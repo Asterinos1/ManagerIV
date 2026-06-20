@@ -1,0 +1,27 @@
+## Visual Studio / dotnet Build Outputs
+[Bb]in/
+[Oo]bj/
+[Tt]emp/
+[Bb]ackup/
+
+## User-specific Files
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+.vs/
+
+## App Data / Logs / Local Cache
+*.log
+*.bak
+github_cache.json
+GtaIVModLoaderTests_*
+GtaIVStateTests_*
+GtaIVArchiveTests_*
+GtaIVModLoaderTests_*/
+GtaIVStateTests_*/
+GtaIVArchiveTests_*/
+
+## Test Results and Coverage
+TestResults/
+*.clog
