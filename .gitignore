@@ -33,6 +33,12 @@ desktop.ini
 .vscode/
 .idea/
 
+## Local Agent Caches & Actions Runner
+.agents/cache/
+.agents/logs/
+.agents/local_settings.json
+.github/act/
+
 ## Ignore all Markdown files except README.md
 *.md
 !README.md
