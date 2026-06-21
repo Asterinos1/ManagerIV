@@ -129,37 +129,80 @@
             <!-- Inspector panel for selected Mod details -->
             <ui:Card Grid.Column="1" Margin="10,0,0,0" Padding="15">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    
-                    <ScrollViewer Grid.Row="0">
-                        <StackPanel>
-                            <TextBlock Text="Mod Details" FontSize="18" FontWeight="Bold" Margin="0,0,0,15" Foreground="White" />
-                            
-                            <TextBlock Text="Name" FontSize="11" Foreground="#FFAAAAAA" />
-                            <TextBlock Text="{Binding SelectedItem.Name, ElementName=LibraryListBox, FallbackValue='No mod selected'}" FontSize="15" FontWeight="SemiBold" Foreground="White" Margin="0,2,0,12" TextWrapping="Wrap" />
-                            
-                            <TextBlock Text="Version" FontSize="11" Foreground="#FFAAAAAA" />
-                            <TextBlock Text="{Binding SelectedItem.Version, ElementName=LibraryListBox, FallbackValue='N/A'}" FontSize="13" Foreground="White" Margin="0,2,0,12" />
+                    <!-- Placeholder when null -->
+                    <TextBlock Text="Select a mod to view and edit details." 
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center" 
+                               Foreground="#FFAAAAAA" 
+                               FontSize="14">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedItem, ElementName=LibraryListBox}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
 
-                            <TextBlock Text="Compatibility Rating" FontSize="11" Foreground="#FFAAAAAA" />
-                            <TextBlock Text="{Binding SelectedItem.Compatibility, ElementName=LibraryListBox, FallbackValue='N/A'}" FontSize="13" Foreground="White" Margin="0,2,0,12" />
+                    <!-- Details Editor when NOT null -->
+                    <Grid DataContext="{Binding SelectedItem, ElementName=LibraryListBox}">
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedItem, ElementName=LibraryListBox}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
-                            <TextBlock Text="Description" FontSize="11" Foreground="#FFAAAAAA" />
-                            <TextBlock Text="{Binding SelectedItem.Model.Description, ElementName=LibraryListBox, FallbackValue='Select a mod to view its details.'}" FontSize="13" Foreground="White" Margin="0,2,0,12" TextWrapping="Wrap" />
+                        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Text="Edit Mod Details" FontSize="18" FontWeight="Bold" Margin="0,0,0,15" Foreground="White" />
 
-                            <TextBlock Text="File Layout (Manifest)" FontSize="11" Foreground="#FFAAAAAA" Margin="0,0,0,4" />
-                            <ListBox ItemsSource="{Binding SelectedItem.Model.Files, ElementName=LibraryListBox}" MaxHeight="200" Background="#FF1E1E1E" BorderBrush="#FF333333" BorderThickness="1">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding RelativePath}" FontSize="11" Foreground="#FFAAAAAA" />
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </StackPanel>
-                    </ScrollViewer>
+                                <TextBlock Text="Name" FontSize="11" Foreground="#FFAAAAAA" Margin="0,0,0,4" />
+                                <ui:TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" />
+
+                                <TextBlock Text="Version" FontSize="11" Foreground="#FFAAAAAA" Margin="0,0,0,4" />
+                                <ui:TextBox Text="{Binding Version, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" />
+
+                                <TextBlock Text="Compatibility" FontSize="11" Foreground="#FFAAAAAA" Margin="0,0,0,4" />
+                                <ui:TextBox Text="{Binding Compatibility, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" />
+
+                                <TextBlock Text="Description" FontSize="11" Foreground="#FFAAAAAA" Margin="0,0,0,4" />
+                                <ui:TextBox Text="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                            AcceptsReturn="True" 
+                                            TextWrapping="Wrap" 
+                                            MinLines="3" 
+                                            Margin="0,0,0,12" />
+
+                                <TextBlock Text="File Layout (Manifest)" FontSize="11" Foreground="#FFAAAAAA" Margin="0,0,0,4" />
+                                <ListBox ItemsSource="{Binding Model.Files}" MaxHeight="150" Background="#FF1E1E1E" BorderBrush="#FF333333" BorderThickness="1" Margin="0,0,0,15">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding RelativePath}" FontSize="11" Foreground="#FFAAAAAA" />
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Save Button at the bottom -->
+                        <ui:Button Grid.Row="1" 
+                                   Content="Save Details" 
+                                   Icon="{ui:SymbolIcon Save24}" 
+                                   Command="{Binding DataContext.SaveModDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                   Appearance="Primary" 
+                                   HorizontalAlignment="Right" />
+                    </Grid>
                 </Grid>
             </ui:Card>
         </Grid>

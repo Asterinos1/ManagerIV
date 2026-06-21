@@ -109,6 +109,9 @@ public class MainViewModel : ViewModelBase
     public ICommand ImportModArchiveCommand { get; }
     public ICommand ReorderModCommand { get; }
     public ICommand SelectGameDirCommand { get; }
+    public ICommand RemoveProfileCommand { get; }
+    public ICommand RenameProfileCommand { get; }
+    public ICommand SaveModDetailsCommand { get; }
 
     public MainViewModel()
     {
@@ -142,6 +145,9 @@ public class MainViewModel : ViewModelBase
         ImportModArchiveCommand = new RelayCommand(async () => await PromptAndImportArchiveAsync());
         ReorderModCommand = new RelayCommand<Tuple<ModViewModel, int>>(ReorderMod);
         SelectGameDirCommand = new RelayCommand(SelectGameDir, () => !IsBusy && ActiveProfile != null);
+        RemoveProfileCommand = new RelayCommand(RemoveActiveProfile, () => !IsBusy && ActiveProfile != null && Profiles.Count > 1);
+        RenameProfileCommand = new RelayCommand<string>(RenameActiveProfile, (name) => !IsBusy && ActiveProfile != null && !string.IsNullOrWhiteSpace(name));
+        SaveModDetailsCommand = new RelayCommand(SaveModDetails, () => !IsBusy);
 
         // Load data
         LoadLibrary();
@@ -228,12 +234,15 @@ public class MainViewModel : ViewModelBase
     {
         if (ActiveProfile == null) return;
 
-        // Apply profile status to LibraryMods
+        var entries = ActiveProfile.LoadOrder.Entries.ToList();
+        bool loadOrderChanged = false;
+
+        // Ensure every mod in LibraryMods has a valid, unique LoadOrder entry
         foreach (var modVm in LibraryMods)
         {
             modVm.IsEnabled = ActiveProfile.EnabledModIds.Contains(modVm.Id);
             
-            var orderEntry = ActiveProfile.LoadOrder.Entries.FirstOrDefault(e => e.ModId == modVm.Id);
+            var orderEntry = entries.FirstOrDefault(e => e.ModId == modVm.Id);
             if (orderEntry != null)
             {
                 modVm.Priority = orderEntry.Priority;
@@ -241,12 +250,68 @@ public class MainViewModel : ViewModelBase
             }
             else
             {
-                // Default priorities
-                modVm.Priority = 99;
+                int maxPriority = entries.Any() ? entries.Max(e => e.Priority) : 0;
+                modVm.Priority = maxPriority + 1;
                 modVm.Target = modVm.Model.Files.Any(f => f.RelativePath.EndsWith(".asi", StringComparison.OrdinalIgnoreCase)) 
                     ? DeployTarget.Plugins 
                     : DeployTarget.Update;
+                
+                entries.Add(new LoadOrderEntry(modVm.Id, modVm.Target, modVm.Priority));
+                loadOrderChanged = true;
             }
+        }
+
+        // Clean up entries for mods that no longer exist in LibraryMods
+        var libraryModIds = LibraryMods.Select(m => m.Id).ToHashSet();
+        int initialCount = entries.Count;
+        entries.RemoveAll(e => !libraryModIds.Contains(e.ModId));
+        if (entries.Count != initialCount)
+        {
+            loadOrderChanged = true;
+        }
+
+        // Re-sequence all entries in the load order to ensure they are 1..N contiguous
+        var resequencedEntries = entries
+            .OrderBy(e => e.Priority)
+            .Select((entry, index) => entry with { Priority = index + 1 })
+            .ToList();
+
+        // Check if resequencing changed any priorities
+        if (!loadOrderChanged && resequencedEntries.Count == entries.Count)
+        {
+            for (int i = 0; i < resequencedEntries.Count; i++)
+            {
+                if (resequencedEntries[i].Priority != entries[i].Priority)
+                {
+                    loadOrderChanged = true;
+                    break;
+                }
+            }
+        }
+
+        if (loadOrderChanged)
+        {
+            var updatedProfile = ActiveProfile with { LoadOrder = new LoadOrderModel(resequencedEntries) };
+            SaveProfileState(updatedProfile);
+        }
+
+        // Apply the resequenced priorities back to modViewModels
+        foreach (var modVm in LibraryMods)
+        {
+            var entry = resequencedEntries.FirstOrDefault(e => e.ModId == modVm.Id);
+            if (entry != null)
+            {
+                modVm.Priority = entry.Priority;
+                modVm.Target = entry.Target;
+            }
+        }
+
+        // Sort LibraryMods collection by Priority
+        var sorted = LibraryMods.OrderBy(m => m.Priority).ToList();
+        LibraryMods.Clear();
+        foreach (var mod in sorted)
+        {
+            LibraryMods.Add(mod);
         }
 
         UpdateConflictsAndWatchdog();
@@ -466,12 +531,7 @@ public class MainViewModel : ViewModelBase
             list.Remove(modVm.Id);
         }
 
-        // Build new load order representation
-        var enabledMods = LibraryMods.Where(m => m.IsEnabled).ToList();
-        var newOrder = _loadOrderService.InitializeLoadOrder(enabledMods.Select(m => m.Model));
-
-        // Sync views back
-        var updatedProfile = ActiveProfile with { EnabledModIds = list, LoadOrder = newOrder };
+        var updatedProfile = ActiveProfile with { EnabledModIds = list };
         SaveProfileState(updatedProfile);
         RefreshActiveModsList();
     }
@@ -628,5 +688,83 @@ public class MainViewModel : ViewModelBase
         }
         _activeProfile = profile;
         OnPropertyChanged(nameof(ActiveProfile));
+    }
+
+    private void RemoveActiveProfile()
+    {
+        if (ActiveProfile == null) return;
+        if (Profiles.Count <= 1)
+        {
+            MessageBox.Show("Cannot delete the only remaining profile. Please create another profile first.", "Cannot Remove Profile", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var profileToDelete = ActiveProfile;
+        var result = MessageBox.Show(
+            $"Are you sure you want to delete the profile '{profileToDelete.Name}'?\n\nThis will remove the configuration profile, but will not delete your actual mod library files.",
+            "Confirm Profile Deletion",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            // First, undeploy current profile links if it's active
+            IsBusy = true;
+            StatusText = "Tearing down profile junctions...";
+            try
+            {
+                var journal = new TransactionJournal();
+                var adapter = new CompleteEditionAdapter(profileToDelete.GamePath, _linker, journal);
+                var enabledVms = LibraryMods.Where(m => profileToDelete.EnabledModIds.Contains(m.Id)).ToList();
+                foreach (var vm in enabledVms)
+                {
+                    _ = adapter.UndeployAsync(vm.Model);
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Teardown warning: {ex.Message}";
+            }
+
+            // Delete the file
+            string file = Path.Combine(_profilesDir, $"{profileToDelete.Id}.json");
+            if (File.Exists(file))
+            {
+                try
+                {
+                    File.Delete(file);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to delete profile file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    IsBusy = false;
+                    return;
+                }
+            }
+
+            Profiles.Remove(profileToDelete);
+            ActiveProfile = Profiles.First();
+            IsBusy = false;
+            StatusText = $"Deleted profile '{profileToDelete.Name}' and switched to '{ActiveProfile.Name}'.";
+        }
+    }
+
+    private void RenameActiveProfile(string? newName)
+    {
+        if (ActiveProfile == null || string.IsNullOrWhiteSpace(newName)) return;
+
+        string oldName = ActiveProfile.Name;
+        if (oldName == newName) return;
+
+        var updatedProfile = ActiveProfile with { Name = newName };
+        SaveProfileState(updatedProfile);
+        StatusText = $"Renamed profile from '{oldName}' to '{newName}'.";
+    }
+
+    private void SaveModDetails()
+    {
+        SaveLibrary();
+        StatusText = "Mod details saved successfully.";
+        MessageBox.Show("Mod details saved successfully to the library manifest.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }

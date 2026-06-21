@@ -7,7 +7,7 @@ namespace ManagerIV.ViewModels;
 /// </summary>
 public class ModViewModel : ViewModelBase
 {
-    private readonly StagedMod _mod;
+    private StagedMod _mod;
     private bool _isEnabled;
     private int _priority;
     private DeployTarget _target;
@@ -23,9 +23,58 @@ public class ModViewModel : ViewModelBase
     }
 
     public string Id => _mod.Id;
-    public string Name => _mod.Name;
-    public string Version => _mod.Version;
-    public string Compatibility => _mod.Compatibility;
+
+    public string Name
+    {
+        get => _mod.Name;
+        set
+        {
+            if (_mod.Name != value)
+            {
+                _mod = _mod with { Name = value };
+                OnPropertyChanged(nameof(Name));
+            }
+        }
+    }
+
+    public string Version
+    {
+        get => _mod.Version;
+        set
+        {
+            if (_mod.Version != value)
+            {
+                _mod = _mod with { Version = value };
+                OnPropertyChanged(nameof(Version));
+            }
+        }
+    }
+
+    public string Compatibility
+    {
+        get => _mod.Compatibility;
+        set
+        {
+            if (_mod.Compatibility != value)
+            {
+                _mod = _mod with { Compatibility = value };
+                OnPropertyChanged(nameof(Compatibility));
+            }
+        }
+    }
+
+    public string Description
+    {
+        get => _mod.Description;
+        set
+        {
+            if (_mod.Description != value)
+            {
+                _mod = _mod with { Description = value };
+                OnPropertyChanged(nameof(Description));
+            }
+        }
+    }
 
     public bool IsEnabled
     {

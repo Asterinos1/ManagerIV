@@ -81,7 +81,14 @@
                         <TextBlock Text="Active Configuration" FontSize="16" FontWeight="Bold" Foreground="White" Margin="0,0,0,15" />
 
                         <TextBlock Text="Profile Name" FontSize="11" Foreground="#FFAAAAAA" />
-                        <TextBlock Text="{Binding ActiveProfile.Name}" FontSize="14" FontWeight="SemiBold" Foreground="White" Margin="0,2,0,12" />
+                        <Grid Margin="0,2,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBox Grid.Column="0" x:Name="ProfileNameEditInput" Text="{Binding ActiveProfile.Name, Mode=OneWay}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                            <ui:Button Grid.Column="1" Content="Rename" Icon="{ui:SymbolIcon Edit24}" Command="{Binding RenameProfileCommand}" CommandParameter="{Binding Text, ElementName=ProfileNameEditInput}" VerticalAlignment="Center" />
+                        </Grid>
 
                         <TextBlock Text="Game Directory (GTAIV.exe Path)" FontSize="11" Foreground="#FFAAAAAA" />
                         <Grid Margin="0,2,0,12">
@@ -101,6 +108,13 @@
 
                         <TextBlock Text="Total Enabled Mods" FontSize="11" Foreground="#FFAAAAAA" />
                         <TextBlock Text="{Binding ActiveProfile.EnabledModIds.Count}" FontSize="13" Foreground="White" Margin="0,2,0,12" />
+
+                        <ui:Button Content="Delete Profile" 
+                                   Icon="{ui:SymbolIcon Delete24}" 
+                                   Command="{Binding RemoveProfileCommand}"
+                                   Appearance="Danger"
+                                   Margin="0,8,0,0"
+                                   HorizontalAlignment="Right" />
                     </StackPanel>
                 </ui:Card>
 
