@@ -52,13 +52,13 @@ Loading / Injection Layer (FusionFix, ASI Loader, ScriptHook — delegated)
 ### Running the Application
 To compile and launch the GUI application, run:
 ```bash
-dotnet run --project src/GtaIVModLoader/GtaIVModLoader.csproj
+dotnet run --project src/ManagerIV/ManagerIV.csproj
 ```
 
 ### Running Unit Tests
 To execute the suite of 14 unit and integration tests (which cover path resolution, conflict detection, transaction rollback, and zip-slip protection):
 ```bash
-dotnet test GtaIVModLoader.sln
+dotnet test ManagerIV.sln
 ```
 
 ---

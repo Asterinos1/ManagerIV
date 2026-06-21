@@ -21,10 +21,10 @@ jobs:
         dotnet-version: '8.0.x'
 
     - name: Restore NuGet Packages
-      run: dotnet restore GtaIVModLoader.sln
+      run: dotnet restore ManagerIV.sln
 
     - name: Build Solution
-      run: dotnet build GtaIVModLoader.sln --configuration Release --no-restore
+      run: dotnet build ManagerIV.sln --configuration Release --no-restore
 
     - name: Run xUnit Unit Tests
-      run: dotnet test GtaIVModLoader.sln --configuration Release --no-build --verbosity normal
+      run: dotnet test ManagerIV.sln --configuration Release --no-build --verbosity normal

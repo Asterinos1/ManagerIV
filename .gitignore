@@ -15,12 +15,12 @@
 *.log
 *.bak
 github_cache.json
-GtaIVModLoaderTests_*
-GtaIVStateTests_*
-GtaIVArchiveTests_*
-GtaIVModLoaderTests_*/
-GtaIVStateTests_*/
-GtaIVArchiveTests_*/
+ManagerIVTests_*
+ManagerIVStateTests_*
+ManagerIVArchiveTests_*
+ManagerIVTests_*/
+ManagerIVStateTests_*/
+ManagerIVArchiveTests_*/
 
 ## Test Results and Coverage
 TestResults/
