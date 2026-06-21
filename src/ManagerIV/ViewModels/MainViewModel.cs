@@ -108,6 +108,7 @@ public class MainViewModel : ViewModelBase
     public ICommand ToggleModEnabledCommand { get; }
     public ICommand ImportModArchiveCommand { get; }
     public ICommand ReorderModCommand { get; }
+    public ICommand SelectGameDirCommand { get; }
 
     public MainViewModel()
     {
@@ -138,8 +139,9 @@ public class MainViewModel : ViewModelBase
         SwitchProfileCommand = new RelayCommand<Profile>(async (p) => await SwitchProfileAsync(p), (p) => !IsBusy && p != null);
         CreateProfileCommand = new RelayCommand<string>(CreateProfile, (name) => !string.IsNullOrWhiteSpace(name));
         ToggleModEnabledCommand = new RelayCommand<ModViewModel>(ToggleModEnabled);
-        ImportModArchiveCommand = new RelayCommand<string>(async (path) => await ImportArchiveAsync(path));
+        ImportModArchiveCommand = new RelayCommand(async () => await PromptAndImportArchiveAsync());
         ReorderModCommand = new RelayCommand<Tuple<ModViewModel, int>>(ReorderMod);
+        SelectGameDirCommand = new RelayCommand(SelectGameDir, () => !IsBusy && ActiveProfile != null);
 
         // Load data
         LoadLibrary();
@@ -321,6 +323,59 @@ public class MainViewModel : ViewModelBase
         catch
         {
             WatchdogWarning = "";
+        }
+    }
+
+    private async Task PromptAndImportArchiveAsync()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Filter = "Mod Archives (*.zip;*.rar;*.7z)|*.zip;*.rar;*.7z|All Files (*.*)|*.*",
+            Title = "Select Mod Archive to Import"
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            await ImportArchiveAsync(dialog.FileName);
+        }
+    }
+
+    private void SelectGameDir()
+    {
+        if (ActiveProfile == null) return;
+
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Select GTA IV Game Directory (containing GTAIV.exe)",
+            InitialDirectory = Directory.Exists(ActiveProfile.GamePath) ? ActiveProfile.GamePath : null
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            string selectedPath = dialog.FolderName;
+            
+            // Check if GTAIV.exe exists
+            string exePath = Path.Combine(selectedPath, "GTAIV.exe");
+            if (!File.Exists(exePath))
+            {
+                var result = MessageBox.Show(
+                    "GTAIV.exe was not found in the selected directory.\n\nAre you sure you want to select this directory anyway?",
+                    "GTAIV.exe Not Found",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (result == MessageBoxResult.No)
+                {
+                    return;
+                }
+            }
+
+            var updatedProfile = ActiveProfile with { GamePath = selectedPath };
+            SaveProfileState(updatedProfile);
+            GameDir = selectedPath;
+            RefreshActiveModsList();
+            
+            StatusText = $"Updated game directory to: {selectedPath}";
         }
     }
 

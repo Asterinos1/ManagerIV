@@ -35,21 +35,7 @@ public partial class ModLibraryView : UserControl
 
     private void UserControl_Drop(object sender, DragEventArgs e)
     {
-        if (e.Data.GetDataPresent(DataFormats.FileDrop))
-        {
-            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            foreach (string file in files)
-            {
-                string ext = Path.GetExtension(file).ToLowerInvariant();
-                if (ext == ".zip" || ext == ".rar" || ext == ".7z")
-                {
-                    if (DataContext is MainViewModel vm)
-                    {
-                        _ = vm.ImportArchiveAsync(file);
-                    }
-                }
-            }
-        }
+        HandleFileDrop(e);
     }
 
     private void ListBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -80,6 +66,25 @@ public partial class ModLibraryView : UserControl
         }
     }
 
+    private void ListBox_DragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent("ModViewModel"))
+        {
+            e.Effects = DragDropEffects.Move;
+            e.Handled = true;
+        }
+        else if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            e.Effects = DragDropEffects.Copy;
+            e.Handled = true;
+        }
+        else
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+        }
+    }
+
     private void ListBox_Drop(object sender, DragEventArgs e)
     {
         if (e.Data.GetDataPresent("ModViewModel"))
@@ -96,6 +101,29 @@ public partial class ModLibraryView : UserControl
                     if (DataContext is MainViewModel vm)
                     {
                         vm.ReorderModCommand.Execute(new Tuple<ModViewModel, int>(droppedMod, newIndex + 1));
+                    }
+                }
+            }
+        }
+        else if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            HandleFileDrop(e);
+        }
+    }
+
+    private void HandleFileDrop(DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            foreach (string file in files)
+            {
+                string ext = Path.GetExtension(file).ToLowerInvariant();
+                if (ext == ".zip" || ext == ".rar" || ext == ".7z")
+                {
+                    if (DataContext is MainViewModel vm)
+                    {
+                        _ = vm.ImportArchiveAsync(file);
                     }
                 }
             }

@@ -84,7 +84,14 @@
                         <TextBlock Text="{Binding ActiveProfile.Name}" FontSize="14" FontWeight="SemiBold" Foreground="White" Margin="0,2,0,12" />
 
                         <TextBlock Text="Game Directory (GTAIV.exe Path)" FontSize="11" Foreground="#FFAAAAAA" />
-                        <TextBlock Text="{Binding ActiveProfile.GamePath}" FontSize="13" Foreground="White" Margin="0,2,0,12" TextWrapping="Wrap" />
+                        <Grid Margin="0,2,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding ActiveProfile.GamePath}" FontSize="13" Foreground="White" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,10,0" />
+                            <ui:Button Grid.Column="1" Content="Browse..." Icon="{ui:SymbolIcon Folder24}" Command="{Binding SelectGameDirCommand}" VerticalAlignment="Center" />
+                        </Grid>
 
                         <TextBlock Text="Mods Library Directory" FontSize="11" Foreground="#FFAAAAAA" />
                         <TextBlock Text="{Binding ActiveProfile.LibraryPath}" FontSize="13" Foreground="White" Margin="0,2,0,12" TextWrapping="Wrap" />

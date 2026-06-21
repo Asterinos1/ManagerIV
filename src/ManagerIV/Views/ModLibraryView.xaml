@@ -51,6 +51,7 @@
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          PreviewMouseLeftButtonDown="ListBox_PreviewMouseLeftButtonDown"
                          MouseMove="ListBox_MouseMove"
+                         DragOver="ListBox_DragOver"
                          Drop="ListBox_Drop"
                          AllowDrop="True"
                          Background="Transparent"
