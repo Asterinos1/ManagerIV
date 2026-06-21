@@ -11,8 +11,8 @@
         Title="GTA IV Mod Loader" 
         Height="700" Width="1050"
         WindowStartupLocation="CenterScreen"
-        Background="#FF111111"
-        Foreground="White">
+        Background="{DynamicResource ApplicationBackgroundBrush}"
+        Foreground="{DynamicResource TextFillColorPrimaryBrush}">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
@@ -25,7 +25,7 @@
         </Grid.ColumnDefinitions>
 
         <!-- Sidebar Grid -->
-        <Grid Grid.Column="0" Background="#FF181818">
+        <Grid Grid.Column="0" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />  <!-- App Header -->
                 <RowDefinition Height="*" />     <!-- Navigation List -->
@@ -35,7 +35,7 @@
             <!-- App Header -->
             <StackPanel Grid.Row="0" Margin="20,25,20,25">
                 <TextBlock Text="GTA IV MOD LOADER" FontSize="18" FontWeight="Black" Foreground="#FF107C41" />
-                <TextBlock Text="Complete Edition Manager" FontSize="11" Foreground="#FFAAAAAA" Margin="0,2,0,0" />
+                <TextBlock Text="Complete Edition Manager" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" />
             </StackPanel>
 
             <!-- Navigation List -->
@@ -62,11 +62,11 @@
                         </Setter>
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#FF252525" />
+                                <Setter Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}" />
                                 <Setter Property="FontWeight" Value="SemiBold" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FF202020" />
+                                <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -76,7 +76,7 @@
                 <ListBoxItem>
                     <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="Library24" Filled="True" Foreground="#FF107C41" />
-                        <TextBlock Text="Mod Library" FontSize="14" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="White" />
+                        <TextBlock Text="Mod Library" FontSize="14" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     </StackPanel>
                 </ListBoxItem>
 
@@ -84,7 +84,7 @@
                 <ListBoxItem>
                     <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="Settings24" Filled="True" Foreground="#FF107C41" />
-                        <TextBlock Text="Profiles &amp; Settings" FontSize="14" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="White" />
+                        <TextBlock Text="Profiles &amp; Settings" FontSize="14" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     </StackPanel>
                 </ListBoxItem>
             </ListBox>
@@ -92,10 +92,10 @@
             <!-- Deployment & Status Panel -->
             <StackPanel Grid.Row="2" Margin="20,15,20,20">
                 <!-- Active Profile Info -->
-                <ui:Card Padding="10" Margin="0,0,0,15" Background="#FF1F1F1F" BorderBrush="#FF2A2A2A">
+                <ui:Card Padding="10" Margin="0,0,0,15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
                     <StackPanel>
-                        <TextBlock Text="ACTIVE PROFILE" FontSize="9" FontWeight="Bold" Foreground="#FFAAAAAA" />
-                        <TextBlock Text="{Binding ActiveProfile.Name}" FontSize="13" FontWeight="SemiBold" Foreground="White" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="ACTIVE PROFILE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="{Binding ActiveProfile.Name}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                 </ui:Card>
 
@@ -110,14 +110,14 @@
                            HorizontalAlignment="Stretch" />
 
                 <!-- Status Text bar -->
-                <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#FFAAAAAA" Margin="0,12,0,0" TextWrapping="Wrap" MaxHeight="40" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,12,0,0" TextWrapping="Wrap" MaxHeight="40" TextTrimming="CharacterEllipsis" />
             </StackPanel>
         </Grid>
 
         <!-- Main Content Area -->
         <TabControl Grid.Column="1" 
                     SelectedIndex="{Binding SelectedIndex, ElementName=SidebarListBox}"
-                    Background="#FF141414"
+                    Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
                     BorderThickness="0"
                     Padding="0">
             <TabControl.Resources>

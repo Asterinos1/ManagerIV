@@ -28,8 +28,8 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0">
-                <TextBlock Text="Mod Library" FontSize="24" FontWeight="Bold" Foreground="White" />
-                <TextBlock Text="Drag and drop mod archives (.zip, .rar, .7z) here to import them." FontSize="13" Foreground="#FFAAAAAA" Margin="0,4,0,0" />
+                <TextBlock Text="Mod Library" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                <TextBlock Text="Drag and drop mod archives (.zip, .rar, .7z) here to import them." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0" />
             </StackPanel>
             
             <ui:Button Grid.Column="1" 
@@ -58,7 +58,7 @@
                          BorderThickness="0">
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:ModViewModel}">
-                            <Border BorderThickness="0,0,0,1" BorderBrush="#FF2D2D2D" Padding="10,8" Margin="0" HorizontalAlignment="Stretch">
+                            <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Padding="10,8" Margin="0" HorizontalAlignment="Stretch">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />  <!-- Priority / Enable Checkbox -->
@@ -68,15 +68,15 @@
 
                                     <!-- Priority Indicator and Toggle Checkbox -->
                                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Priority, StringFormat='\{0:D3\}'}" FontSize="12" Foreground="#FF888888" Width="30" VerticalAlignment="Center" TextAlignment="Center" />
+                                        <TextBlock Text="{Binding Priority, StringFormat='\{0:D3\}'}" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Width="30" VerticalAlignment="Center" TextAlignment="Center" />
                                         <CheckBox IsChecked="{Binding IsEnabled, Mode=OneWay}" Command="{Binding DataContext.ToggleModEnabledCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Margin="10,0,10,0" VerticalAlignment="Center" />
                                     </StackPanel>
 
                                     <!-- Mod Name & Version -->
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="White" />
+                                        <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                            <TextBlock Text="{Binding Version, StringFormat='Version: \{0\}'}" FontSize="11" Foreground="#FFAAAAAA" />
+                                            <TextBlock Text="{Binding Version, StringFormat='Version: \{0\}'}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             <TextBlock Text="{Binding ConflictStatus, StringFormat='  •  \{0\}'}" FontSize="11" Foreground="#FFD83B01" FontWeight="SemiBold" Visibility="{Binding HasConflict, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                         </StackPanel>
                                     </StackPanel>
@@ -88,9 +88,8 @@
                                             <TextBlock x:Name="TypeTagText" FontSize="10" FontWeight="Bold" Foreground="White" />
                                         </Border>
 
-                                        <!-- Compatibility Status Badge -->
-                                        <Border x:Name="CompatBorder" CornerRadius="4" Padding="6,2" Margin="5,0" VerticalAlignment="Center" Background="#FF333333">
-                                            <TextBlock Text="{Binding Compatibility}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                        <Border x:Name="CompatBorder" CornerRadius="4" Padding="6,2" Margin="5,0" VerticalAlignment="Center" Background="{DynamicResource ControlFillColorDefaultBrush}">
+                                            <TextBlock Text="{Binding Compatibility}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                         </Border>
                                     </StackPanel>
                                 </Grid>
@@ -133,7 +132,7 @@
                     <TextBlock Text="Select a mod to view and edit details." 
                                HorizontalAlignment="Center" 
                                VerticalAlignment="Center" 
-                               Foreground="#FFAAAAAA" 
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" 
                                FontSize="14">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
@@ -166,29 +165,29 @@
 
                         <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
                             <StackPanel>
-                                <TextBlock Text="Edit Mod Details" FontSize="18" FontWeight="Bold" Margin="0,0,0,15" Foreground="White" />
+                                <TextBlock Text="Edit Mod Details" FontSize="18" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
 
-                                <TextBlock Text="Name" FontSize="11" Foreground="#FFAAAAAA" Margin="0,0,0,4" />
+                                <TextBlock Text="Name" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
                                 <ui:TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" />
 
-                                <TextBlock Text="Version" FontSize="11" Foreground="#FFAAAAAA" Margin="0,0,0,4" />
+                                <TextBlock Text="Version" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
                                 <ui:TextBox Text="{Binding Version, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" />
 
-                                <TextBlock Text="Compatibility" FontSize="11" Foreground="#FFAAAAAA" Margin="0,0,0,4" />
+                                <TextBlock Text="Compatibility" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
                                 <ui:TextBox Text="{Binding Compatibility, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" />
 
-                                <TextBlock Text="Description" FontSize="11" Foreground="#FFAAAAAA" Margin="0,0,0,4" />
+                                <TextBlock Text="Description" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
                                 <ui:TextBox Text="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                             AcceptsReturn="True" 
                                             TextWrapping="Wrap" 
                                             MinLines="3" 
                                             Margin="0,0,0,12" />
 
-                                <TextBlock Text="File Layout (Manifest)" FontSize="11" Foreground="#FFAAAAAA" Margin="0,0,0,4" />
-                                <ListBox ItemsSource="{Binding Model.Files}" MaxHeight="150" Background="#FF1E1E1E" BorderBrush="#FF333333" BorderThickness="1" Margin="0,0,0,15">
+                                <TextBlock Text="File Layout (Manifest)" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+                                <ListBox ItemsSource="{Binding Model.Files}" MaxHeight="150" Background="{DynamicResource ControlFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" Margin="0,0,0,15">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding RelativePath}" FontSize="11" Foreground="#FFAAAAAA" />
+                                            <TextBlock Text="{Binding RelativePath}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>

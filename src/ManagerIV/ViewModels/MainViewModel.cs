@@ -40,6 +40,7 @@ public class MainViewModel : ViewModelBase
     private string _statusText = "Ready";
     private bool _isBusy;
     private BackendStatusViewModel _backendStatus = new();
+    private bool _isDarkTheme = true;
 
     // Properties
     public ObservableCollection<Profile> Profiles
@@ -109,6 +110,19 @@ public class MainViewModel : ViewModelBase
         set => SetProperty(ref _backendStatus, value);
     }
 
+    public bool IsDarkTheme
+    {
+        get => _isDarkTheme;
+        set
+        {
+            if (SetProperty(ref _isDarkTheme, value))
+            {
+                ApplyTheme(value);
+                SaveSettings();
+            }
+        }
+    }
+
     // Commands
     public ICommand ApplyDeploymentCommand { get; }
     public ICommand SwitchProfileCommand { get; }
@@ -165,6 +179,23 @@ public class MainViewModel : ViewModelBase
         // Load data
         LoadLibrary();
         LoadProfiles();
+
+        // Load settings
+        string settingsFile = Path.Combine(_baseDir, "settings.json");
+        if (File.Exists(settingsFile))
+        {
+            try
+            {
+                string json = File.ReadAllText(settingsFile);
+                var settings = JsonSerializer.Deserialize<AppSettings>(json);
+                if (settings != null)
+                {
+                    _isDarkTheme = settings.IsDarkTheme;
+                }
+            }
+            catch { }
+        }
+        ApplyTheme(_isDarkTheme);
     }
 
     private void LoadLibrary()
@@ -818,6 +849,40 @@ public class MainViewModel : ViewModelBase
         MessageBox.Show("Mod details saved successfully to the library manifest.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
+    private void ApplyTheme(bool isDark)
+    {
+        try
+        {
+            if (isDark)
+            {
+                Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
+            }
+            else
+            {
+                Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Light);
+            }
+        }
+        catch
+        {
+            // Ignore if theme dictionaries are not fully initialized yet
+        }
+    }
+
+    private void SaveSettings()
+    {
+        try
+        {
+            string settingsFile = Path.Combine(_baseDir, "settings.json");
+            var settings = new AppSettings { IsDarkTheme = _isDarkTheme };
+            string json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(settingsFile, json);
+        }
+        catch
+        {
+            // Ignore settings save errors
+        }
+    }
+
     private async Task InstallFusionFixAsync()
     {
         if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath) || !Directory.Exists(ActiveProfile.GamePath))
@@ -1037,4 +1102,9 @@ public class MainViewModel : ViewModelBase
             UpdateConflictsAndWatchdog();
         }
     }
+}
+
+public class AppSettings
+{
+    public bool IsDarkTheme { get; set; } = true;
 }
