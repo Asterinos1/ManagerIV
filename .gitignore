@@ -26,6 +26,13 @@ ManagerIVArchiveTests_*/
 TestResults/
 *.clog
 
+## OS and Common Editor Files
+.DS_Store
+[Tt]humbs.db
+desktop.ini
+.vscode/
+.idea/
+
 ## Ignore all Markdown files except README.md
 *.md
 !README.md
