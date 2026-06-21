@@ -25,3 +25,7 @@ ManagerIVArchiveTests_*/
 ## Test Results and Coverage
 TestResults/
 *.clog
+
+## Ignore all Markdown files except README.md
+*.md
+!README.md
