@@ -192,6 +192,20 @@
                                 <TextBlock Text="{Binding BackendStatus.ScriptHookText}" FontSize="10" FontWeight="Bold" Foreground="White" />
                             </Border>
                         </Grid>
+
+                        <ui:Button Content="Install / Update FusionFix" 
+                                   Icon="{ui:SymbolIcon ArrowDownload24}" 
+                                   Command="{Binding InstallFusionFixCommand}"
+                                   Appearance="Primary"
+                                   Margin="0,15,0,0"
+                                   HorizontalAlignment="Stretch" />
+
+                        <ui:Button Content="Uninstall FusionFix" 
+                                   Icon="{ui:SymbolIcon Delete24}" 
+                                   Command="{Binding UninstallFusionFixCommand}"
+                                   Appearance="Secondary"
+                                   Margin="0,8,0,0"
+                                   HorizontalAlignment="Stretch" />
                     </StackPanel>
                 </ui:Card>
 

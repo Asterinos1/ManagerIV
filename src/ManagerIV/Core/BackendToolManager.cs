@@ -17,7 +17,8 @@ public record ReleaseInfo(
     string HtmlUrl,
     string? DownloadUrl,
     long SizeBytes,
-    DateTime CachedAt
+    DateTime CachedAt,
+    System.Collections.Generic.Dictionary<string, string>? Assets = null
 );
 
 /// <summary>
@@ -72,12 +73,14 @@ public class BackendToolManager
         {
             var release = await _githubClient.Repository.Release.GetLatest(repoOwner, repoName);
             var asset = release.Assets.FirstOrDefault();
+            var assetsDict = release.Assets.ToDictionary(a => a.Name, a => a.BrowserDownloadUrl);
             var info = new ReleaseInfo(
                 release.TagName,
                 release.HtmlUrl,
                 asset?.BrowserDownloadUrl,
                 asset?.Size ?? 0,
-                DateTime.Now
+                DateTime.Now,
+                assetsDict
             );
 
             Directory.CreateDirectory(_cacheDir);

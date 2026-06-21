@@ -21,6 +21,7 @@ public class MainViewModel : ViewModelBase
     private readonly NativeFileSystemLinker _linker;
     private readonly BackupRollbackService _rollbackService;
     private readonly UpdateWatchdog _watchdog;
+    private readonly BackendToolManager _backendToolManager;
 
     // Config Paths
     private readonly string _baseDir;
@@ -119,6 +120,8 @@ public class MainViewModel : ViewModelBase
     public ICommand RemoveProfileCommand { get; }
     public ICommand RenameProfileCommand { get; }
     public ICommand SaveModDetailsCommand { get; }
+    public ICommand InstallFusionFixCommand { get; }
+    public ICommand UninstallFusionFixCommand { get; }
 
     public MainViewModel()
     {
@@ -133,6 +136,7 @@ public class MainViewModel : ViewModelBase
 
         // Establish paths
         _baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ManagerIV");
+        _backendToolManager = new BackendToolManager(Path.Combine(_baseDir, "Cache"));
         _libraryDir = Path.Combine(_baseDir, "Library");
         _profilesDir = Path.Combine(_baseDir, "Profiles");
         _backupDir = Path.Combine(_baseDir, "Backup");
@@ -155,6 +159,8 @@ public class MainViewModel : ViewModelBase
         RemoveProfileCommand = new RelayCommand(RemoveActiveProfile, () => !IsBusy && ActiveProfile != null && Profiles.Count > 1);
         RenameProfileCommand = new RelayCommand<string>(RenameActiveProfile, (name) => !IsBusy && ActiveProfile != null && !string.IsNullOrWhiteSpace(name));
         SaveModDetailsCommand = new RelayCommand(SaveModDetails, () => !IsBusy);
+        InstallFusionFixCommand = new RelayCommand(async () => await InstallFusionFixAsync(), () => !IsBusy && ActiveProfile != null);
+        UninstallFusionFixCommand = new RelayCommand(async () => await UninstallFusionFixAsync(), () => !IsBusy && ActiveProfile != null);
 
         // Load data
         LoadLibrary();
@@ -810,5 +816,225 @@ public class MainViewModel : ViewModelBase
         SaveLibrary();
         StatusText = "Mod details saved successfully.";
         MessageBox.Show("Mod details saved successfully to the library manifest.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private async Task InstallFusionFixAsync()
+    {
+        if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath) || !Directory.Exists(ActiveProfile.GamePath))
+        {
+            MessageBox.Show("Please select a valid game directory first.", "Cannot Install", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        IsBusy = true;
+        StatusText = "Querying latest FusionFix release from GitHub...";
+
+        try
+        {
+            var release = await _backendToolManager.GetLatestReleaseAsync("ThirteenAG", "GTAIV.EFLC.FusionFix");
+            if (release.Assets == null || !release.Assets.ContainsKey("GTAIV.EFLC.FusionFix.zip"))
+            {
+                throw new Exception("Could not find standard FusionFix asset in the latest release.");
+            }
+
+            string downloadUrl = release.Assets["GTAIV.EFLC.FusionFix.zip"];
+            string cacheZip = Path.Combine(_baseDir, "Cache", "GTAIV.EFLC.FusionFix.zip");
+
+            StatusText = "Downloading GTAIV.EFLC.FusionFix.zip...";
+            await _backendToolManager.DownloadToolAsync(downloadUrl, cacheZip);
+
+            string tempExtractionDir = Path.Combine(_baseDir, "Cache", "FusionFixTemp_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempExtractionDir);
+
+            StatusText = "Extracting FusionFix...";
+            await _archiveHandler.ExtractAsync(cacheZip, tempExtractionDir);
+
+            // If it's legacy version, we also download the Legacy Addon
+            bool isLegacy = ActiveProfile.LastKnownVersion != null && !ActiveProfile.LastKnownVersion.IsCompleteEdition;
+            if (isLegacy)
+            {
+                if (release.Assets.ContainsKey("GTAIV.EFLC.FusionFixLegacyAddon.zip"))
+                {
+                    string legacyDownloadUrl = release.Assets["GTAIV.EFLC.FusionFixLegacyAddon.zip"];
+                    string legacyCacheZip = Path.Combine(_baseDir, "Cache", "GTAIV.EFLC.FusionFixLegacyAddon.zip");
+
+                    StatusText = "Downloading GTAIV.EFLC.FusionFixLegacyAddon.zip...";
+                    await _backendToolManager.DownloadToolAsync(legacyDownloadUrl, legacyCacheZip);
+
+                    StatusText = "Extracting Legacy Addon...";
+                    await _archiveHandler.ExtractAsync(legacyCacheZip, tempExtractionDir);
+                }
+                else
+                {
+                    StatusText = "Warning: Legacy version detected but no legacy addon found in release. Proceeding with standard install...";
+                }
+            }
+
+            // Copy all extracted files into GTAIV game directory
+            StatusText = "Installing FusionFix files to game directory...";
+            string gamePath = ActiveProfile.GamePath;
+            var installedFiles = new System.Collections.Generic.List<string>();
+            CopyDirectoryWithManifest(tempExtractionDir, gamePath, gamePath, installedFiles);
+
+            // Save installed files manifest for uninstallation
+            string manifestPath = Path.Combine(_profilesDir, $"{ActiveProfile.Id}_tools_manifest.json");
+            string manifestJson = JsonSerializer.Serialize(installedFiles, new JsonSerializerOptions { WriteIndented = true });
+            await File.WriteAllTextAsync(manifestPath, manifestJson);
+
+            // Clean up temporary extraction
+            try
+            {
+                Directory.Delete(tempExtractionDir, recursive: true);
+                if (File.Exists(cacheZip)) File.Delete(cacheZip);
+                string legacyZip = Path.Combine(_baseDir, "Cache", "GTAIV.EFLC.FusionFixLegacyAddon.zip");
+                if (File.Exists(legacyZip)) File.Delete(legacyZip);
+            }
+            catch { /* Ignore cleanup errors */ }
+
+            StatusText = $"Successfully installed FusionFix {release.TagName}!";
+            MessageBox.Show($"FusionFix {release.TagName} has been successfully installed!\nASI Loader, FusionOverloader, and DXVK are ready.", "Installation Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"FusionFix installation failed: {ex.Message}";
+            MessageBox.Show($"Installation failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsBusy = false;
+            UpdateConflictsAndWatchdog();
+        }
+    }
+
+    private void CopyDirectoryWithManifest(string sourceDir, string targetDir, string gamePath, System.Collections.Generic.List<string> installedFiles)
+    {
+        Directory.CreateDirectory(targetDir);
+
+        foreach (string file in Directory.GetFiles(sourceDir))
+        {
+            string targetFile = Path.Combine(targetDir, Path.GetFileName(file));
+            File.Copy(file, targetFile, overwrite: true);
+            
+            // Record target relative path
+            string relativePath = Path.GetRelativePath(gamePath, targetFile);
+            installedFiles.Add(relativePath);
+        }
+
+        foreach (string directory in Directory.GetDirectories(sourceDir))
+        {
+            string dirName = Path.GetFileName(directory);
+            string targetSubDir = Path.Combine(targetDir, dirName);
+            CopyDirectoryWithManifest(directory, targetSubDir, gamePath, installedFiles);
+        }
+    }
+
+    private async Task UninstallFusionFixAsync()
+    {
+        if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath) || !Directory.Exists(ActiveProfile.GamePath))
+        {
+            MessageBox.Show("Please select a valid game directory first.", "Cannot Uninstall", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        string gamePath = ActiveProfile.GamePath;
+        string manifestPath = Path.Combine(_profilesDir, $"{ActiveProfile.Id}_tools_manifest.json");
+        if (!File.Exists(manifestPath))
+        {
+            // Fallback: if manifest doesn't exist, we delete default known FusionFix files
+            var result = MessageBox.Show(
+                "No installation manifest was found for this profile. Would you like to perform a default uninstall of known FusionFix files?",
+                "Manifest Not Found",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.No) return;
+
+            IsBusy = true;
+            StatusText = "Performing default FusionFix uninstall...";
+            
+            var defaultFiles = new[]
+            {
+                "dinput8.dll", "xlive.dll", "dsound.dll",
+                "plugins/FusionOverloader.asi", "plugins/FusionOverloader.ini",
+                "plugins/GTAIV.FusionOverloader.asi", "plugins/GTAIV.FusionOverloader.ini",
+                "plugins/GTAIV.FusionFix.asi", "plugins/GTAIV.FusionFix.ini",
+                "plugins/FusionFix.asi", "plugins/FusionFix.ini",
+                "d3d9.dll", "dxgi.dll"
+            };
+
+            foreach (var relPath in defaultFiles)
+            {
+                string fullPath = Path.Combine(gamePath, relPath);
+                if (File.Exists(fullPath))
+                {
+                    try { File.Delete(fullPath); } catch { }
+                }
+            }
+
+            IsBusy = false;
+            StatusText = "Default uninstall completed.";
+            MessageBox.Show("Default uninstallation completed. Key loader files were removed.", "Uninstall Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            UpdateConflictsAndWatchdog();
+            return;
+        }
+
+        var confirm = MessageBox.Show(
+            "Are you sure you want to uninstall FusionFix from the game directory?\n\nThis will remove all installed loaders, hooks, and DXVK dlls.",
+            "Confirm Uninstall",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (confirm == MessageBoxResult.No) return;
+
+        IsBusy = true;
+        StatusText = "Uninstalling FusionFix files...";
+
+        try
+        {
+            string json = await File.ReadAllTextAsync(manifestPath);
+            var installedFiles = JsonSerializer.Deserialize<System.Collections.Generic.List<string>>(json);
+            if (installedFiles != null)
+            {
+                // Delete files
+                foreach (var relPath in installedFiles)
+                {
+                    string fullPath = Path.Combine(gamePath, relPath);
+                    if (File.Exists(fullPath))
+                    {
+                        try { File.Delete(fullPath); } catch { }
+                    }
+                }
+
+                // Delete empty directories created by installation (reverse order)
+                var dirsToCheck = installedFiles
+                    .Select(f => Path.GetDirectoryName(Path.Combine(gamePath, f)))
+                    .Where(d => d != null && d != gamePath && d.StartsWith(gamePath))
+                    .Distinct()
+                    .OrderByDescending(d => d!.Length)
+                    .ToList();
+
+                foreach (var dir in dirsToCheck)
+                {
+                    if (dir != null && Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any())
+                    {
+                        try { Directory.Delete(dir); } catch { }
+                    }
+                }
+            }
+
+            File.Delete(manifestPath);
+            StatusText = "FusionFix uninstalled successfully.";
+            MessageBox.Show("FusionFix and its components have been uninstalled successfully from the game directory.", "Uninstall Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Uninstallation failed: {ex.Message}";
+            MessageBox.Show($"Uninstallation failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsBusy = false;
+            UpdateConflictsAndWatchdog();
+        }
     }
 }
