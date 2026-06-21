@@ -118,6 +118,83 @@
                     </StackPanel>
                 </ui:Card>
 
+                <!-- Backend Loaders Status Card -->
+                <ui:Card Padding="15" Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock Text="Loader &amp; Hook Status" FontSize="16" FontWeight="Bold" Foreground="White" Margin="0,0,0,15" />
+
+                        <!-- Ultimate ASI Loader -->
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Ultimate ASI Loader" FontSize="13" FontWeight="SemiBold" Foreground="White" />
+                                <TextBlock Text="dinput8.dll / xlive.dll / dsound.dll" FontSize="11" Foreground="#FFAAAAAA" />
+                            </StackPanel>
+                            <Border Grid.Column="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
+                                    Background="{Binding BackendStatus.AsiLoaderBrush}">
+                                <TextBlock Text="{Binding BackendStatus.AsiLoaderText}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                            </Border>
+                        </Grid>
+
+                        <Separator Height="1" Background="#FF2D2D2D" Margin="0,5" />
+
+                        <!-- FusionOverloader -->
+                        <Grid Margin="0,8,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="FusionOverloader" FontSize="13" FontWeight="SemiBold" Foreground="White" />
+                                <TextBlock Text="plugins/FusionOverloader.asi" FontSize="11" Foreground="#FFAAAAAA" />
+                            </StackPanel>
+                            <Border Grid.Column="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
+                                    Background="{Binding BackendStatus.OverloaderBrush}">
+                                <TextBlock Text="{Binding BackendStatus.OverloaderText}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                            </Border>
+                        </Grid>
+
+                        <Separator Height="1" Background="#FF2D2D2D" Margin="0,5" />
+
+                        <!-- FusionFix -->
+                        <Grid Margin="0,8,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="FusionFix" FontSize="13" FontWeight="SemiBold" Foreground="White" />
+                                <TextBlock Text="plugins/GTAIV.FusionFix.asi" FontSize="11" Foreground="#FFAAAAAA" />
+                            </StackPanel>
+                            <Border Grid.Column="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
+                                    Background="{Binding BackendStatus.FusionFixBrush}">
+                                <TextBlock Text="{Binding BackendStatus.FusionFixText}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                            </Border>
+                        </Grid>
+
+                        <Separator Height="1" Background="#FF2D2D2D" Margin="0,5" />
+
+                        <!-- ScriptHook -->
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="ScriptHook" FontSize="13" FontWeight="SemiBold" Foreground="White" />
+                                <TextBlock Text="ScriptHook.dll / ScriptHookDotNet" FontSize="11" Foreground="#FFAAAAAA" />
+                            </StackPanel>
+                            <Border Grid.Column="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
+                                    Background="{Binding BackendStatus.ScriptHookBrush}">
+                                <TextBlock Text="{Binding BackendStatus.ScriptHookText}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+                </ui:Card>
+
                 <!-- Watchdog Mismatch Alert Card -->
                 <Border x:Name="WatchdogWarningCard" 
                         CornerRadius="4" 

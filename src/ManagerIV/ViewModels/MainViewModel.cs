@@ -38,6 +38,7 @@ public class MainViewModel : ViewModelBase
     private bool _hasWatchdogWarning;
     private string _statusText = "Ready";
     private bool _isBusy;
+    private BackendStatusViewModel _backendStatus = new();
 
     // Properties
     public ObservableCollection<Profile> Profiles
@@ -99,6 +100,12 @@ public class MainViewModel : ViewModelBase
     {
         get => _isBusy;
         set => SetProperty(ref _isBusy, value);
+    }
+
+    public BackendStatusViewModel BackendStatus
+    {
+        get => _backendStatus;
+        set => SetProperty(ref _backendStatus, value);
     }
 
     // Commands
@@ -321,6 +328,8 @@ public class MainViewModel : ViewModelBase
     {
         if (ActiveProfile == null) return;
 
+        UpdateBackendStatus();
+
         // Build sorted enabled mods list
         var enabledVms = LibraryMods.Where(m => m.IsEnabled).ToList();
         var enabledModels = enabledVms.Select(v => v.Model).ToList();
@@ -356,6 +365,41 @@ public class MainViewModel : ViewModelBase
 
         // Trigger Watchdog check in background
         _ = RunWatchdogCheckAsync();
+    }
+
+    private void UpdateBackendStatus()
+    {
+        if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath) || !Directory.Exists(ActiveProfile.GamePath))
+        {
+            BackendStatus = new BackendStatusViewModel();
+            return;
+        }
+
+        string gamePath = ActiveProfile.GamePath;
+        bool asiLoaderExists = File.Exists(Path.Combine(gamePath, "dinput8.dll")) || 
+                               File.Exists(Path.Combine(gamePath, "xlive.dll")) || 
+                               File.Exists(Path.Combine(gamePath, "dsound.dll"));
+
+        string pluginsDir = Path.Combine(gamePath, "plugins");
+        bool overloaderExists = false;
+        bool fusionFixExists = false;
+        if (Directory.Exists(pluginsDir))
+        {
+            overloaderExists = File.Exists(Path.Combine(pluginsDir, "FusionOverloader.asi")) ||
+                               File.Exists(Path.Combine(pluginsDir, "GTAIV.FusionOverloader.asi")) ||
+                               Directory.GetFiles(pluginsDir, "*Overloader*.asi").Any();
+
+            fusionFixExists = File.Exists(Path.Combine(pluginsDir, "GTAIV.FusionFix.asi")) ||
+                             File.Exists(Path.Combine(pluginsDir, "FusionFix.asi")) ||
+                             Directory.GetFiles(pluginsDir, "*FusionFix*.asi").Any();
+        }
+
+        bool scriptHookExists = File.Exists(Path.Combine(gamePath, "ScriptHook.dll")) ||
+                                File.Exists(Path.Combine(gamePath, "ScriptHookDotNet.dll")) ||
+                                (Directory.Exists(pluginsDir) && Directory.GetFiles(pluginsDir, "*ScriptHook*.dll").Any()) ||
+                                (Directory.Exists(Path.Combine(gamePath, "scripts")) && Directory.GetFiles(Path.Combine(gamePath, "scripts"), "*ScriptHook*.dll").Any());
+
+        BackendStatus = new BackendStatusViewModel(asiLoaderExists, overloaderExists, fusionFixExists, scriptHookExists);
     }
 
     private async Task RunWatchdogCheckAsync()

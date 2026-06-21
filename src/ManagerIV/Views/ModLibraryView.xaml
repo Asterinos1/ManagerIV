@@ -69,7 +69,7 @@
                                     <!-- Priority Indicator and Toggle Checkbox -->
                                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Priority, StringFormat='\{0:D3\}'}" FontSize="12" Foreground="#FF888888" Width="30" VerticalAlignment="Center" TextAlignment="Center" />
-                                        <CheckBox IsChecked="{Binding IsEnabled}" Command="{Binding DataContext.ToggleModEnabledCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Margin="10,0,10,0" VerticalAlignment="Center" />
+                                        <CheckBox IsChecked="{Binding IsEnabled, Mode=OneWay}" Command="{Binding DataContext.ToggleModEnabledCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Margin="10,0,10,0" VerticalAlignment="Center" />
                                     </StackPanel>
 
                                     <!-- Mod Name & Version -->
