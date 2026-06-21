@@ -81,22 +81,7 @@
                         </StackPanel>
                     </ui:Card>
 
-                    <!-- App Theme Settings Card -->
-                    <ui:Card Padding="15" Margin="0,15,0,0">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="Dark Mode Theme" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                <TextBlock Text="Toggle between light and dark styling." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" />
-                            </StackPanel>
-                            <ui:ToggleSwitch Grid.Column="1" 
-                                             IsChecked="{Binding IsDarkTheme, Mode=TwoWay}" 
-                                             VerticalAlignment="Center" />
-                        </Grid>
-                    </ui:Card>
+
                 </StackPanel>
 
                 <!-- Active Details Card -->
