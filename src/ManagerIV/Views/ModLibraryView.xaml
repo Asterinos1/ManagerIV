@@ -194,13 +194,28 @@
                             </StackPanel>
                         </ScrollViewer>
 
-                        <!-- Save Button at the bottom -->
-                        <ui:Button Grid.Row="1" 
-                                   Content="Save Details" 
-                                   Icon="{ui:SymbolIcon Save24}" 
-                                   Command="{Binding DataContext.SaveModDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                   Appearance="Primary" 
-                                   HorizontalAlignment="Right" />
+                        <!-- Action Buttons at the bottom -->
+                        <Grid Grid.Row="1" Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <ui:Button Grid.Column="0"
+                                       Content="Delete Mod" 
+                                       Icon="{ui:SymbolIcon Delete24}" 
+                                       Command="{Binding DataContext.DeleteModCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                       CommandParameter="{Binding}"
+                                       Appearance="Danger" 
+                                       HorizontalAlignment="Left" />
+                                       
+                            <ui:Button Grid.Column="1" 
+                                       Content="Save Details" 
+                                       Icon="{ui:SymbolIcon Save24}" 
+                                       Command="{Binding DataContext.SaveModDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                       Appearance="Primary" 
+                                       HorizontalAlignment="Right" />
+                        </Grid>
                     </Grid>
                 </Grid>
             </ui:Card>

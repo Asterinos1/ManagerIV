@@ -136,6 +136,7 @@ public class MainViewModel : ViewModelBase
     public ICommand SaveModDetailsCommand { get; }
     public ICommand InstallFusionFixCommand { get; }
     public ICommand UninstallFusionFixCommand { get; }
+    public ICommand DeleteModCommand { get; }
 
     public MainViewModel()
     {
@@ -175,6 +176,7 @@ public class MainViewModel : ViewModelBase
         SaveModDetailsCommand = new RelayCommand(SaveModDetails, () => !IsBusy);
         InstallFusionFixCommand = new RelayCommand(async () => await InstallFusionFixAsync(), () => !IsBusy && ActiveProfile != null);
         UninstallFusionFixCommand = new RelayCommand(async () => await UninstallFusionFixAsync(), () => !IsBusy && ActiveProfile != null);
+        DeleteModCommand = new RelayCommand<ModViewModel>(async (mod) => await DeleteModAsync(mod), (mod) => !IsBusy && mod != null);
 
         // Load data
         LoadLibrary();
@@ -236,6 +238,8 @@ public class MainViewModel : ViewModelBase
             StatusText = $"Failed to save library manifest: {ex.Message}";
         }
     }
+
+
 
     private void LoadProfiles()
     {
@@ -545,6 +549,10 @@ public class MainViewModel : ViewModelBase
             // Extract with zip-slip protection
             await _archiveHandler.ExtractAsync(archivePath, extractionTarget);
 
+            // Promote mod root if it is nested inside subfolders
+            StatusText = "Optimizing directory structure...";
+            await Task.Run(() => _archiveHandler.PromoteModRoot(extractionTarget));
+
             StatusText = "Analyzing compatibility and metadata...";
             
             // Scan folder
@@ -847,6 +855,91 @@ public class MainViewModel : ViewModelBase
         SaveLibrary();
         StatusText = "Mod details saved successfully.";
         MessageBox.Show("Mod details saved successfully to the library manifest.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private async Task DeleteModAsync(ModViewModel? modVm)
+    {
+        if (modVm == null) return;
+
+        var result = MessageBox.Show(
+            $"Are you sure you want to permanently delete the mod '{modVm.Name}' from the library?\n\nThis will remove it from all profiles and delete its files from your disk.",
+            "Delete Mod",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result == MessageBoxResult.No)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        StatusText = $"Deleting mod '{modVm.Name}'...";
+
+        try
+        {
+            // 1. Physically undeploy it from the game directory if game path is configured
+            if (ActiveProfile != null && !string.IsNullOrEmpty(ActiveProfile.GamePath) && Directory.Exists(ActiveProfile.GamePath))
+            {
+                var adapter = new CompleteEditionAdapter(ActiveProfile.GamePath, _linker);
+                await adapter.UndeployAsync(modVm.Model);
+            }
+
+            // 2. Remove the mod from all profiles
+            var profilesList = Profiles.ToList();
+            foreach (var profile in profilesList)
+            {
+                bool profileChanged = false;
+                var enabledIds = profile.EnabledModIds.ToList();
+                if (enabledIds.Contains(modVm.Id))
+                {
+                    enabledIds.Remove(modVm.Id);
+                    profileChanged = true;
+                }
+
+                var loadOrderEntries = profile.LoadOrder.Entries.Where(e => e.ModId != modVm.Id).ToList();
+                if (loadOrderEntries.Count != profile.LoadOrder.Entries.Count)
+                {
+                    profileChanged = true;
+                }
+
+                if (profileChanged)
+                {
+                    var updatedProfile = profile with {
+                        EnabledModIds = enabledIds,
+                        LoadOrder = new LoadOrderModel(loadOrderEntries)
+                    };
+                    SaveProfileState(updatedProfile);
+                }
+            }
+
+            // 3. Remove from library list and save library manifest
+            App.Current.Dispatcher.Invoke(() =>
+            {
+                LibraryMods.Remove(modVm);
+            });
+            SaveLibrary();
+
+            // 4. Delete the physical directory
+            if (Directory.Exists(modVm.Model.LibraryPath))
+            {
+                await Task.Run(() => Directory.Delete(modVm.Model.LibraryPath, true));
+            }
+
+            // 5. Refresh active profile links list
+            RefreshActiveModsList();
+
+            StatusText = $"Deleted mod '{modVm.Name}' successfully.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Failed to delete mod: {ex.Message}";
+            MessageBox.Show($"Failed to delete mod: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsBusy = false;
+            UpdateConflictsAndWatchdog();
+        }
     }
 
     private void ApplyTheme(bool isDark)

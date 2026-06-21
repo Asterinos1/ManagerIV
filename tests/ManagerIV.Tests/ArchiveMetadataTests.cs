@@ -66,6 +66,24 @@ public class ArchiveMetadataTests : IDisposable
         }
     }
 
+    private void CreateNestedTestZip(string filePath)
+    {
+        using var fs = new FileStream(filePath, FileMode.Create);
+        using var zip = new ZipArchive(fs, ZipArchiveMode.Create);
+
+        var imgEntry = zip.CreateEntry("MyVehiclesMod/pc/models/cdimages/vehicles.img");
+        using (var writer = new StreamWriter(imgEntry.Open()))
+        {
+            writer.Write("dummy img data");
+        }
+
+        var readmeEntry = zip.CreateEntry("MyVehiclesMod/readme.txt");
+        using (var writer = new StreamWriter(readmeEntry.Open()))
+        {
+            writer.Write("readme contents");
+        }
+    }
+
     [Fact]
     public async Task TestSafeExtractionAndMetadataParsing()
     {
@@ -124,6 +142,28 @@ public class ArchiveMetadataTests : IDisposable
 
         Assert.Equal(expectedName, parsedName);
         Assert.Equal(expectedVersion, parsedVersion);
+    }
+
+    [Fact]
+    public async Task TestModRootPromotion()
+    {
+        // Arrange
+        string nestedZipPath = Path.Combine(_testBaseDir, "nested_mod.zip");
+        string extractionDir = Path.Combine(_testBaseDir, "NestedExtracted");
+        CreateNestedTestZip(nestedZipPath);
+
+        // Act
+        await _archiveHandler.ExtractAsync(nestedZipPath, extractionDir);
+        _archiveHandler.PromoteModRoot(extractionDir);
+
+        // Assert
+        string nestedFolder = Path.Combine(extractionDir, "MyVehiclesMod");
+        string promotedImg = Path.Combine(extractionDir, "pc", "models", "cdimages", "vehicles.img");
+        string promotedReadme = Path.Combine(extractionDir, "readme.txt");
+
+        Assert.False(Directory.Exists(nestedFolder), "The original nested folder should be removed.");
+        Assert.True(File.Exists(promotedImg), "The image file should be promoted to the root.");
+        Assert.True(File.Exists(promotedReadme), "The readme file should be promoted to the root.");
     }
 
     public void Dispose()
