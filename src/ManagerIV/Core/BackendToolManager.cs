@@ -41,6 +41,12 @@ public class BackendToolManager
         _httpClient = new HttpClient();
     }
 
+    public BackendToolManager(string cacheDir, HttpClient httpClient)
+    {
+        _cacheDir = cacheDir ?? throw new ArgumentNullException(nameof(cacheDir));
+        _githubClient = new GitHubClient(new ProductHeaderValue("ManagerIV"));
+        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+    }
     /// <summary>
     /// Queries the latest release of a GitHub repository, caching the metadata locally.
     /// </summary>
@@ -119,12 +125,26 @@ public class BackendToolManager
         using (var response = await _httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead))
         {
             response.EnsureSuccessStatusCode();
+
+            // Validate Content-Type to reject HTML error pages or redirects
+            var contentType = response.Content.Headers.ContentType;
+            if (contentType != null && (contentType.MediaType == "text/html" || contentType.MediaType == "application/xhtml+xml"))
+            {
+                string snippet = "";
+                try
+                {
+                    snippet = await response.Content.ReadAsStringAsync();
+                    if (snippet.Length > 300) snippet = snippet.Substring(0, 300) + "...";
+                }
+                catch { }
+                throw new InvalidDataException($"Expected binary/text payload but received an HTML response. Possible server error or network login page redirect. Response snippet: {snippet}");
+            }
+
             using (var fs = new FileStream(destinationPath, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.None))
             {
                 await response.Content.CopyToAsync(fs);
             }
         }
-
         // Validate checksum
         if (!string.IsNullOrEmpty(expectedSha256))
         {
@@ -142,7 +162,7 @@ public class BackendToolManager
         return destinationPath;
     }
 
-    private async Task<string> ComputeSha256Async(string filePath)
+    public async Task<string> ComputeSha256Async(string filePath)
     {
         using var sha256 = SHA256.Create();
         using var stream = new FileStream(filePath, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read, 4096, useAsync: true);

@@ -103,6 +103,8 @@ public record ConflictState(
 /// <param name="EnabledModIds">IDs of the mods enabled in this profile.</param>
 /// <param name="LoadOrder">Unified load order model.</param>
 /// <param name="ConflictState">Conflict detection state for this profile.</param>
+/// <param name="LastKnownVersion">Cached version profile of the game executable.</param>
+/// <param name="GpuVramMb">The user's GPU VRAM limit in Megabytes.</param>
 public record Profile(
     string Id,
     string Name,
@@ -111,5 +113,29 @@ public record Profile(
     IReadOnlyList<string> EnabledModIds,
     LoadOrderModel LoadOrder,
     ConflictState ConflictState,
-    GameVersionProfile? LastKnownVersion = null
+    GameVersionProfile? LastKnownVersion = null,
+    int GpuVramMb = 2048
+);
+
+/// <summary>
+/// Records a single file deployed by a backend tool.
+/// </summary>
+public record InstalledToolFile(
+    string SourceTool,
+    string InstalledPath,
+    string Sha256
+);
+
+/// <summary>
+/// Represents a GTA IV save game profile directory state.
+/// </summary>
+/// <param name="FolderName">The physical folder name, e.g., "975EF3C9" or "975EF3C9_LCPDFR".</param>
+/// <param name="DisplayName">The user-friendly display name.</param>
+/// <param name="IsActive">Whether this save profile is currently the active one loaded by the game.</param>
+/// <param name="FullPath">The absolute physical path to the save profile directory.</param>
+public record SaveProfile(
+    string FolderName,
+    string DisplayName,
+    bool IsActive,
+    string FullPath
 );

@@ -88,7 +88,15 @@
                     </StackPanel>
                 </ListBoxItem>
 
-                <!-- Nav Item 3: Settings -->
+                <!-- Nav Item 3: FusionFix Config -->
+                <ListBoxItem>
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="Options24" Filled="True" Foreground="#FF107C41" />
+                        <TextBlock Text="FusionFix Config" FontSize="14" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    </StackPanel>
+                </ListBoxItem>
+
+                <!-- Nav Item 4: Settings -->
                 <ListBoxItem>
                     <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="Wrench24" Filled="True" Foreground="#FF107C41" />
@@ -140,6 +148,9 @@
             </TabItem>
             <TabItem>
                 <views:ProfileSwitcherView DataContext="{Binding}" />
+            </TabItem>
+            <TabItem>
+                <views:FusionFixConfigView DataContext="{Binding}" />
             </TabItem>
             <TabItem>
                 <views:SettingsView DataContext="{Binding}" />

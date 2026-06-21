@@ -18,6 +18,7 @@
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -32,15 +33,134 @@
                 <TextBlock Text="Drag and drop mod archives (.zip, .rar, .7z) here to import them." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0" />
             </StackPanel>
             
-            <ui:Button Grid.Column="1" 
-                       Icon="{ui:SymbolIcon FolderAdd24}" 
-                       Content="Import Archive" 
-                       Command="{Binding ImportModArchiveCommand}"
-                       VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:Button Icon="{ui:SymbolIcon Delete24}" 
+                           Content="Clear Library" 
+                           Command="{Binding ClearLibraryCommand}"
+                           Appearance="Danger"
+                           Margin="0,0,10,0" />
+                <ui:Button Icon="{ui:SymbolIcon FolderAdd24}" 
+                           Content="Import Archive" 
+                           Command="{Binding ImportModArchiveCommand}" />
+            </StackPanel>
         </Grid>
 
+        <!-- .img Archives Limit Counter -->
+        <ui:Card Grid.Row="1" Margin="0,0,0,15" Padding="15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                
+                <!-- Top row: Info and Current count -->
+                <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="Database24" Filled="True" Margin="0,0,8,0" VerticalAlignment="Center">
+                            <ui:SymbolIcon.Style>
+                                <Style TargetType="ui:SymbolIcon">
+                                    <Setter Property="Foreground" Value="#FF107C41" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ActiveImgArchiveSeverity}" Value="Warning">
+                                            <Setter Property="Foreground" Value="#FFD83B01" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding ActiveImgArchiveSeverity}" Value="Danger">
+                                            <Setter Property="Foreground" Value="#FFE81123" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:SymbolIcon.Style>
+                        </ui:SymbolIcon>
+                        <TextBlock Text="Active Custom .IMG Archives:" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock Text=" " />
+                        <TextBlock Text="{Binding ActiveImgArchiveStatus}" FontSize="13" FontWeight="Bold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#FF107C41" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ActiveImgArchiveSeverity}" Value="Warning">
+                                            <Setter Property="Foreground" Value="#FFD83B01" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding ActiveImgArchiveSeverity}" Value="Danger">
+                                            <Setter Property="Foreground" Value="#FFE81123" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                    
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding ActiveImgArchiveCount}" FontSize="15" FontWeight="Black" />
+                        <TextBlock Text=" / 50 limit" FontSize="11" VerticalAlignment="Bottom" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="2,0,0,2" />
+                    </StackPanel>
+                </Grid>
+                
+                <!-- Progress Bar -->
+                <ProgressBar Grid.Row="1" Height="8" Minimum="0" Maximum="50" Value="{Binding ActiveImgArchiveCount}">
+                    <ProgressBar.Style>
+                        <Style TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
+                            <Setter Property="Foreground" Value="#FF107C41" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ActiveImgArchiveSeverity}" Value="Warning">
+                                    <Setter Property="Foreground" Value="#FFD83B01" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ActiveImgArchiveSeverity}" Value="Danger">
+                                    <Setter Property="Foreground" Value="#FFE81123" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ProgressBar.Style>
+                </ProgressBar>
+                
+                <!-- Warning description box (visible when warning or danger) -->
+                <Border Grid.Row="2" Margin="0,10,0,0" Padding="12" CornerRadius="6" BorderThickness="1" Visibility="{Binding ActiveImgArchiveHasWarning, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="#10FF107C" />
+                            <Setter Property="BorderBrush" Value="#FF107C41" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ActiveImgArchiveSeverity}" Value="Warning">
+                                    <Setter Property="Background" Value="#22D83B01" />
+                                    <Setter Property="BorderBrush" Value="#FFD83B01" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ActiveImgArchiveSeverity}" Value="Danger">
+                                    <Setter Property="Background" Value="#22E81123" />
+                                    <Setter Property="BorderBrush" Value="#FFE81123" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel>
+                        <TextBlock Text="{Binding ActiveImgArchiveWarningTitle}" FontWeight="Bold" Margin="0,0,0,4">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#FF107C41" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ActiveImgArchiveSeverity}" Value="Warning">
+                                            <Setter Property="Foreground" Value="#FFD83B01" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding ActiveImgArchiveSeverity}" Value="Danger">
+                                            <Setter Property="Foreground" Value="#FFE81123" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Text="{Binding ActiveImgArchiveWarningDescription}" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </ui:Card>
+
         <!-- Library List with Drag-and-Drop Reordering -->
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="3*" />
                 <ColumnDefinition Width="2*" />

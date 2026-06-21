@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using ManagerIV.Core;
 
 namespace ManagerIV.ViewModels;
@@ -18,7 +19,7 @@ public class MainViewModel : ViewModelBase
     private readonly ProfileManager _profileManager;
     private readonly LoadOrderService _loadOrderService;
     private readonly ConflictDetector _conflictDetector;
-    private readonly NativeFileSystemLinker _linker;
+    private readonly IFileSystemLinker _linker;
     private readonly BackupRollbackService _rollbackService;
     private readonly UpdateWatchdog _watchdog;
     private readonly BackendToolManager _backendToolManager;
@@ -42,6 +43,16 @@ public class MainViewModel : ViewModelBase
     private BackendStatusViewModel _backendStatus = new();
     private bool _isDarkTheme = true;
 
+    // Save Profiles fields
+    private SaveProfileManager _saveProfileManager;
+    private string _gtaSaveProfilesPath = "";
+    private ObservableCollection<string> _baseProfileIds = new();
+    private string? _selectedBaseProfileId;
+    private ObservableCollection<SaveProfile> _saveProfiles = new();
+    private SaveProfile? _selectedSaveProfile;
+    private string _newSaveProfileName = "";
+    private string _renameActiveSaveTo = "";
+
     // Properties
     public ObservableCollection<Profile> Profiles
     {
@@ -58,6 +69,8 @@ public class MainViewModel : ViewModelBase
             {
                 GameDir = value.GamePath;
                 RefreshActiveModsList();
+                OnPropertyChanged(nameof(GpuVramMb));
+                LoadFusionFixConfig();
             }
         }
     }
@@ -72,6 +85,24 @@ public class MainViewModel : ViewModelBase
     {
         get => _gameDir;
         set => SetProperty(ref _gameDir, value);
+    }
+
+    public int GpuVramMb
+    {
+        get
+        {
+            if (ActiveProfile == null) return 2048;
+            return ActiveProfile.GpuVramMb == 0 ? 2048 : ActiveProfile.GpuVramMb;
+        }
+        set
+        {
+            if (ActiveProfile != null && GpuVramMb != value)
+            {
+                var updatedProfile = ActiveProfile with { GpuVramMb = value };
+                SaveProfileState(updatedProfile);
+                OnPropertyChanged(nameof(GpuVramMb));
+            }
+        }
     }
 
     public string WatchdogWarning
@@ -101,7 +132,13 @@ public class MainViewModel : ViewModelBase
     public bool IsBusy
     {
         get => _isBusy;
-        set => SetProperty(ref _isBusy, value);
+        set
+        {
+            if (SetProperty(ref _isBusy, value))
+            {
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
     }
 
     public BackendStatusViewModel BackendStatus
@@ -123,6 +160,127 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    public string GtaSaveProfilesPath
+    {
+        get => _gtaSaveProfilesPath;
+        set
+        {
+            if (SetProperty(ref _gtaSaveProfilesPath, value))
+            {
+                _saveProfileManager = new SaveProfileManager(value);
+                LoadSaveProfilesData();
+                SaveSettings();
+            }
+        }
+    }
+
+    public ObservableCollection<string> BaseProfileIds
+    {
+        get => _baseProfileIds;
+        set => SetProperty(ref _baseProfileIds, value);
+    }
+
+    public string? SelectedBaseProfileId
+    {
+        get => _selectedBaseProfileId;
+        set
+        {
+            if (SetProperty(ref _selectedBaseProfileId, value))
+            {
+                RefreshSaveProfilesList();
+            }
+        }
+    }
+
+    public ObservableCollection<SaveProfile> SaveProfiles
+    {
+        get => _saveProfiles;
+        set => SetProperty(ref _saveProfiles, value);
+    }
+
+    public SaveProfile? SelectedSaveProfile
+    {
+        get => _selectedSaveProfile;
+        set => SetProperty(ref _selectedSaveProfile, value);
+    }
+
+    public string NewSaveProfileName
+    {
+        get => _newSaveProfileName;
+        set => SetProperty(ref _newSaveProfileName, value);
+    }
+
+    public string RenameActiveSaveTo
+    {
+        get => _renameActiveSaveTo;
+        set => SetProperty(ref _renameActiveSaveTo, value);
+    }
+
+    private int _selectedIndex;
+    public int SelectedIndex
+    {
+        get => _selectedIndex;
+        set => SetProperty(ref _selectedIndex, value);
+    }
+
+    private int _activeImgArchiveCount;
+    private string _activeImgArchiveStatus = "Safe";
+    private string _activeImgArchiveSeverity = "Safe";
+    private string _activeImgArchiveWarningTitle = "";
+    private string _activeImgArchiveWarningDescription = "";
+    private bool _activeImgArchiveHasWarning;
+
+    public int ActiveImgArchiveCount
+    {
+        get => _activeImgArchiveCount;
+        set => SetProperty(ref _activeImgArchiveCount, value);
+    }
+
+    public string ActiveImgArchiveStatus
+    {
+        get => _activeImgArchiveStatus;
+        set => SetProperty(ref _activeImgArchiveStatus, value);
+    }
+
+    public string ActiveImgArchiveSeverity
+    {
+        get => _activeImgArchiveSeverity;
+        set => SetProperty(ref _activeImgArchiveSeverity, value);
+    }
+
+    public string ActiveImgArchiveWarningTitle
+    {
+        get => _activeImgArchiveWarningTitle;
+        set => SetProperty(ref _activeImgArchiveWarningTitle, value);
+    }
+
+    public string ActiveImgArchiveWarningDescription
+    {
+        get => _activeImgArchiveWarningDescription;
+        set => SetProperty(ref _activeImgArchiveWarningDescription, value);
+    }
+
+    public bool ActiveImgArchiveHasWarning
+    {
+        get => _activeImgArchiveHasWarning;
+        set => SetProperty(ref _activeImgArchiveHasWarning, value);
+    }
+
+    private FusionFixConfig _fusionFixSettings = new();
+    private bool _isFusionFixConfigAvailable;
+
+    public FusionFixConfig FusionFixSettings
+    {
+        get => _fusionFixSettings;
+        set => SetProperty(ref _fusionFixSettings, value);
+    }
+
+    public bool IsFusionFixConfigAvailable
+    {
+        get => _isFusionFixConfigAvailable;
+        set => SetProperty(ref _isFusionFixConfigAvailable, value);
+    }
+
     // Commands
     public ICommand ApplyDeploymentCommand { get; }
     public ICommand SwitchProfileCommand { get; }
@@ -136,9 +294,26 @@ public class MainViewModel : ViewModelBase
     public ICommand SaveModDetailsCommand { get; }
     public ICommand InstallFusionFixCommand { get; }
     public ICommand UninstallFusionFixCommand { get; }
+    public ICommand InstallAsiLoaderCommand { get; }
+    public ICommand UninstallAsiLoaderCommand { get; }
+    public ICommand InstallDxvkCommand { get; }
+    public ICommand UninstallDxvkCommand { get; }
     public ICommand DeleteModCommand { get; }
+    public ICommand SetVramPresetCommand { get; }
+    public ICommand ClearLibraryCommand { get; }
+    public ICommand SaveFusionFixConfigCommand { get; }
+    public ICommand BrowseSaveProfilesPathCommand { get; }
+    public ICommand ActivateSaveProfileCommand { get; }
+    public ICommand CreateSaveProfileCommand { get; }
+    public ICommand RenameSaveProfileCommand { get; }
+    public ICommand DeleteSaveProfileCommand { get; }
+    public ICommand RefreshSaveProfilesCommand { get; }
 
-    public MainViewModel()
+    public MainViewModel() : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ManagerIV"))
+    {
+    }
+
+    public MainViewModel(string baseDir, IFileSystemLinker? linker = null)
     {
         // Core initialization
         _archiveHandler = new ArchiveHandler();
@@ -146,11 +321,11 @@ public class MainViewModel : ViewModelBase
         _profileManager = new ProfileManager();
         _loadOrderService = new LoadOrderService();
         _conflictDetector = new ConflictDetector();
-        _linker = new NativeFileSystemLinker();
+        _linker = linker ?? new NativeFileSystemLinker();
         _watchdog = new UpdateWatchdog();
 
         // Establish paths
-        _baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ManagerIV");
+        _baseDir = baseDir;
         _backendToolManager = new BackendToolManager(Path.Combine(_baseDir, "Cache"));
         _libraryDir = Path.Combine(_baseDir, "Library");
         _profilesDir = Path.Combine(_baseDir, "Profiles");
@@ -176,7 +351,21 @@ public class MainViewModel : ViewModelBase
         SaveModDetailsCommand = new RelayCommand(SaveModDetails, () => !IsBusy);
         InstallFusionFixCommand = new RelayCommand(async () => await InstallFusionFixAsync(), () => !IsBusy && ActiveProfile != null);
         UninstallFusionFixCommand = new RelayCommand(async () => await UninstallFusionFixAsync(), () => !IsBusy && ActiveProfile != null);
+        InstallAsiLoaderCommand = new RelayCommand(async () => await InstallAsiLoaderAsync(), () => !IsBusy && ActiveProfile != null);
+        UninstallAsiLoaderCommand = new RelayCommand(async () => await UninstallAsiLoaderAsync(), () => !IsBusy && ActiveProfile != null);
+        InstallDxvkCommand = new RelayCommand(async () => await InstallDxvkAsync(), () => !IsBusy && ActiveProfile != null);
+        UninstallDxvkCommand = new RelayCommand(async () => await UninstallDxvkAsync(), () => !IsBusy && ActiveProfile != null);
         DeleteModCommand = new RelayCommand<ModViewModel>(async (mod) => await DeleteModAsync(mod), (mod) => !IsBusy && mod != null);
+        SetVramPresetCommand = new RelayCommand<object>(SetVramPreset);
+        ClearLibraryCommand = new RelayCommand(async () => await ClearLibraryAsync(), () => !IsBusy && LibraryMods.Any());
+        SaveFusionFixConfigCommand = new RelayCommand(SaveFusionFixConfig, () => IsFusionFixConfigAvailable && !IsBusy);
+
+        BrowseSaveProfilesPathCommand = new RelayCommand(BrowseSaveProfilesPath);
+        ActivateSaveProfileCommand = new RelayCommand<object>(ActivateSaveProfile);
+        CreateSaveProfileCommand = new RelayCommand(CreateSaveProfile);
+        RenameSaveProfileCommand = new RelayCommand<string>(RenameSaveProfile);
+        DeleteSaveProfileCommand = new RelayCommand(DeleteSaveProfile);
+        RefreshSaveProfilesCommand = new RelayCommand(RefreshSaveProfilesList);
 
         // Load data
         LoadLibrary();
@@ -193,11 +382,15 @@ public class MainViewModel : ViewModelBase
                 if (settings != null)
                 {
                     _isDarkTheme = settings.IsDarkTheme;
+                    _gtaSaveProfilesPath = settings.GtaSaveProfilesPath ?? "";
                 }
             }
             catch { }
         }
         ApplyTheme(_isDarkTheme);
+
+        _saveProfileManager = new SaveProfileManager(_gtaSaveProfilesPath);
+        LoadSaveProfilesData();
     }
 
     private void LoadLibrary()
@@ -370,6 +563,7 @@ public class MainViewModel : ViewModelBase
         if (ActiveProfile == null) return;
 
         UpdateBackendStatus();
+        LoadFusionFixConfig();
 
         // Build sorted enabled mods list
         var enabledVms = LibraryMods.Where(m => m.IsEnabled).ToList();
@@ -404,6 +598,43 @@ public class MainViewModel : ViewModelBase
             }
         }
 
+        // Calculate custom .img archive count
+        int imgCount = 0;
+        foreach (var modVm in LibraryMods)
+        {
+            if (modVm.IsEnabled && modVm.Target == DeployTarget.Update)
+            {
+                imgCount += modVm.Model.Files.Count(f => f.RelativePath.EndsWith(".img", System.StringComparison.OrdinalIgnoreCase));
+            }
+        }
+        
+        ActiveImgArchiveCount = imgCount;
+
+        if (imgCount <= 40)
+        {
+            ActiveImgArchiveStatus = "Safe";
+            ActiveImgArchiveSeverity = "Safe";
+            ActiveImgArchiveHasWarning = false;
+            ActiveImgArchiveWarningTitle = "";
+            ActiveImgArchiveWarningDescription = "";
+        }
+        else if (imgCount <= 49)
+        {
+            ActiveImgArchiveStatus = "Danger Zone";
+            ActiveImgArchiveSeverity = "Warning";
+            ActiveImgArchiveHasWarning = true;
+            ActiveImgArchiveWarningTitle = "⚠️ Danger Zone: Approaching Engine Stability Limits";
+            ActiveImgArchiveWarningDescription = $"You have {imgCount} active custom .img files. Exceeding 50 custom archives inside the 'update' folder will overflow Grand Theft Auto IV's unmodifiable 8-bit index (max 255 archives total, including vanilla base), causing missing textures, disappearing traffic, and immediate crashes. Consider using OpenIV to merge/consolidate your modded vehicles or map archives.";
+        }
+        else
+        {
+            ActiveImgArchiveStatus = "Crash Risk";
+            ActiveImgArchiveSeverity = "Danger";
+            ActiveImgArchiveHasWarning = true;
+            ActiveImgArchiveWarningTitle = "❌ Critical Limit Exceeded: Engine Crash Imminent!";
+            ActiveImgArchiveWarningDescription = $"You have {imgCount} active custom .img files. Hitting 50+ custom archives overflows GTA IV's unmodifiable 8-bit index (maximum 255 archives total). Textures and cars will fail to load, followed by immediate stack overflow crashes. You MUST use OpenIV to consolidate your files (e.g., combine multiple individual vehicle .img archives into a single custom_vehicles.img archive) to stay below the limit.";
+        }
+
         // Trigger Watchdog check in background
         _ = RunWatchdogCheckAsync();
     }
@@ -417,22 +648,19 @@ public class MainViewModel : ViewModelBase
         }
 
         string gamePath = ActiveProfile.GamePath;
-        bool asiLoaderExists = File.Exists(Path.Combine(gamePath, "dinput8.dll")) || 
-                               File.Exists(Path.Combine(gamePath, "xlive.dll")) || 
-                               File.Exists(Path.Combine(gamePath, "dsound.dll"));
+        // Ultimate ASI Loader uses dinput8.dll for GTA IV CE
+        bool asiLoaderExists = File.Exists(Path.Combine(gamePath, "dinput8.dll"));
+
+        // DXVK uses vulkan.dll (under FusionFix) or d3d9.dll (standalone)
+        bool dxvkExists = File.Exists(Path.Combine(gamePath, "vulkan.dll")) || File.Exists(Path.Combine(gamePath, "d3d9.dll"));
 
         string pluginsDir = Path.Combine(gamePath, "plugins");
-        bool overloaderExists = false;
         bool fusionFixExists = false;
         if (Directory.Exists(pluginsDir))
         {
-            overloaderExists = File.Exists(Path.Combine(pluginsDir, "FusionOverloader.asi")) ||
-                               File.Exists(Path.Combine(pluginsDir, "GTAIV.FusionOverloader.asi")) ||
-                               Directory.GetFiles(pluginsDir, "*Overloader*.asi").Any();
-
             fusionFixExists = File.Exists(Path.Combine(pluginsDir, "GTAIV.FusionFix.asi")) ||
-                             File.Exists(Path.Combine(pluginsDir, "FusionFix.asi")) ||
-                             Directory.GetFiles(pluginsDir, "*FusionFix*.asi").Any();
+                              File.Exists(Path.Combine(pluginsDir, "FusionFix.asi")) ||
+                              Directory.GetFiles(pluginsDir, "*FusionFix*.asi").Any();
         }
 
         bool scriptHookExists = File.Exists(Path.Combine(gamePath, "ScriptHook.dll")) ||
@@ -440,7 +668,7 @@ public class MainViewModel : ViewModelBase
                                 (Directory.Exists(pluginsDir) && Directory.GetFiles(pluginsDir, "*ScriptHook*.dll").Any()) ||
                                 (Directory.Exists(Path.Combine(gamePath, "scripts")) && Directory.GetFiles(Path.Combine(gamePath, "scripts"), "*ScriptHook*.dll").Any());
 
-        BackendStatus = new BackendStatusViewModel(asiLoaderExists, overloaderExists, fusionFixExists, scriptHookExists);
+        BackendStatus = new BackendStatusViewModel(asiLoaderExists, fusionFixExists, dxvkExists, scriptHookExists);
     }
 
     private async Task RunWatchdogCheckAsync()
@@ -601,6 +829,15 @@ public class MainViewModel : ViewModelBase
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    private void SetVramPreset(object? param)
+    {
+        if (param == null) return;
+        if (int.TryParse(param.ToString(), out int vramMb))
+        {
+            GpuVramMb = vramMb;
         }
     }
 
@@ -777,6 +1014,7 @@ public class MainViewModel : ViewModelBase
         }
         _activeProfile = profile;
         OnPropertyChanged(nameof(ActiveProfile));
+        OnPropertyChanged(nameof(GpuVramMb));
     }
 
     private void RemoveActiveProfile()
@@ -942,6 +1180,293 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    private async Task ClearLibraryAsync()
+    {
+        if (!LibraryMods.Any()) return;
+
+        var result = MessageBox.Show(
+            "Are you sure you want to permanently delete ALL mods from the library?\n\nThis will physically undeploy all active mods from the game directory, remove them from all profiles, and delete all mod files from your disk. This action CANNOT be undone.",
+            "Clear Mod Library",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result == MessageBoxResult.No)
+        {
+            return;
+        }
+
+        await ClearLibraryInternalAsync(showSuccessMessage: true);
+    }
+
+    public async Task ClearLibraryInternalAsync(bool showSuccessMessage = false)
+    {
+        IsBusy = true;
+        StatusText = "Clearing mod library...";
+
+        try
+        {
+            // 1. Undeploy all mods first from the current active game path
+            if (ActiveProfile != null && !string.IsNullOrEmpty(ActiveProfile.GamePath) && Directory.Exists(ActiveProfile.GamePath))
+            {
+                var adapter = new CompleteEditionAdapter(ActiveProfile.GamePath, _linker);
+                foreach (var modVm in LibraryMods)
+                {
+                    try
+                    {
+                        await adapter.UndeployAsync(modVm.Model);
+                    }
+                    catch { /* Ignore individual undeploy errors */ }
+                }
+            }
+
+            // 2. Remove all mods from all profiles
+            var profilesList = Profiles.ToList();
+            foreach (var profile in profilesList)
+            {
+                var updatedProfile = profile with
+                {
+                    EnabledModIds = Array.Empty<string>(),
+                    LoadOrder = new LoadOrderModel(Array.Empty<LoadOrderEntry>())
+                };
+                SaveProfileState(updatedProfile);
+            }
+
+            // 3. Delete physical library directory contents
+            if (Directory.Exists(_libraryDir))
+            {
+                await Task.Run(() =>
+                {
+                    foreach (var dir in Directory.GetDirectories(_libraryDir))
+                    {
+                        try { Directory.Delete(dir, true); } catch { }
+                    }
+                    foreach (var file in Directory.GetFiles(_libraryDir))
+                    {
+                        if (!Path.GetFileName(file).Equals("mods.json", StringComparison.OrdinalIgnoreCase))
+                        {
+                            try { File.Delete(file); } catch { }
+                        }
+                    }
+                });
+            }
+
+            // 4. Clear library mods list and save manifest
+            if (Application.Current != null && Application.Current.Dispatcher != null)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    LibraryMods.Clear();
+                });
+            }
+            else
+            {
+                LibraryMods.Clear();
+            }
+            SaveLibrary();
+
+            // 5. Refresh active profile links list
+            RefreshActiveModsList();
+
+            StatusText = "Mod library cleared successfully.";
+            if (showSuccessMessage)
+            {
+                MessageBox.Show("Mod library has been cleared completely.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Failed to clear mod library: {ex.Message}";
+            if (showSuccessMessage)
+            {
+                MessageBox.Show($"Failed to clear library: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            else
+            {
+                throw;
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+            UpdateConflictsAndWatchdog();
+        }
+    }
+
+    private string GetFusionFixIniPath()
+    {
+        if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath)) return "";
+        string path1 = Path.Combine(ActiveProfile.GamePath, "plugins", "GTAIV.EFLC.FusionFix.ini");
+        string path2 = Path.Combine(ActiveProfile.GamePath, "plugins", "FusionFix.ini");
+        if (File.Exists(path1)) return path1;
+        if (File.Exists(path2)) return path2;
+        return path1;
+    }
+
+    private void LoadFusionFixConfig()
+    {
+        string iniPath = GetFusionFixIniPath();
+        if (File.Exists(iniPath))
+        {
+            FusionFixSettings = FusionFixConfig.Load(iniPath);
+            IsFusionFixConfigAvailable = true;
+        }
+        else
+        {
+            FusionFixSettings = new FusionFixConfig();
+            IsFusionFixConfigAvailable = false;
+        }
+    }
+
+    private void SaveFusionFixConfig()
+    {
+        string iniPath = GetFusionFixIniPath();
+        if (string.IsNullOrEmpty(iniPath) || !File.Exists(iniPath))
+        {
+            MessageBox.Show("FusionFix configuration file not found. Install FusionFix first.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        try
+        {
+            FusionFixConfig.Save(iniPath, FusionFixSettings);
+            StatusText = "FusionFix configuration saved successfully.";
+            MessageBox.Show("FusionFix configuration saved successfully to the plugins directory.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to save FusionFix configuration: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void LoadSaveProfilesData()
+    {
+        BaseProfileIds.Clear();
+        var bases = _saveProfileManager.GetBaseProfileIds();
+        foreach (var b in bases)
+        {
+            BaseProfileIds.Add(b);
+        }
+        SelectedBaseProfileId = BaseProfileIds.FirstOrDefault();
+    }
+
+    private void RefreshSaveProfilesList()
+    {
+        SaveProfiles.Clear();
+        if (string.IsNullOrEmpty(SelectedBaseProfileId)) return;
+
+        var list = _saveProfileManager.GetSaveProfiles(SelectedBaseProfileId);
+        foreach (var sp in list)
+        {
+            SaveProfiles.Add(sp);
+        }
+    }
+
+    private void BrowseSaveProfilesPath()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Select Rockstar Games GTA IV Profiles Directory",
+            InitialDirectory = Directory.Exists(GtaSaveProfilesPath) ? GtaSaveProfilesPath : null
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            GtaSaveProfilesPath = dialog.FolderName;
+        }
+    }
+
+    private void ActivateSaveProfile(object? param)
+    {
+        if (SelectedSaveProfile == null || string.IsNullOrEmpty(SelectedBaseProfileId)) return;
+
+        var renameActiveInput = param as string ?? RenameActiveSaveTo;
+        
+        try
+        {
+            _saveProfileManager.ActivateSaveProfile(SelectedBaseProfileId, SelectedSaveProfile, renameActiveInput);
+            RenameActiveSaveTo = "";
+            RefreshSaveProfilesList();
+            StatusText = $"Activated save profile: '{SelectedSaveProfile.DisplayName}'";
+            MessageBox.Show($"Activated save profile '{SelectedSaveProfile.DisplayName}' successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to activate save profile: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void CreateSaveProfile()
+    {
+        if (string.IsNullOrEmpty(SelectedBaseProfileId)) return;
+
+        if (string.IsNullOrWhiteSpace(NewSaveProfileName))
+        {
+            MessageBox.Show("Please enter a name for the new save profile.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            _saveProfileManager.CreateNewSaveProfile(SelectedBaseProfileId, NewSaveProfileName, RenameActiveSaveTo);
+            NewSaveProfileName = "";
+            RenameActiveSaveTo = "";
+            RefreshSaveProfilesList();
+            StatusText = $"Created new save profile successfully.";
+            MessageBox.Show($"Created new save profile successfully. The game will start a new story in this save folder.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to create save profile: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void RenameSaveProfile(string? newName)
+    {
+        if (SelectedSaveProfile == null || string.IsNullOrWhiteSpace(newName)) return;
+
+        try
+        {
+            _saveProfileManager.RenameSaveProfile(SelectedSaveProfile, newName);
+            RefreshSaveProfilesList();
+            StatusText = $"Renamed save profile to '{newName}'";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to rename save profile: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void DeleteSaveProfile()
+    {
+        if (SelectedSaveProfile == null) return;
+
+        if (SelectedSaveProfile.IsActive)
+        {
+            MessageBox.Show("Cannot delete the currently active save profile directory. Please activate another save first.", "Cannot Delete Active Save", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var result = MessageBox.Show(
+            $"Are you sure you want to permanently delete the save profile '{SelectedSaveProfile.DisplayName}'?\n\nThis physical directory will be deleted from your disk.",
+            "Confirm Deletion",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            try
+            {
+                _saveProfileManager.DeleteSaveProfile(SelectedSaveProfile);
+                RefreshSaveProfilesList();
+                StatusText = "Deleted save profile.";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to delete save profile: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
     private void ApplyTheme(bool isDark)
     {
         try
@@ -949,10 +1474,12 @@ public class MainViewModel : ViewModelBase
             if (isDark)
             {
                 Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
+                ApplyCustomPalette(true);
             }
             else
             {
                 Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Light);
+                ApplyCustomPalette(false);
             }
         }
         catch
@@ -961,12 +1488,176 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    private void ApplyCustomPalette(bool isDark)
+    {
+        try
+        {
+            var resources = Application.Current.Resources;
+
+            if (isDark)
+            {
+                // Dark Theme: Liberty City Nights
+                SetResourceBrush(resources, "ApplicationBackgroundBrush", "#FF0A0A0A");
+                SetResourceBrush(resources, "SolidBackgroundFillColorBaseBrush", "#FF0A0A0A");
+
+                SetResourceBrush(resources, "MicaBackgroundBrush", "#FF121212");
+                SetResourceBrush(resources, "SolidBackgroundFillColorSecondaryBrush", "#FF1A1A1A");
+                SetResourceBrush(resources, "SolidBackgroundFillColorTertiaryBrush", "#FF1A1A1A");
+                SetResourceBrush(resources, "CardBackgroundFillColorDefaultBrush", "#FF1A1A1A");
+                SetResourceBrush(resources, "ControlFillColorDefaultBrush", "#FF1A1A1A");
+
+                SetResourceBrush(resources, "ControlStrokeColorDefaultBrush", "#333333");
+                SetResourceBrush(resources, "CardStrokeColorDefaultBrush", "#333333");
+                SetResourceBrush(resources, "ControlElevationBorderBrush", "#333333");
+                SetResourceBrush(resources, "TextFillColorDisabledBrush", "#333333");
+
+                SetResourceBrush(resources, "TextFillColorPrimaryBrush", "#FFFFFFFF");
+
+                SetResourceBrush(resources, "TextFillColorSecondaryBrush", "#FF8A8A8A");
+                SetResourceBrush(resources, "TextFillColorTertiaryBrush", "#FF8A8A8A");
+
+                // Accents: Active Menu Amber (#FFFFA500), Hover (#FFFFBC42)
+                SetResourceColor(resources, "SystemAccentColor", "#FFFFA500");
+                SetResourceBrush(resources, "SystemAccentBrush", "#FFFFA500");
+                SetResourceColor(resources, "SystemAccentColorSecondary", "#FFFFBC42");
+                SetResourceBrush(resources, "SystemAccentColorSecondaryBrush", "#FFFFBC42");
+                
+                SetResourceColor(resources, "SystemAccentColorLight1", "#FFFFBC42");
+                SetResourceBrush(resources, "SystemAccentColorLight1Brush", "#FFFFBC42");
+                SetResourceColor(resources, "SystemAccentColorLight2", "#FFFFD075");
+                SetResourceBrush(resources, "SystemAccentColorLight2Brush", "#FFFFD075");
+                SetResourceColor(resources, "SystemAccentColorLight3", "#FFFFE3A8");
+                SetResourceBrush(resources, "SystemAccentColorLight3Brush", "#FFFFE3A8");
+                SetResourceColor(resources, "SystemAccentColorDark1", "#FFE69500");
+                SetResourceBrush(resources, "SystemAccentColorDark1Brush", "#FFE69500");
+                SetResourceColor(resources, "SystemAccentColorDark2", "#FFCC8400");
+                SetResourceBrush(resources, "SystemAccentColorDark2Brush", "#FFCC8400");
+                SetResourceColor(resources, "SystemAccentColorDark3", "#FFA36A00");
+                SetResourceBrush(resources, "SystemAccentColorDark3Brush", "#FFA36A00");
+
+                // Success / Validated State
+                SetResourceColor(resources, "SystemGreenColor", "#FF388E3C");
+                SetResourceBrush(resources, "SystemGreenBrush", "#FF388E3C");
+
+                // Error / Overflow Limit
+                SetResourceColor(resources, "SystemRedColor", "#FFD32F2F");
+                SetResourceBrush(resources, "SystemRedBrush", "#FFD32F2F");
+
+                // Backwards compatibility accent references
+                SetResourceBrush(resources, "WarmAccentBrush", "#3A2E28");
+                SetResourceBrush(resources, "SecondaryAccentBrush", "#FFFFBC42");
+            }
+            else
+            {
+                // Light Theme: Algonquin Daylight
+                SetResourceBrush(resources, "ApplicationBackgroundBrush", "#FFF4F4F4");
+                SetResourceBrush(resources, "SolidBackgroundFillColorBaseBrush", "#FFF4F4F4");
+
+                SetResourceBrush(resources, "MicaBackgroundBrush", "#FFEAEAEA");
+                SetResourceBrush(resources, "SolidBackgroundFillColorSecondaryBrush", "#FFFFFFFF");
+                SetResourceBrush(resources, "SolidBackgroundFillColorTertiaryBrush", "#FFFFFFFF");
+                SetResourceBrush(resources, "CardBackgroundFillColorDefaultBrush", "#FFFFFFFF");
+                SetResourceBrush(resources, "ControlFillColorDefaultBrush", "#FFFFFFFF");
+
+                SetResourceBrush(resources, "ControlStrokeColorDefaultBrush", "#B0B0B0");
+                SetResourceBrush(resources, "CardStrokeColorDefaultBrush", "#B0B0B0");
+                SetResourceBrush(resources, "ControlElevationBorderBrush", "#B0B0B0");
+                SetResourceBrush(resources, "TextFillColorDisabledBrush", "#B0B0B0");
+
+                SetResourceBrush(resources, "TextFillColorPrimaryBrush", "#FF111111");
+
+                SetResourceBrush(resources, "TextFillColorSecondaryBrush", "#FF666666");
+                SetResourceBrush(resources, "TextFillColorTertiaryBrush", "#FF666666");
+
+                // Accents: Active Menu Amber Deeper (#FFE69100), Hover (#FFFFA500)
+                SetResourceColor(resources, "SystemAccentColor", "#FFE69100");
+                SetResourceBrush(resources, "SystemAccentBrush", "#FFE69100");
+                SetResourceColor(resources, "SystemAccentColorSecondary", "#FFFFA500");
+                SetResourceBrush(resources, "SystemAccentColorSecondaryBrush", "#FFFFA500");
+
+                SetResourceColor(resources, "SystemAccentColorLight1", "#FFFFA500");
+                SetResourceBrush(resources, "SystemAccentColorLight1Brush", "#FFFFA500");
+                SetResourceColor(resources, "SystemAccentColorLight2", "#FFFFBB33");
+                SetResourceBrush(resources, "SystemAccentColorLight2Brush", "#FFFFBB33");
+                SetResourceColor(resources, "SystemAccentColorLight3", "#FFFFCC66");
+                SetResourceBrush(resources, "SystemAccentColorLight3Brush", "#FFFFCC66");
+                SetResourceColor(resources, "SystemAccentColorDark1", "#FFCC8000");
+                SetResourceBrush(resources, "SystemAccentColorDark1Brush", "#FFCC8000");
+                SetResourceColor(resources, "SystemAccentColorDark2", "#FFA36600");
+                SetResourceBrush(resources, "SystemAccentColorDark2Brush", "#FFA36600");
+                SetResourceColor(resources, "SystemAccentColorDark3", "#FF7A4D00");
+                SetResourceBrush(resources, "SystemAccentColorDark3Brush", "#FF7A4D00");
+
+                // Success / Validated State
+                SetResourceColor(resources, "SystemGreenColor", "#FF2E7D32");
+                SetResourceBrush(resources, "SystemGreenBrush", "#FF2E7D32");
+
+                // Error / Overflow Limit
+                SetResourceColor(resources, "SystemRedColor", "#FFC62828");
+                SetResourceBrush(resources, "SystemRedBrush", "#FFC62828");
+
+                // Backwards compatibility accent references
+                SetResourceBrush(resources, "WarmAccentBrush", "#B87353");
+                SetResourceBrush(resources, "SecondaryAccentBrush", "#FFFFA500");
+            }
+        }
+        catch { }
+    }
+
+    private void SetResourceBrush(ResourceDictionary resources, string key, string hexColor)
+    {
+        try
+        {
+            var color = (Color)ColorConverter.ConvertFromString(hexColor);
+            if (resources.Contains(key))
+            {
+                if (resources[key] is SolidColorBrush brush)
+                {
+                    if (brush.Color != color)
+                    {
+                        if (brush.IsFrozen)
+                        {
+                            resources[key] = new SolidColorBrush(color);
+                        }
+                        else
+                        {
+                            brush.Color = color;
+                        }
+                    }
+                }
+                else
+                {
+                    resources[key] = new SolidColorBrush(color);
+                }
+            }
+            else
+            {
+                resources.Add(key, new SolidColorBrush(color));
+            }
+        }
+        catch { }
+    }
+
+    private void SetResourceColor(ResourceDictionary resources, string key, string hexColor)
+    {
+        try
+        {
+            var color = (Color)ColorConverter.ConvertFromString(hexColor);
+            resources[key] = color;
+        }
+        catch { }
+    }
+
     private void SaveSettings()
     {
         try
         {
             string settingsFile = Path.Combine(_baseDir, "settings.json");
-            var settings = new AppSettings { IsDarkTheme = _isDarkTheme };
+            var settings = new AppSettings 
+            { 
+                IsDarkTheme = _isDarkTheme,
+                GtaSaveProfilesPath = _gtaSaveProfilesPath
+            };
             string json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(settingsFile, json);
         }
@@ -1031,13 +1722,16 @@ public class MainViewModel : ViewModelBase
             // Copy all extracted files into GTAIV game directory
             StatusText = "Installing FusionFix files to game directory...";
             string gamePath = ActiveProfile.GamePath;
-            var installedFiles = new System.Collections.Generic.List<string>();
-            CopyDirectoryWithManifest(tempExtractionDir, gamePath, gamePath, installedFiles);
+            var manifest = await LoadToolsManifestAsync();
+            manifest.RemoveAll(f => string.Equals(f.SourceTool, "FusionFix", StringComparison.OrdinalIgnoreCase));
 
-            // Save installed files manifest for uninstallation
-            string manifestPath = Path.Combine(_profilesDir, $"{ActiveProfile.Id}_tools_manifest.json");
-            string manifestJson = JsonSerializer.Serialize(installedFiles, new JsonSerializerOptions { WriteIndented = true });
-            await File.WriteAllTextAsync(manifestPath, manifestJson);
+            var newInstalled = new System.Collections.Generic.List<InstalledToolFile>();
+            CopyDirectoryWithToolManifest(tempExtractionDir, gamePath, gamePath, "FusionFix", newInstalled);
+            manifest.AddRange(newInstalled);
+            await SaveToolsManifestAsync(manifest);
+
+            // Apply configuration bug fixes (VRAM, aspect ratio)
+            await ApplyPostInstallationPatchesAsync(gamePath, "FusionFix");
 
             // Clean up temporary extraction
             try
@@ -1050,7 +1744,7 @@ public class MainViewModel : ViewModelBase
             catch { /* Ignore cleanup errors */ }
 
             StatusText = $"Successfully installed FusionFix {release.TagName}!";
-            MessageBox.Show($"FusionFix {release.TagName} has been successfully installed!\nASI Loader, FusionOverloader, and DXVK are ready.", "Installation Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show($"FusionFix {release.TagName} has been successfully installed!\nASI Loader and DXVK are ready.", "Installation Successful", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -1060,11 +1754,12 @@ public class MainViewModel : ViewModelBase
         finally
         {
             IsBusy = false;
+            UpdateBackendStatus();
             UpdateConflictsAndWatchdog();
         }
     }
 
-    private void CopyDirectoryWithManifest(string sourceDir, string targetDir, string gamePath, System.Collections.Generic.List<string> installedFiles)
+    private void CopyDirectoryWithToolManifest(string sourceDir, string targetDir, string gamePath, string toolName, System.Collections.Generic.List<InstalledToolFile> installedFiles)
     {
         Directory.CreateDirectory(targetDir);
 
@@ -1073,20 +1768,85 @@ public class MainViewModel : ViewModelBase
             string targetFile = Path.Combine(targetDir, Path.GetFileName(file));
             File.Copy(file, targetFile, overwrite: true);
             
-            // Record target relative path
-            string relativePath = Path.GetRelativePath(gamePath, targetFile);
-            installedFiles.Add(relativePath);
+            // Compute SHA256 of the copied file
+            string hash = "";
+            try
+            {
+                using var sha256 = System.Security.Cryptography.SHA256.Create();
+                using var stream = new FileStream(targetFile, FileMode.Open, FileAccess.Read, FileShare.Read);
+                byte[] hashBytes = sha256.ComputeHash(stream);
+                hash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+            }
+            catch { }
+
+            installedFiles.Add(new InstalledToolFile(toolName, targetFile, hash));
         }
 
         foreach (string directory in Directory.GetDirectories(sourceDir))
         {
             string dirName = Path.GetFileName(directory);
             string targetSubDir = Path.Combine(targetDir, dirName);
-            CopyDirectoryWithManifest(directory, targetSubDir, gamePath, installedFiles);
+            CopyDirectoryWithToolManifest(directory, targetSubDir, gamePath, toolName, installedFiles);
         }
     }
 
     private async Task UninstallFusionFixAsync()
+    {
+        await UninstallToolGenericAsync("FusionFix", "FusionFix");
+    }
+
+    private async Task<System.Collections.Generic.List<InstalledToolFile>> LoadToolsManifestAsync()
+    {
+        if (ActiveProfile == null) return new System.Collections.Generic.List<InstalledToolFile>();
+        string manifestPath = Path.Combine(_profilesDir, $"{ActiveProfile.Id}_tools_manifest.json");
+        if (!File.Exists(manifestPath)) return new System.Collections.Generic.List<InstalledToolFile>();
+
+        try
+        {
+            string json = await File.ReadAllTextAsync(manifestPath);
+            // Try new format
+            try
+            {
+                var list = JsonSerializer.Deserialize<System.Collections.Generic.List<InstalledToolFile>>(json);
+                if (list != null && list.Count > 0 && list[0].InstalledPath != null)
+                {
+                    return list;
+                }
+            }
+            catch { }
+
+            // Try old format
+            var oldList = JsonSerializer.Deserialize<System.Collections.Generic.List<string>>(json);
+            if (oldList != null)
+            {
+                var migrated = new System.Collections.Generic.List<InstalledToolFile>();
+                foreach (var relPath in oldList)
+                {
+                    string absPath = Path.Combine(ActiveProfile.GamePath, relPath);
+                    string hash = "";
+                    if (File.Exists(absPath))
+                    {
+                        hash = await _backendToolManager.ComputeSha256Async(absPath);
+                    }
+                    migrated.Add(new InstalledToolFile("FusionFix", absPath, hash));
+                }
+                return migrated;
+            }
+        }
+        catch { }
+
+        return new System.Collections.Generic.List<InstalledToolFile>();
+    }
+
+    private async Task SaveToolsManifestAsync(System.Collections.Generic.List<InstalledToolFile> manifest)
+    {
+        if (ActiveProfile == null) return;
+        string manifestPath = Path.Combine(_profilesDir, $"{ActiveProfile.Id}_tools_manifest.json");
+        string json = JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(manifestPath, json);
+    }
+
+    private async Task UninstallToolGenericAsync(string toolName, string displayName)
     {
         if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath) || !Directory.Exists(ActiveProfile.GamePath))
         {
@@ -1094,50 +1854,8 @@ public class MainViewModel : ViewModelBase
             return;
         }
 
-        string gamePath = ActiveProfile.GamePath;
-        string manifestPath = Path.Combine(_profilesDir, $"{ActiveProfile.Id}_tools_manifest.json");
-        if (!File.Exists(manifestPath))
-        {
-            // Fallback: if manifest doesn't exist, we delete default known FusionFix files
-            var result = MessageBox.Show(
-                "No installation manifest was found for this profile. Would you like to perform a default uninstall of known FusionFix files?",
-                "Manifest Not Found",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.No) return;
-
-            IsBusy = true;
-            StatusText = "Performing default FusionFix uninstall...";
-            
-            var defaultFiles = new[]
-            {
-                "dinput8.dll", "xlive.dll", "dsound.dll",
-                "plugins/FusionOverloader.asi", "plugins/FusionOverloader.ini",
-                "plugins/GTAIV.FusionOverloader.asi", "plugins/GTAIV.FusionOverloader.ini",
-                "plugins/GTAIV.FusionFix.asi", "plugins/GTAIV.FusionFix.ini",
-                "plugins/FusionFix.asi", "plugins/FusionFix.ini",
-                "d3d9.dll", "dxgi.dll"
-            };
-
-            foreach (var relPath in defaultFiles)
-            {
-                string fullPath = Path.Combine(gamePath, relPath);
-                if (File.Exists(fullPath))
-                {
-                    try { File.Delete(fullPath); } catch { }
-                }
-            }
-
-            IsBusy = false;
-            StatusText = "Default uninstall completed.";
-            MessageBox.Show("Default uninstallation completed. Key loader files were removed.", "Uninstall Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-            UpdateConflictsAndWatchdog();
-            return;
-        }
-
         var confirm = MessageBox.Show(
-            "Are you sure you want to uninstall FusionFix from the game directory?\n\nThis will remove all installed loaders, hooks, and DXVK dlls.",
+            $"Are you sure you want to uninstall {displayName} from the game directory?",
             "Confirm Uninstall",
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
@@ -1145,28 +1863,29 @@ public class MainViewModel : ViewModelBase
         if (confirm == MessageBoxResult.No) return;
 
         IsBusy = true;
-        StatusText = "Uninstalling FusionFix files...";
+        StatusText = $"Uninstalling {displayName}...";
 
         try
         {
-            string json = await File.ReadAllTextAsync(manifestPath);
-            var installedFiles = JsonSerializer.Deserialize<System.Collections.Generic.List<string>>(json);
-            if (installedFiles != null)
+            var manifest = await LoadToolsManifestAsync();
+            var toRemove = manifest.Where(f => string.Equals(f.SourceTool, toolName, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            if (toRemove.Count > 0)
             {
                 // Delete files
-                foreach (var relPath in installedFiles)
+                foreach (var file in toRemove)
                 {
-                    string fullPath = Path.Combine(gamePath, relPath);
-                    if (File.Exists(fullPath))
+                    if (File.Exists(file.InstalledPath))
                     {
-                        try { File.Delete(fullPath); } catch { }
+                        try { File.Delete(file.InstalledPath); } catch { }
                     }
+                    manifest.Remove(file);
                 }
 
-                // Delete empty directories created by installation (reverse order)
-                var dirsToCheck = installedFiles
-                    .Select(f => Path.GetDirectoryName(Path.Combine(gamePath, f)))
-                    .Where(d => d != null && d != gamePath && d.StartsWith(gamePath))
+                // Delete empty directories created (in reverse order of length)
+                var dirsToCheck = toRemove
+                    .Select(f => Path.GetDirectoryName(f.InstalledPath))
+                    .Where(d => d != null && d != ActiveProfile.GamePath && d.StartsWith(ActiveProfile.GamePath))
                     .Distinct()
                     .OrderByDescending(d => d!.Length)
                     .ToList();
@@ -1178,11 +1897,36 @@ public class MainViewModel : ViewModelBase
                         try { Directory.Delete(dir); } catch { }
                     }
                 }
+
+                await SaveToolsManifestAsync(manifest);
+            }
+            else
+            {
+                // Fallback for default known files of that tool if manifest didn't track it
+                var defaultFiles = GetDefaultFilesForTool(toolName);
+                foreach (var relPath in defaultFiles)
+                {
+                    string absPath = Path.Combine(ActiveProfile.GamePath, relPath);
+                    if (File.Exists(absPath))
+                    {
+                        try { File.Delete(absPath); } catch { }
+                    }
+                }
             }
 
-            File.Delete(manifestPath);
-            StatusText = "FusionFix uninstalled successfully.";
-            MessageBox.Show("FusionFix and its components have been uninstalled successfully from the game directory.", "Uninstall Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            // Remove manifest file if it is empty now
+            string manifestPath = Path.Combine(_profilesDir, $"{ActiveProfile.Id}_tools_manifest.json");
+            if (File.Exists(manifestPath))
+            {
+                var currentManifest = await LoadToolsManifestAsync();
+                if (currentManifest.Count == 0)
+                {
+                    try { File.Delete(manifestPath); } catch { }
+                }
+            }
+
+            StatusText = $"{displayName} uninstalled successfully.";
+            MessageBox.Show($"{displayName} has been uninstalled successfully.", "Uninstall Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -1192,12 +1936,358 @@ public class MainViewModel : ViewModelBase
         finally
         {
             IsBusy = false;
+            UpdateBackendStatus();
             UpdateConflictsAndWatchdog();
         }
+    }
+
+    private System.Collections.Generic.IEnumerable<string> GetDefaultFilesForTool(string toolName)
+    {
+        if (string.Equals(toolName, "FusionFix", StringComparison.OrdinalIgnoreCase))
+        {
+            return new[]
+            {
+                "dinput8.dll", "d3d9.dll", "vulkan.dll",
+                "plugins/GTAIV.EAFLC.FusionFix.asi", "plugins/GTAIV.EFLC.FusionFix.ini",
+                "plugins/GTAIV.FusionFix.asi", "plugins/FusionFix.asi", "plugins/FusionFix.ini"
+            };
+        }
+        else if (string.Equals(toolName, "ASILoader", StringComparison.OrdinalIgnoreCase))
+        {
+            return new[] { "dinput8.dll" };
+        }
+        else if (string.Equals(toolName, "DXVK", StringComparison.OrdinalIgnoreCase))
+        {
+            return new[] { "d3d9.dll", "vulkan.dll", "dxvk.conf", "commandline.txt" };
+        }
+        return System.Array.Empty<string>();
+    }
+
+    private async Task InstallAsiLoaderAsync()
+    {
+        if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath) || !Directory.Exists(ActiveProfile.GamePath))
+        {
+            MessageBox.Show("Please select a valid game directory first.", "Cannot Install", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        // Install guard: If FusionFix is already installed, skip standalone ASI Loader installation entirely
+        var manifest = await LoadToolsManifestAsync();
+        bool hasFusionFix = manifest.Any(f => string.Equals(f.SourceTool, "FusionFix", StringComparison.OrdinalIgnoreCase));
+        if (hasFusionFix || BackendStatus.FusionFixInstalled)
+        {
+            MessageBox.Show("FusionFix is already installed and contains its own ASI Loader. Standalone ASI Loader installation is skipped.", "Installation Skipped", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        IsBusy = true;
+        StatusText = "Querying latest Ultimate ASI Loader release...";
+
+        try
+        {
+            var release = await _backendToolManager.GetLatestReleaseAsync("ThirteenAG", "Ultimate-ASI-Loader");
+            if (release.Assets == null)
+            {
+                throw new Exception("No assets found in the latest Ultimate ASI Loader release.");
+            }
+            
+            // Prefer Ultimate-ASI-Loader.zip (x86), fallback to Ultimate-ASI-Loader_x64.zip
+            string assetName = release.Assets.ContainsKey("Ultimate-ASI-Loader.zip") 
+                ? "Ultimate-ASI-Loader.zip" 
+                : "Ultimate-ASI-Loader_x64.zip";
+
+            if (!release.Assets.ContainsKey(assetName))
+            {
+                throw new Exception($"Could not find '{assetName}' asset in the latest Ultimate ASI Loader release.");
+            }
+
+            string downloadUrl = release.Assets[assetName];
+            string cacheZip = Path.Combine(_baseDir, "Cache", assetName);
+
+            StatusText = $"Downloading {assetName}...";
+            await _backendToolManager.DownloadToolAsync(downloadUrl, cacheZip);
+
+            string tempExtractionDir = Path.Combine(_baseDir, "Cache", "AsiLoaderTemp_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempExtractionDir);
+
+            StatusText = "Extracting ASI Loader...";
+            await _archiveHandler.ExtractAsync(cacheZip, tempExtractionDir);
+
+            string gamePath = ActiveProfile.GamePath;
+            string sourceDll = Path.Combine(tempExtractionDir, "dinput8.dll");
+            
+            if (!File.Exists(sourceDll))
+            {
+                sourceDll = Directory.GetFiles(tempExtractionDir, "dinput8.dll", SearchOption.AllDirectories).FirstOrDefault() 
+                    ?? throw new FileNotFoundException("dinput8.dll was not found in the extracted ASI Loader archive.");
+            }
+
+            string targetDll = Path.Combine(gamePath, "dinput8.dll");
+            File.Copy(sourceDll, targetDll, overwrite: true);
+
+            string hash = await _backendToolManager.ComputeSha256Async(targetDll);
+
+            // Record to manifest
+            manifest.RemoveAll(f => string.Equals(f.SourceTool, "ASILoader", StringComparison.OrdinalIgnoreCase));
+            manifest.Add(new InstalledToolFile("ASILoader", targetDll, hash));
+            await SaveToolsManifestAsync(manifest);
+
+            // Clean up temp files
+            try
+            {
+                Directory.Delete(tempExtractionDir, recursive: true);
+                if (File.Exists(cacheZip)) File.Delete(cacheZip);
+            }
+            catch { }
+
+            StatusText = $"Successfully installed Ultimate ASI Loader {release.TagName}!";
+            MessageBox.Show($"Ultimate ASI Loader {release.TagName} has been successfully installed!", "Installation Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"ASI Loader installation failed: {ex.Message}";
+            MessageBox.Show($"Installation failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsBusy = false;
+            UpdateBackendStatus();
+            UpdateConflictsAndWatchdog();
+        }
+    }
+
+    private async Task UninstallAsiLoaderAsync()
+    {
+        await UninstallToolGenericAsync("ASILoader", "Ultimate ASI Loader");
+    }
+
+    private async Task InstallDxvkAsync()
+    {
+        if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath) || !Directory.Exists(ActiveProfile.GamePath))
+        {
+            MessageBox.Show("Please select a valid game directory first.", "Cannot Install", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        IsBusy = true;
+        StatusText = "Querying latest DXVK release from GitHub...";
+
+        try
+        {
+            var release = await _backendToolManager.GetLatestReleaseAsync("doitsujin", "dxvk");
+            if (release.Assets == null)
+            {
+                throw new Exception("No assets found in the latest DXVK release.");
+            }
+            
+            bool isLegacy = ActiveProfile.LastKnownVersion != null && !ActiveProfile.LastKnownVersion.IsCompleteEdition;
+            string? assetKey = null;
+
+            if (isLegacy)
+            {
+                // Legacy GTA IV: use native variant containing "native" in filename
+                assetKey = release.Assets.Keys.FirstOrDefault(k => k.Contains("native") && k.EndsWith(".tar.gz"));
+                if (assetKey == null)
+                {
+                    assetKey = release.Assets.Keys.FirstOrDefault(k => k.EndsWith(".tar.gz") && !k.Contains("debug"));
+                }
+            }
+            else
+            {
+                // CE version: use standard release asset (.tar.gz, no native, no debug)
+                assetKey = release.Assets.Keys.FirstOrDefault(k => k.EndsWith(".tar.gz") && !k.Contains("native") && !k.Contains("debug"));
+            }
+
+            if (string.IsNullOrEmpty(assetKey))
+            {
+                throw new Exception("Could not find a suitable DXVK .tar.gz release asset.");
+            }
+
+            string downloadUrl = release.Assets[assetKey];
+            string cacheTarGz = Path.Combine(_baseDir, "Cache", assetKey);
+
+            StatusText = $"Downloading {assetKey}...";
+            await _backendToolManager.DownloadToolAsync(downloadUrl, cacheTarGz);
+
+            string tempExtractionDir = Path.Combine(_baseDir, "Cache", "DxvkTemp_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempExtractionDir);
+
+            StatusText = "Extracting DXVK tar.gz...";
+            await _archiveHandler.ExtractAsync(cacheTarGz, tempExtractionDir);
+
+            // Locate d3d9.dll in x32 folder (ignore x64)
+            string[] matchingFiles = Directory.GetFiles(tempExtractionDir, "d3d9.dll", SearchOption.AllDirectories);
+            string? d3d9Source = matchingFiles.FirstOrDefault(f => f.Split(Path.DirectorySeparatorChar).Contains("x32"));
+
+            if (string.IsNullOrEmpty(d3d9Source) || !File.Exists(d3d9Source))
+            {
+                throw new FileNotFoundException("d3d9.dll was not found in the x32 folder of the extracted DXVK archive.");
+            }
+
+            string gamePath = ActiveProfile.GamePath;
+            
+            // If FusionFix is present, rename to vulkan.dll. Otherwise d3d9.dll
+            var manifest = await LoadToolsManifestAsync();
+            bool hasFusionFix = manifest.Any(f => string.Equals(f.SourceTool, "FusionFix", StringComparison.OrdinalIgnoreCase)) || BackendStatus.FusionFixInstalled;
+
+            string targetFileName = hasFusionFix ? "vulkan.dll" : "d3d9.dll";
+            string targetPath = Path.Combine(gamePath, targetFileName);
+
+            File.Copy(d3d9Source, targetPath, overwrite: true);
+
+            string hash = await _backendToolManager.ComputeSha256Async(targetPath);
+
+            // Record to manifest
+            manifest.RemoveAll(f => string.Equals(f.SourceTool, "DXVK", StringComparison.OrdinalIgnoreCase));
+            manifest.Add(new InstalledToolFile("DXVK", targetPath, hash));
+            await SaveToolsManifestAsync(manifest);
+
+            // Apply configuration bug fixes
+            await ApplyPostInstallationPatchesAsync(gamePath, "DXVK");
+
+            // Clean up
+            try
+            {
+                Directory.Delete(tempExtractionDir, recursive: true);
+                if (File.Exists(cacheTarGz)) File.Delete(cacheTarGz);
+            }
+            catch { }
+
+            StatusText = $"Successfully installed DXVK {release.TagName}!";
+            MessageBox.Show($"DXVK {release.TagName} has been successfully installed!", "Installation Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"DXVK installation failed: {ex.Message}";
+            MessageBox.Show($"Installation failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsBusy = false;
+            UpdateBackendStatus();
+            UpdateConflictsAndWatchdog();
+        }
+    }
+
+    private async Task UninstallDxvkAsync()
+    {
+        await UninstallToolGenericAsync("DXVK", "DXVK");
+    }
+
+    private async Task ApplyPostInstallationPatchesAsync(string gamePath, string sourceTool)
+    {
+        // Fix 1: VRAM Detection Bug
+        int vramVal = GpuVramMb;
+        string commandlinePath = Path.Combine(gamePath, "commandline.txt");
+        bool commandlineCreated = false;
+        if (!File.Exists(commandlinePath))
+        {
+            commandlineCreated = true;
+        }
+        UpdateCommandLineTxt(gamePath, vramVal);
+        
+        // Record commandline.txt in manifest if created
+        if (commandlineCreated)
+        {
+            var manifest = await LoadToolsManifestAsync();
+            if (!manifest.Any(f => f.InstalledPath.Equals(commandlinePath, StringComparison.OrdinalIgnoreCase)))
+            {
+                string hash = await _backendToolManager.ComputeSha256Async(commandlinePath);
+                manifest.Add(new InstalledToolFile(sourceTool, commandlinePath, hash));
+                await SaveToolsManifestAsync(manifest);
+            }
+        }
+
+        // Fix 2: Resolution Not Scaling Bug
+        string dxvkConfPath = Path.Combine(gamePath, "dxvk.conf");
+        bool dxvkConfCreated = false;
+        if (!File.Exists(dxvkConfPath))
+        {
+            dxvkConfCreated = true;
+            try
+            {
+                string dxvkConfUrl = "https://raw.githubusercontent.com/doitsujin/dxvk/master/dxvk.conf";
+                await _backendToolManager.DownloadToolAsync(dxvkConfUrl, dxvkConfPath);
+            }
+            catch
+            {
+                // Fallback: write a basic forceAspectRatio entry if download fails
+                await File.WriteAllTextAsync(dxvkConfPath, "# d3d9.forceAspectRatio = \"\"");
+            }
+        }
+
+        if (File.Exists(dxvkConfPath))
+        {
+            try
+            {
+                double width = SystemParameters.PrimaryScreenWidth;
+                double height = SystemParameters.PrimaryScreenHeight;
+                double ratio = width / height;
+                string aspectVal = ratio > 2.0 ? "21:9" : "16:9";
+
+                string content = await File.ReadAllTextAsync(dxvkConfPath);
+                if (content.Contains("# d3d9.forceAspectRatio = \"\""))
+                {
+                    content = content.Replace("# d3d9.forceAspectRatio = \"\"", $"d3d9.forceAspectRatio = \"{aspectVal}\"");
+                }
+                else if (content.Contains("#d3d9.forceAspectRatio = \"\""))
+                {
+                    content = content.Replace("#d3d9.forceAspectRatio = \"\"", $"d3d9.forceAspectRatio = \"{aspectVal}\"");
+                }
+                else if (!content.Contains("d3d9.forceAspectRatio"))
+                {
+                    content += $"\r\nd3d9.forceAspectRatio = \"{aspectVal}\"\r\n";
+                }
+                await File.WriteAllTextAsync(dxvkConfPath, content);
+
+                if (dxvkConfCreated)
+                {
+                    var manifest = await LoadToolsManifestAsync();
+                    if (!manifest.Any(f => f.InstalledPath.Equals(dxvkConfPath, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        string hash = await _backendToolManager.ComputeSha256Async(dxvkConfPath);
+                        manifest.Add(new InstalledToolFile(sourceTool, dxvkConfPath, hash));
+                        await SaveToolsManifestAsync(manifest);
+                    }
+                }
+            }
+            catch { }
+        }
+    }
+
+    private void UpdateCommandLineTxt(string gamePath, int vramMb)
+    {
+        string filePath = Path.Combine(gamePath, "commandline.txt");
+        System.Collections.Generic.List<string> lines = new System.Collections.Generic.List<string>();
+        if (File.Exists(filePath))
+        {
+            try
+            {
+                lines = File.ReadAllLines(filePath).ToList();
+            }
+            catch { }
+        }
+
+        // Remove existing keys if any
+        lines.RemoveAll(l => l.StartsWith("-availablevidmem", StringComparison.OrdinalIgnoreCase));
+        lines.RemoveAll(l => l.StartsWith("-nomemrestrict", StringComparison.OrdinalIgnoreCase));
+        lines.RemoveAll(l => l.StartsWith("-norestrictions", StringComparison.OrdinalIgnoreCase));
+
+        // Append new ones
+        lines.Add($"-availablevidmem {vramMb}");
+        lines.Add("-nomemrestrict");
+        lines.Add("-norestrictions");
+
+        try
+        {
+            File.WriteAllLines(filePath, lines);
+        }
+        catch { }
     }
 }
 
 public class AppSettings
 {
     public bool IsDarkTheme { get; set; } = true;
+    public string GtaSaveProfilesPath { get; set; } = "";
 }
