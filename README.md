@@ -8,12 +8,12 @@ The manager orchestrates existing community loaders (FusionFix, FusionOverloader
 
 ## Key Features
 
-* 🛡️ **Zero Game Directory Mutation:** Uses NTFS **directory junctions** (cross-drive, no elevation) and **hard links** (same-volume, no duplication) to deploy files. Your vanilla game files are never modified, and Steam file verification will never wipe your mods.
-* 🔄 **Transaction Journal & Safety Rollbacks:** All operations are recorded sequentially. If an error occurs mid-deployment (e.g. locked files or directory errors), the manager automatically rolls back all changes, restoring the system to its prior stable state.
-* 📦 **Safe Archive Import:** Drag-and-drop `.zip`, `.rar`, and `.7z` archive files directly into the window. Features built-in **Zip-Slip (path traversal) protection** to prevent security issues.
-* 🔍 **Metadata Extraction & Compatibility Scanner:** Automatically normalizes mod filenames (stripping build hashes, release noise tokens) to deduce name and version. Scans text readmes and configuration files for version keywords to flag compatibility badges (`CE-compatible`, `Legacy`, `Mixed`).
-* 🐕 **Update Watchdog:** Monitors `GTAIV.exe` size and SHA-256 hash. If Steam updates the game executable under the hood, the app displays a clear warning page to prevent broken setups.
-* 🎨 **Fluent Windows 11 Design:** Built using WPF and styled with the native `WPF-UI` library for a premium Fluent theme interface.
+* **Zero Game Directory Mutation:** Uses NTFS **directory junctions** (cross-drive, no elevation) and **hard links** (same-volume, no duplication) to deploy files. Your vanilla game files are never modified, and Steam file verification will never wipe your mods.
+* **Transaction Journal & Safety Rollbacks:** All operations are recorded sequentially. If an error occurs mid-deployment (e.g. locked files or directory errors), the manager automatically rolls back all changes, restoring the system to its prior stable state.
+* **Safe Archive Import:** Drag-and-drop `.zip`, `.rar`, and `.7z` archive files directly into the window. Features built-in **Zip-Slip (path traversal) protection** to prevent security issues.
+* **Metadata Extraction & Compatibility Scanner:** Automatically normalizes mod filenames (stripping build hashes, release noise tokens) to deduce name and version. Scans text readmes and configuration files for version keywords to flag compatibility badges (`CE-compatible`, `Legacy`, `Mixed`).
+* **Update Watchdog:** Monitors `GTAIV.exe` size and SHA-256 hash. If Steam updates the game executable under the hood, the app displays a clear warning page to prevent broken setups.
+* **Fluent Windows 11 Design:** Built using WPF and styled with the native `WPF-UI` library for a premium Fluent theme interface.
 
 ---
 
