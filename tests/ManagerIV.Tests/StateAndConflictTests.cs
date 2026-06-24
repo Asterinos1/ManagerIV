@@ -64,22 +64,22 @@ public class StateAndConflictTests : IDisposable
         Assert.Equal("mod_b", loadOrder.Entries[1].ModId);
         Assert.Equal(2, loadOrder.Entries[1].Priority);
 
-        // Act: Detect Conflicts (modB has higher priority and should win)
+        // Act: Detect Conflicts (modA has lower priority value (1), so it should win)
         var conflictState = _conflictDetector.DetectConflicts(mods, loadOrder);
 
-        // Assert: Overlap detected and modB wins
+        // Assert: Overlap detected and modA wins
         string expectedVirtualPath = "update/data/handling.dat";
         Assert.True(conflictState.Conflicts.ContainsKey(expectedVirtualPath), "Conflict should be registered for handling.dat.");
         
         var conflictInfo = conflictState.Conflicts[expectedVirtualPath];
-        Assert.Equal("mod_b", conflictInfo.WinnerModId);
-        Assert.Contains("mod_a", conflictInfo.ConflictingModIds);
+        Assert.Equal("mod_a", conflictInfo.WinnerModId);
+        Assert.Contains("mod_b", conflictInfo.ConflictingModIds);
 
         // Verify warning generated for handling.dat
         Assert.Single(conflictState.Warnings);
         Assert.Contains("Conflict on handling configuration file", conflictState.Warnings[0]);
 
-        // Act: Reorder mods so modA overrides modB (modA moves to priority 2)
+        // Act: Reorder mods so modA moves to priority 2, leaving modB at priority 1
         var updatedLoadOrder = _loadOrderService.ReorderMod(loadOrder, "mod_a", 2);
 
         // Assert priorities were updated
@@ -91,10 +91,10 @@ public class StateAndConflictTests : IDisposable
         // Act: Re-run conflict detection with new order
         var updatedConflictState = _conflictDetector.DetectConflicts(mods, updatedLoadOrder);
 
-        // Assert: Overlap detected and modA now wins
+        // Assert: Overlap detected and modB now wins
         var updatedConflictInfo = updatedConflictState.Conflicts[expectedVirtualPath];
-        Assert.Equal("mod_a", updatedConflictInfo.WinnerModId);
-        Assert.Contains("mod_b", updatedConflictInfo.ConflictingModIds);
+        Assert.Equal("mod_b", updatedConflictInfo.WinnerModId);
+        Assert.Contains("mod_a", updatedConflictInfo.ConflictingModIds);
     }
 
     [Fact]
@@ -312,6 +312,55 @@ public class StateAndConflictTests : IDisposable
         // Assert
         Assert.Empty(vm.LibraryMods);
         Assert.False(Directory.Exists(modA.LibraryPath));
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task TestImportMultipleArchivesAsync()
+    {
+        // Arrange
+        string baseDir = Path.Combine(_tempDir, "multi_import_test");
+        Directory.CreateDirectory(baseDir);
+
+        var vm = new ManagerIV.ViewModels.MainViewModel(baseDir);
+        Assert.Empty(vm.LibraryMods);
+
+        // Create two dummy archives
+        string zip1Path = Path.Combine(baseDir, "mod1.zip");
+        using (var fs = new FileStream(zip1Path, FileMode.Create))
+        using (var zip = new System.IO.Compression.ZipArchive(fs, System.IO.Compression.ZipArchiveMode.Create))
+        {
+            var entry = zip.CreateEntry("common/data/handling.dat");
+            using (var writer = new StreamWriter(entry.Open()))
+            {
+                writer.Write("mod 1 handling data");
+            }
+        }
+
+        string zip2Path = Path.Combine(baseDir, "mod2.zip");
+        using (var fs = new FileStream(zip2Path, FileMode.Create))
+        using (var zip = new System.IO.Compression.ZipArchive(fs, System.IO.Compression.ZipArchiveMode.Create))
+        {
+            var entry = zip.CreateEntry("plugins/test_mod.asi");
+            using (var writer = new StreamWriter(entry.Open()))
+            {
+                writer.Write("mod 2 asi plugin data");
+            }
+        }
+
+        // Act: Import both archives as a batch
+        var archives = new[] { zip1Path, zip2Path };
+        await vm.ImportArchivesAsync(archives);
+
+        // Assert
+        Assert.Equal(2, vm.LibraryMods.Count);
+        
+        var firstMod = vm.LibraryMods.FirstOrDefault(m => m.Name == "Mod1");
+        var secondMod = vm.LibraryMods.FirstOrDefault(m => m.Name == "Mod2");
+
+        Assert.NotNull(firstMod);
+        Assert.NotNull(secondMod);
+        Assert.Equal(DeployTarget.Update, firstMod.Target);
+        Assert.Equal(DeployTarget.Plugins, secondMod.Target);
     }
 
     [Fact]

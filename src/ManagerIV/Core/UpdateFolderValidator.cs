@@ -65,7 +65,33 @@ public class UpdateFolderValidator
             string fileName = Path.GetFileName(relPath);
             string ext = Path.GetExtension(relPath).ToLowerInvariant();
 
-            var parts = relPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            // Strip sub-game prefix if present: iv/, tlad/, tbogt/
+            string checkPath = relPath;
+            if (checkPath.StartsWith("iv/", StringComparison.OrdinalIgnoreCase))
+            {
+                checkPath = checkPath.Substring(3);
+            }
+            else if (checkPath.StartsWith("tlad/", StringComparison.OrdinalIgnoreCase))
+            {
+                checkPath = checkPath.Substring(5);
+            }
+            else if (checkPath.StartsWith("tbogt/", StringComparison.OrdinalIgnoreCase))
+            {
+                checkPath = checkPath.Substring(6);
+            }
+
+            // Check for reserved path update/GTAIV.EFLC.FusionFix/
+            if (checkPath.StartsWith("GTAIV.EFLC.FusionFix/", StringComparison.OrdinalIgnoreCase) || 
+                checkPath.Equals("GTAIV.EFLC.FusionFix", StringComparison.OrdinalIgnoreCase))
+            {
+                issues.Add(new ValidationIssue(
+                    file.RelativePath,
+                    "Error",
+                    "Writing to reserved path 'update/GTAIV.EFLC.FusionFix/' is prohibited to protect the FusionFix installation."
+                ));
+            }
+
+            var parts = checkPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0) continue;
 
             string rootDir = parts[0].ToLowerInvariant();

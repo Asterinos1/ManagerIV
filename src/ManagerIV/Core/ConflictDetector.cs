@@ -66,8 +66,8 @@ public class ConflictDetector
 
             if (modIds.Count > 1)
             {
-                // The winner is the last one in the list (since list is sorted in ascending priority)
-                string winnerId = modIds[^1];
+                // The winner is the first one in the list (since list is sorted in ascending priority, priority 1 wins)
+                string winnerId = modIds[0];
                 var loserIds = modIds.Where(id => id != winnerId).ToList();
 
                 conflicts[virtualPath] = new ConflictInfo(virtualPath, winnerId, loserIds);

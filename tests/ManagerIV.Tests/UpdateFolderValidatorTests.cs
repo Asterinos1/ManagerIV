@@ -184,4 +184,59 @@ public class UpdateFolderValidatorTests
         Assert.NotEmpty(issues);
         Assert.Contains(issues, i => i.Severity == "Error" && i.Message.Contains("exceeds the RPF limit"));
     }
+
+    [Fact]
+    public void TestSubgameFolderValidation()
+    {
+        // Arrange: Mod with subgame folders
+        var files = new List<ModFile>
+        {
+            new ModFile("iv/custom_vehicles.img", 1024, null),
+            new ModFile("tlad/common/data/handling.dat", 2048, null),
+            new ModFile("tbogt/pc/models/cdimages/vehicles.img", 512, null)
+        };
+        var mod = new StagedMod(
+            Id: "test-subgame",
+            Name: "Subgame Mod",
+            Version: "1.0",
+            Description: "A mod with subgame targets",
+            LibraryPath: "C:/DummyModPath",
+            Files: files,
+            IsEnabled: true,
+            Compatibility: "CE-compatible"
+        );
+
+        // Act
+        var issues = _validator.Validate(mod);
+
+        // Assert
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void TestFusionFixProtection()
+    {
+        // Arrange: Mod attempting to write to update/GTAIV.EFLC.FusionFix/
+        var files = new List<ModFile>
+        {
+            new ModFile("GTAIV.EFLC.FusionFix/unwanted_file.txt", 1024, null)
+        };
+        var mod = new StagedMod(
+            Id: "test-ff-hack",
+            Name: "FusionFix Intruder",
+            Version: "1.0",
+            Description: "Attempts to write to FusionFix folder",
+            LibraryPath: "C:/DummyModPath",
+            Files: files,
+            IsEnabled: true,
+            Compatibility: "CE-compatible"
+        );
+
+        // Act
+        var issues = _validator.Validate(mod);
+
+        // Assert
+        Assert.NotEmpty(issues);
+        Assert.Contains(issues, i => i.Severity == "Error" && i.Message.Contains("reserved path"));
+    }
 }

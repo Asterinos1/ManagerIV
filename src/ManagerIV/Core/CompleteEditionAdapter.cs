@@ -80,6 +80,11 @@ public class CompleteEditionAdapter : IBackendAdapter
                 string folderName = _loadOrderService.GetDeployedFolderName(mod, priority);
                 string junctionPath = Path.Combine(_gameDir, "update", folderName);
 
+                if (Path.GetFileName(junctionPath).Equals("GTAIV.EFLC.FusionFix", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"Writing to reserved path '{junctionPath}' is prohibited.");
+                }
+
                 if (_journal != null)
                 {
                     _journal.Record(new JournalEntry(JournalOpType.CreateJunction, junctionPath, mod.LibraryPath, IsDirectory: true));
@@ -95,6 +100,12 @@ public class CompleteEditionAdapter : IBackendAdapter
                 {
                     string libraryFilePath = Path.Combine(mod.LibraryPath, file.RelativePath);
                     string targetFilePath = Path.Combine(_gameDir, "update", file.RelativePath);
+
+                    string normalizedTarget = targetFilePath.Replace('\\', '/');
+                    if (normalizedTarget.Contains("/update/gtaiv.eflc.fusionfix", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException($"Writing to reserved path '{targetFilePath}' is prohibited.");
+                    }
 
                     // Ensure target subdirectories inside update/ exist
                     string? targetDir = Path.GetDirectoryName(targetFilePath);
@@ -220,7 +231,15 @@ public class CompleteEditionAdapter : IBackendAdapter
     private bool IsLooseUpdateFile(string relativePath)
     {
         string path = relativePath.Replace('\\', '/').ToLowerInvariant();
-        return !path.EndsWith(".img") && !path.Contains(".img/");
+        
+        // If the path starts with a subgame folder (iv/, tlad/, tbogt/), it is NOT a loose update file
+        // and must be deployed via the mod folder junction.
+        if (path.StartsWith("iv/") || path.StartsWith("tlad/") || path.StartsWith("tbogt/"))
+        {
+            return false;
+        }
+
+        return !path.EndsWith(".img");
     }
 
     public async Task<LoadOrderModel> ReadLoadOrderAsync()

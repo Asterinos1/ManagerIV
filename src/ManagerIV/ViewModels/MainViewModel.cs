@@ -818,12 +818,13 @@ public class MainViewModel : ViewModelBase
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
             Filter = "Mod Archives (*.zip;*.rar;*.7z)|*.zip;*.rar;*.7z|All Files (*.*)|*.*",
-            Title = "Select Mod Archive to Import"
+            Title = "Select Mod Archives to Import",
+            Multiselect = true
         };
 
         if (dialog.ShowDialog() == true)
         {
-            await ImportArchiveAsync(dialog.FileName);
+            await ImportArchivesAsync(dialog.FileNames);
         }
     }
 
@@ -868,72 +869,121 @@ public class MainViewModel : ViewModelBase
 
     public async Task ImportArchiveAsync(string archivePath)
     {
+        await ImportArchivesAsync(new[] { archivePath });
+    }
+
+    public async Task ImportArchivesAsync(IEnumerable<string> archivePaths)
+    {
         if (ActiveProfile == null)
         {
             MessageBox.Show("Please select an active profile before importing mods.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
+        var pathsList = archivePaths?.ToList();
+        if (pathsList == null || !pathsList.Any()) return;
+
         IsBusy = true;
-        StatusText = $"Extracting archive '{Path.GetFileName(archivePath)}'...";
+        int total = pathsList.Count;
+        int successCount = 0;
+        var errors = new List<string>();
 
         try
         {
-            // Parse temporary destination in library
-            string tempGuid = Guid.NewGuid().ToString("N");
-            string extractionTarget = Path.Combine(_libraryDir, tempGuid);
-
-            // Extract with zip-slip protection
-            await _archiveHandler.ExtractAsync(archivePath, extractionTarget);
-
-            // Promote mod root if it is nested inside subfolders
-            StatusText = "Optimizing directory structure...";
-            await Task.Run(() => _archiveHandler.PromoteModRoot(extractionTarget));
-
-            StatusText = "Analyzing compatibility and metadata...";
-            
-            // Scan folder
-            var metadata = _metadataService.ScanExtractedDirectory(extractionTarget, Path.GetFileName(archivePath));
-
-            // Move extraction folder to a clean mod name folder
-            string cleanModName = string.Concat(metadata.Name.Split(Path.GetInvalidFileNameChars())).Replace(" ", "");
-            string finalModPath = Path.Combine(_libraryDir, cleanModName);
-            if (Directory.Exists(finalModPath))
+            for (int i = 0; i < total; i++)
             {
-                // Append suffix if mod name folder already exists
-                finalModPath += "_" + Guid.NewGuid().ToString("N").Substring(0, 6);
+                string archivePath = pathsList[i];
+                StatusText = $"[{i + 1}/{total}] Extracting '{Path.GetFileName(archivePath)}'...";
+
+                try
+                {
+                    // Parse temporary destination in library
+                    string tempGuid = Guid.NewGuid().ToString("N");
+                    string extractionTarget = Path.Combine(_libraryDir, tempGuid);
+
+                    // Extract with zip-slip protection
+                    await _archiveHandler.ExtractAsync(archivePath, extractionTarget);
+
+                    // Promote mod root if it is nested inside subfolders
+                    StatusText = $"[{i + 1}/{total}] Optimizing directory structure for '{Path.GetFileName(archivePath)}'...";
+                    await Task.Run(() => _archiveHandler.PromoteModRoot(extractionTarget));
+
+                    StatusText = $"[{i + 1}/{total}] Analyzing compatibility and metadata for '{Path.GetFileName(archivePath)}'...";
+                    
+                    // Scan folder
+                    var metadata = _metadataService.ScanExtractedDirectory(extractionTarget, Path.GetFileName(archivePath));
+
+                    // Move extraction folder to a clean mod name folder
+                    string cleanModName = string.Concat(metadata.Name.Split(Path.GetInvalidFileNameChars())).Replace(" ", "");
+                    string finalModPath = Path.Combine(_libraryDir, cleanModName);
+                    if (Directory.Exists(finalModPath))
+                    {
+                        // Append suffix if mod name folder already exists
+                        finalModPath += "_" + Guid.NewGuid().ToString("N").Substring(0, 6);
+                    }
+
+                    Directory.Move(extractionTarget, finalModPath);
+
+                    // Build StagedMod record
+                    var stagedMod = new StagedMod(
+                        Id: Guid.NewGuid().ToString("N"),
+                        Name: metadata.Name,
+                        Version: metadata.Version,
+                        Description: metadata.Description,
+                        LibraryPath: finalModPath,
+                        Files: metadata.FileManifest.Select(f => new ModFile(f, new FileInfo(Path.Combine(finalModPath, f)).Length, null)).ToList(),
+                        IsEnabled: false,
+                        Compatibility: metadata.Compatibility
+                    );
+
+                    // Add to library
+                    var vm = new ModViewModel(stagedMod, false, 99, stagedMod.Files.Any(f => f.RelativePath.EndsWith(".asi", StringComparison.OrdinalIgnoreCase)) ? DeployTarget.Plugins : DeployTarget.Update);
+                    
+                    if (System.Windows.Application.Current != null && System.Windows.Application.Current.Dispatcher != null)
+                    {
+                        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            LibraryMods.Add(vm);
+                        });
+                    }
+                    else
+                    {
+                        LibraryMods.Add(vm);
+                    }
+
+                    successCount++;
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"'{Path.GetFileName(archivePath)}': {ex.Message}");
+                }
             }
 
-            Directory.Move(extractionTarget, finalModPath);
-
-            // Build StagedMod record
-            var stagedMod = new StagedMod(
-                Id: Guid.NewGuid().ToString("N"),
-                Name: metadata.Name,
-                Version: metadata.Version,
-                Description: metadata.Description,
-                LibraryPath: finalModPath,
-                Files: metadata.FileManifest.Select(f => new ModFile(f, new FileInfo(Path.Combine(finalModPath, f)).Length, null)).ToList(),
-                IsEnabled: false,
-                Compatibility: metadata.Compatibility
-            );
-
-            // Add to library
-            var vm = new ModViewModel(stagedMod, false, 99, stagedMod.Files.Any(f => f.RelativePath.EndsWith(".asi", StringComparison.OrdinalIgnoreCase)) ? DeployTarget.Plugins : DeployTarget.Update);
-            
-            App.Current.Dispatcher.Invoke(() =>
+            // Save library and refresh lists once after batch import completes
+            if (System.Windows.Application.Current != null && System.Windows.Application.Current.Dispatcher != null)
             {
-                LibraryMods.Add(vm);
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    SaveLibrary();
+                    RefreshActiveModsList();
+                });
+            }
+            else
+            {
                 SaveLibrary();
                 RefreshActiveModsList();
-            });
+            }
 
-            StatusText = $"Successfully imported mod '{metadata.Name}' (v{metadata.Version})!";
-        }
-        catch (Exception ex)
-        {
-            StatusText = $"Failed to import archive: {ex.Message}";
-            MessageBox.Show($"Import failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            if (errors.Any())
+            {
+                string summary = $"Import completed with errors. Successfully imported {successCount}/{total} mods.\n\nFailed imports:\n" + string.Join("\n", errors);
+                StatusText = $"Import completed with {errors.Count} error(s)";
+                MessageBox.Show(summary, "Import Completed with Errors", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            else
+            {
+                StatusText = $"Successfully imported {successCount} mod(s)!";
+            }
         }
         finally
         {
@@ -1067,6 +1117,49 @@ public class MainViewModel : ViewModelBase
 
         try
         {
+            var sortedEnabled = LibraryMods
+                .Where(m => m.IsEnabled)
+                .OrderBy(m => m.Priority)
+                .ToList();
+
+            // A. Validate structure of all enabled mods
+            var validator = new UpdateFolderValidator();
+            var allErrors = new List<string>();
+            foreach (var vm in sortedEnabled)
+            {
+                var issues = validator.Validate(vm.Model);
+                var errors = issues.Where(i => i.Severity == "Error").Select(i => $"[{vm.Name}] {i.Message}").ToList();
+                allErrors.AddRange(errors);
+            }
+
+            if (allErrors.Any())
+            {
+                throw new InvalidOperationException($"Mod structure errors detected:\n\n{string.Join(Environment.NewLine, allErrors)}");
+            }
+
+            // B. Detect loose file conflicts
+            var entries = sortedEnabled.Select(v => new LoadOrderEntry(v.Id, v.Target, v.Priority)).OrderBy(e => e.Priority).ToList();
+            var currentLoadOrder = new LoadOrderModel(entries);
+            var enabledModels = sortedEnabled.Select(v => v.Model).ToList();
+            var conflictState = _conflictDetector.DetectConflicts(enabledModels, currentLoadOrder);
+
+            var looseConflicts = conflictState.Conflicts.Values
+                .Where(c => c.TargetPath.StartsWith("update/", StringComparison.OrdinalIgnoreCase) && 
+                            !c.TargetPath.EndsWith(".img", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (looseConflicts.Any())
+            {
+                var conflictList = new List<string>();
+                foreach (var conflict in looseConflicts)
+                {
+                    var winnerName = LibraryMods.FirstOrDefault(m => m.Id == conflict.WinnerModId)?.Name ?? "Unknown";
+                    var loserNames = conflict.ConflictingModIds.Select(id => LibraryMods.FirstOrDefault(m => m.Id == id)?.Name ?? "Unknown");
+                    conflictList.Add($"  - '{conflict.TargetPath}' ({winnerName} conflicts with: {string.Join(", ", loserNames)})");
+                }
+                throw new InvalidOperationException($"Unresolved loose file conflicts (manual merge required):\n\n{string.Join(Environment.NewLine, conflictList)}");
+            }
+
             // 1. Undeploy currently active links
             StatusText = "Clearing physical links...";
             foreach (var modVm in LibraryMods)
@@ -1076,11 +1169,6 @@ public class MainViewModel : ViewModelBase
 
             // 2. Deploy enabled links in load order priority sequence
             StatusText = "Applying junctions and hard links...";
-            var sortedEnabled = LibraryMods
-                .Where(m => m.IsEnabled)
-                .OrderBy(m => m.Priority)
-                .ToList();
-
             foreach (var vm in sortedEnabled)
             {
                 StatusText = $"Deploying '{vm.Name}' (Priority {vm.Priority})...";

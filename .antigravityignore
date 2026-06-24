@@ -13,3 +13,4 @@
 # git/github directories
 .git/
 .github/
+.md

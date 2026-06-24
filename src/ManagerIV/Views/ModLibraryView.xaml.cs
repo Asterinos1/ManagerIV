@@ -116,16 +116,19 @@ public partial class ModLibraryView : UserControl
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
         {
             string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            var validFiles = new System.Collections.Generic.List<string>();
             foreach (string file in files)
             {
                 string ext = Path.GetExtension(file).ToLowerInvariant();
                 if (ext == ".zip" || ext == ".rar" || ext == ".7z")
                 {
-                    if (DataContext is MainViewModel vm)
-                    {
-                        _ = vm.ImportArchiveAsync(file);
-                    }
+                    validFiles.Add(file);
                 }
+            }
+
+            if (validFiles.Count > 0 && DataContext is MainViewModel vm)
+            {
+                _ = vm.ImportArchivesAsync(validFiles);
             }
         }
     }
