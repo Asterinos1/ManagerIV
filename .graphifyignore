@@ -1,0 +1,57 @@
+.git/
+node_modules/
+dist/
+build/
+__pycache__/
+*.log
+*.zip
+*.tar
+*.gz
+*.rar
+*.dll
+*.exe
+*.asi
+*.bin
+*.bak
+
+# Visual Studio / dotnet Build Outputs
+[Bb]in/
+[Oo]bj/
+[Tt]emp/
+[Bb]ackup/
+.vs/
+
+# Local Agent Caches & Actions Runner
+.agents/cache/
+.agents/logs/
+.agents/local_settings.json
+
+# git/github directories
+.git/
+.github/
+.md
+
+*.md
+*.txt
+*.rst
+*.pdf
+
+# Graphify Output
+graphify-out/
+
+# IDE & User Specific Configuration
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+.vscode/
+.idea/
+
+# Test Results & Coverage
+TestResults/
+*.clog
+
+# OS Metadata
+desktop.ini
+[Tt]humbs.db
+.DS_Store
