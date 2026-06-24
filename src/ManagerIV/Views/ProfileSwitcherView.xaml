@@ -250,12 +250,25 @@
                         <TextBlock Text="Total Enabled Mods" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         <TextBlock Text="{Binding ActiveProfile.EnabledModIds.Count}" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,2,0,12" />
 
-                        <ui:Button Content="Delete Profile" 
-                                   Icon="{ui:SymbolIcon Delete24}" 
-                                   Command="{Binding RemoveProfileCommand}"
-                                   Appearance="Danger"
-                                   Margin="0,8,0,0"
-                                   HorizontalAlignment="Right" />
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:Button Grid.Column="0" 
+                                       Content="Reset Game Directory" 
+                                       Icon="{ui:SymbolIcon ArrowUndo24}" 
+                                       Command="{Binding ResetGameDirectoryCommand}"
+                                       Appearance="Secondary"
+                                       HorizontalAlignment="Left" />
+                            <ui:Button Grid.Column="2" 
+                                       Content="Delete Profile" 
+                                       Icon="{ui:SymbolIcon Delete24}" 
+                                       Command="{Binding RemoveProfileCommand}"
+                                       Appearance="Danger"
+                                       HorizontalAlignment="Right" />
+                        </Grid>
                     </StackPanel>
                 </ui:Card>
 

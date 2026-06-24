@@ -89,6 +89,60 @@ public class WatchdogAdapterTests : IDisposable
         Assert.Equal(DeployTarget.Scripts, _adapter.ResolveTarget(scriptFile));
     }
 
+    [Fact]
+    public async Task TestCompleteEditionAdapterUndeploy()
+    {
+        // Arrange
+        var pluginMod = new StagedMod(
+            Id: "plugin_mod",
+            Name: "Plugin Mod",
+            Version: "1.0",
+            Description: "A test plugin mod",
+            LibraryPath: Path.Combine(_tempDir, "Library", "plugin_mod"),
+            Files: new[] { new ModFile("plugins/my_plugin.asi", 1024, "hash1") },
+            IsEnabled: true,
+            Compatibility: "CE-compatible"
+        );
+
+        var assetMod = new StagedMod(
+            Id: "asset_mod",
+            Name: "Asset Mod",
+            Version: "1.0",
+            Description: "A test asset mod",
+            LibraryPath: Path.Combine(_tempDir, "Library", "asset_mod"),
+            Files: new[] { new ModFile("pc/data/cdimages/vehicles.img", 2048, "hash2") },
+            IsEnabled: true,
+            Compatibility: "CE-compatible"
+        );
+
+        // Setup directories and files
+        Directory.CreateDirectory(pluginMod.LibraryPath);
+        Directory.CreateDirectory(Path.Combine(pluginMod.LibraryPath, "plugins"));
+        await File.WriteAllTextAsync(Path.Combine(pluginMod.LibraryPath, "plugins", "my_plugin.asi"), "plugin code");
+
+        Directory.CreateDirectory(assetMod.LibraryPath);
+        Directory.CreateDirectory(Path.Combine(assetMod.LibraryPath, "pc", "data", "cdimages"));
+        await File.WriteAllTextAsync(Path.Combine(assetMod.LibraryPath, "pc", "data", "cdimages", "vehicles.img"), "vehicles data");
+
+        // Act: deploy
+        await _adapter.DeployAsync(pluginMod, priority: 1);
+        await _adapter.DeployAsync(assetMod, priority: 2);
+
+        // Assert deployment exists
+        string deployedPlugin = Path.Combine(_tempDir, "plugins", "01_my_plugin.asi");
+        string deployedJunction = Path.Combine(_tempDir, "update", "002_AssetMod");
+        Assert.True(File.Exists(deployedPlugin), "Deployed plugin file should exist.");
+        Assert.True(Directory.Exists(deployedJunction), "Deployed junction directory should exist.");
+
+        // Act: Undeploy
+        await _adapter.UndeployAsync(pluginMod);
+        await _adapter.UndeployAsync(assetMod);
+
+        // Assert clean
+        Assert.False(File.Exists(deployedPlugin), "Deployed plugin file should be deleted.");
+        Assert.False(Directory.Exists(deployedJunction), "Deployed junction directory should be deleted.");
+    }
+
     [Theory]
     [InlineData("1.0.4.0", false)]
     [InlineData("1.0.7.0", false)]

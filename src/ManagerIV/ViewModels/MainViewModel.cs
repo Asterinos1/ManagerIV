@@ -301,6 +301,7 @@ public class MainViewModel : ViewModelBase
     public ICommand DeleteModCommand { get; }
     public ICommand SetVramPresetCommand { get; }
     public ICommand ClearLibraryCommand { get; }
+    public ICommand ResetGameDirectoryCommand { get; }
     public ICommand SaveFusionFixConfigCommand { get; }
     public ICommand LoadFusionFixDefaultsCommand { get; }
     public ICommand BrowseSaveProfilesPathCommand { get; }
@@ -359,6 +360,7 @@ public class MainViewModel : ViewModelBase
         DeleteModCommand = new RelayCommand<ModViewModel>(async (mod) => await DeleteModAsync(mod), (mod) => !IsBusy && mod != null);
         SetVramPresetCommand = new RelayCommand<object>(SetVramPreset);
         ClearLibraryCommand = new RelayCommand(async () => await ClearLibraryAsync(), () => !IsBusy && LibraryMods.Any());
+        ResetGameDirectoryCommand = new RelayCommand(async () => await ResetGameDirectoryAsync(), () => !IsBusy && ActiveProfile != null && !string.IsNullOrEmpty(ActiveProfile.GamePath));
         SaveFusionFixConfigCommand = new RelayCommand(SaveFusionFixConfig, () => IsFusionFixConfigAvailable && !IsBusy);
         LoadFusionFixDefaultsCommand = new RelayCommand(LoadFusionFixDefaults, () => IsFusionFixConfigAvailable && !IsBusy);
 
@@ -1485,6 +1487,124 @@ public class MainViewModel : ViewModelBase
         finally
         {
             IsBusy = false;
+            UpdateConflictsAndWatchdog();
+        }
+    }
+
+    private async Task ResetGameDirectoryAsync()
+    {
+        if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath) || !Directory.Exists(ActiveProfile.GamePath))
+        {
+            MessageBox.Show("Please select a valid game directory first.", "Cannot Reset", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var confirm = MessageBox.Show(
+            "Are you sure you want to restore the game directory to its clean vanilla structure?\n\nThis will:\n" +
+            "- Undeploy all active mods (remove junctions and links)\n" +
+            "- Uninstall all tools (FusionFix, Ultimate ASI Loader, DXVK)\n" +
+            "- Remove the 'update', 'plugins', and 'scripts' directories (if empty)\n" +
+            "- Remove 'dxvk.conf' and 'commandline.txt' if present\n\n" +
+            "No original game files will be modified. This action cannot be undone.",
+            "Confirm Reset to Clean Game Structure",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (confirm != MessageBoxResult.Yes) return;
+
+        IsBusy = true;
+        StatusText = "Restoring vanilla game structure...";
+
+        try
+        {
+            // 1. Undeploy all mods first from the current active game path
+            var adapter = new CompleteEditionAdapter(ActiveProfile.GamePath, _linker);
+            foreach (var modVm in LibraryMods)
+            {
+                try
+                {
+                    await adapter.UndeployAsync(modVm.Model);
+                }
+                catch { /* Ignore individual undeploy errors */ }
+            }
+
+            // 2. Load and clean all tools tracked by the manifest
+            var manifest = await LoadToolsManifestAsync();
+            if (manifest != null && manifest.Count > 0)
+            {
+                foreach (var file in manifest)
+                {
+                    if (File.Exists(file.InstalledPath))
+                    {
+                        try { File.Delete(file.InstalledPath); } catch { }
+                    }
+                }
+            }
+
+            // 3. Fallback/Thoroughness: Delete default files for all tools
+            var allTools = new[] { "FusionFix", "ASILoader", "DXVK" };
+            foreach (var tool in allTools)
+            {
+                var defaultFiles = GetDefaultFilesForTool(tool);
+                foreach (var relPath in defaultFiles)
+                {
+                    string absPath = Path.Combine(ActiveProfile.GamePath, relPath);
+                    if (File.Exists(absPath))
+                    {
+                        try { File.Delete(absPath); } catch { }
+                    }
+                }
+            }
+
+            // 4. Delete the log files if they exist
+            var logPaths = adapter.BackendLogPaths();
+            foreach (var logPath in logPaths)
+            {
+                if (File.Exists(logPath))
+                {
+                    try { File.Delete(logPath); } catch { }
+                }
+            }
+
+            // 5. Delete empty folders/structures that are part of mod loader but not vanilla
+            string[] dirsToDelete = new[]
+            {
+                Path.Combine(ActiveProfile.GamePath, "update"),
+                Path.Combine(ActiveProfile.GamePath, "plugins"),
+                Path.Combine(ActiveProfile.GamePath, "scripts")
+            };
+            foreach (var dir in dirsToDelete)
+            {
+                if (Directory.Exists(dir))
+                {
+                    try { Directory.Delete(dir, recursive: true); } catch { }
+                }
+            }
+
+            // 6. Delete the tools manifest file itself
+            string manifestPath = Path.Combine(_profilesDir, $"{ActiveProfile.Id}_tools_manifest.json");
+            if (File.Exists(manifestPath))
+            {
+                try { File.Delete(manifestPath); } catch { }
+            }
+
+            // 7. Clear tool installation versions in the profile
+            var updatedProfile = ActiveProfile with { InstalledToolVersions = new Dictionary<string, string>() };
+            _profileManager.SaveProfile(Path.Combine(_profilesDir, $"{updatedProfile.Id}.json"), updatedProfile);
+            ActiveProfile = updatedProfile;
+
+            StatusText = "Restored vanilla game structure successfully.";
+            MessageBox.Show("The game directory has been successfully restored to its original clean state.", "Reset Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Reset failed: {ex.Message}";
+            MessageBox.Show($"Failed to reset game directory: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsBusy = false;
+            UpdateBackendStatus();
             UpdateConflictsAndWatchdog();
         }
     }
