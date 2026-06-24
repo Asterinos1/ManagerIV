@@ -1,0 +1,15 @@
+# Visual Studio / dotnet Build Outputs
+[Bb]in/
+[Oo]bj/
+[Tt]emp/
+[Bb]ackup/
+.vs/
+
+# Local Agent Caches & Actions Runner
+.agents/cache/
+.agents/logs/
+.agents/local_settings.json
+
+# git/github directories
+.git/
+.github/

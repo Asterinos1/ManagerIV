@@ -17,6 +17,13 @@ public class FusionFixConfig : ViewModelBase
     // [MAIN]
     private int _recoilFix = 1;
     private int _aimingZoomFix = 1;
+    private int _skipIntro = 1;
+    private int _skipMenu = 0;
+    private int _mouseFix = 1;
+    private string _walkKey = "0x12";
+
+    // [USERPROFILE]
+    private string _customUserProfilePath = "";
 
     // [CAMERASENSITIVITY]
     private double _mouseLookSensitivityRangeMin = 0.1;
@@ -138,6 +145,33 @@ public class FusionFixConfig : ViewModelBase
     {
         get => _aimingZoomFix;
         set => SetProperty(ref _aimingZoomFix, value);
+    }
+    public int SkipIntro
+    {
+        get => _skipIntro;
+        set { if (SetProperty(ref _skipIntro, value)) OnPropertyChanged(nameof(SkipIntroEnabled)); }
+    }
+    public int SkipMenu
+    {
+        get => _skipMenu;
+        set { if (SetProperty(ref _skipMenu, value)) OnPropertyChanged(nameof(SkipMenuEnabled)); }
+    }
+    public int MouseFix
+    {
+        get => _mouseFix;
+        set { if (SetProperty(ref _mouseFix, value)) OnPropertyChanged(nameof(MouseFixEnabled)); }
+    }
+    public string WalkKey
+    {
+        get => _walkKey;
+        set => SetProperty(ref _walkKey, value ?? "0x12");
+    }
+
+    // [USERPROFILE]
+    public string CustomUserProfilePath
+    {
+        get => _customUserProfilePath;
+        set => SetProperty(ref _customUserProfilePath, value ?? "");
     }
 
     // [CAMERASENSITIVITY]
@@ -553,6 +587,21 @@ public class FusionFixConfig : ViewModelBase
         get => RecoilFix == 1;
         set => RecoilFix = value ? 1 : 0;
     }
+    public bool SkipIntroEnabled
+    {
+        get => SkipIntro == 1;
+        set => SkipIntro = value ? 1 : 0;
+    }
+    public bool SkipMenuEnabled
+    {
+        get => SkipMenu == 1;
+        set => SkipMenu = value ? 1 : 0;
+    }
+    public bool MouseFixEnabled
+    {
+        get => MouseFix == 1;
+        set => MouseFix = value ? 1 : 0;
+    }
     public bool HighResolutionShadowsEnabled
     {
         get => HighResolutionShadows == 1;
@@ -747,6 +796,13 @@ public class FusionFixConfig : ViewModelBase
                     case "MAIN":
                         if (key == "recoilfix" && int.TryParse(valueStr, out int rf)) config.RecoilFix = rf;
                         if (key == "aimingzoomfix" && int.TryParse(valueStr, out int azf)) config.AimingZoomFix = azf;
+                        if (key == "skipintro" && int.TryParse(valueStr, out int si)) config.SkipIntro = si;
+                        if (key == "skipmenu" && int.TryParse(valueStr, out int sm)) config.SkipMenu = sm;
+                        if (key == "mousefix" && int.TryParse(valueStr, out int mf)) config.MouseFix = mf;
+                        if (key == "walkkey") config.WalkKey = valueStr;
+                        break;
+                    case "USERPROFILE":
+                        if (key == "customuserprofilepath") config.CustomUserProfilePath = valueStr;
                         break;
                     case "CAMERASENSITIVITY":
                         if (key == "mouselooksensitivityrange")
@@ -884,6 +940,7 @@ public class FusionFixConfig : ViewModelBase
         try
         {
             var lines = File.ReadAllLines(iniPath).ToList();
+            var writtenKeys = new HashSet<(string section, string key)>();
             string section = "";
             for (int i = 0; i < lines.Count; i++)
             {
@@ -926,8 +983,15 @@ public class FusionFixConfig : ViewModelBase
                 switch (section)
                 {
                     case "MAIN":
-                        if (key == "recoilfix") newValue = config.RecoilFix.ToString();
-                        if (key == "aimingzoomfix") newValue = config.AimingZoomFix.ToString();
+                        if (key == "recoilfix") { newValue = config.RecoilFix.ToString(); writtenKeys.Add(("MAIN", "recoilfix")); }
+                        if (key == "aimingzoomfix") { newValue = config.AimingZoomFix.ToString(); writtenKeys.Add(("MAIN", "aimingzoomfix")); }
+                        if (key == "skipintro") { newValue = config.SkipIntro.ToString(); writtenKeys.Add(("MAIN", "skipintro")); }
+                        if (key == "skipmenu") { newValue = config.SkipMenu.ToString(); writtenKeys.Add(("MAIN", "skipmenu")); }
+                        if (key == "mousefix") { newValue = config.MouseFix.ToString(); writtenKeys.Add(("MAIN", "mousefix")); }
+                        if (key == "walkkey") { newValue = config.WalkKey; writtenKeys.Add(("MAIN", "walkkey")); }
+                        break;
+                    case "USERPROFILE":
+                        if (key == "customuserprofilepath") { newValue = config.CustomUserProfilePath; writtenKeys.Add(("USERPROFILE", "customuserprofilepath")); }
                         break;
                     case "CAMERASENSITIVITY":
                         if (key == "mouselooksensitivityrange") newValue = $"{config.MouseLookSensitivityRangeMin.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)}, {config.MouseLookSensitivityRangeMax.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)}";
@@ -1045,6 +1109,60 @@ public class FusionFixConfig : ViewModelBase
                     lines[i] = $"{indent}{parts[0].Trim()} = {newValue}{spacing}{comment}".TrimEnd();
                 }
             }
+
+            // Insert missing keys
+            var missingKeys = new List<(string Section, string Key, string Value)>();
+            if (!writtenKeys.Contains(("MAIN", "skipintro"))) missingKeys.Add(("MAIN", "skipintro", config.SkipIntro.ToString()));
+            if (!writtenKeys.Contains(("MAIN", "skipmenu"))) missingKeys.Add(("MAIN", "skipmenu", config.SkipMenu.ToString()));
+            if (!writtenKeys.Contains(("MAIN", "mousefix"))) missingKeys.Add(("MAIN", "mousefix", config.MouseFix.ToString()));
+            if (!writtenKeys.Contains(("MAIN", "walkkey"))) missingKeys.Add(("MAIN", "walkkey", config.WalkKey));
+            if (!writtenKeys.Contains(("USERPROFILE", "customuserprofilepath"))) missingKeys.Add(("USERPROFILE", "customuserprofilepath", config.CustomUserProfilePath));
+
+            var grouped = missingKeys.GroupBy(k => k.Section).ToList();
+            foreach (var group in grouped)
+            {
+                string targetSection = group.Key;
+                int sectionHeaderIdx = -1;
+                int nextSectionHeaderIdx = -1;
+                for (int j = 0; j < lines.Count; j++)
+                {
+                    var trimmedLine = lines[j].Trim();
+                    if (trimmedLine.StartsWith("[") && trimmedLine.EndsWith("]"))
+                    {
+                        var secName = trimmedLine.Substring(1, trimmedLine.Length - 2).Trim().ToUpperInvariant();
+                        if (secName == targetSection)
+                        {
+                            sectionHeaderIdx = j;
+                        }
+                        else if (sectionHeaderIdx != -1 && nextSectionHeaderIdx == -1)
+                        {
+                            nextSectionHeaderIdx = j;
+                            break;
+                        }
+                    }
+                }
+
+                if (sectionHeaderIdx != -1)
+                {
+                    int insertIdx = nextSectionHeaderIdx != -1 ? nextSectionHeaderIdx : lines.Count;
+                    foreach (var item in group)
+                    {
+                        lines.Insert(insertIdx, $"{item.Key} = {item.Value}");
+                        insertIdx++;
+                        if (nextSectionHeaderIdx != -1) nextSectionHeaderIdx++;
+                    }
+                }
+                else
+                {
+                    lines.Add("");
+                    lines.Add($"[{targetSection}]");
+                    foreach (var item in group)
+                    {
+                        lines.Add($"{item.Key} = {item.Value}");
+                    }
+                }
+            }
+
             File.WriteAllLines(iniPath, lines);
         }
         catch { }

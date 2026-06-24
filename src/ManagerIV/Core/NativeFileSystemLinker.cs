@@ -81,6 +81,12 @@ public class NativeFileSystemLinker : IFileSystemLinker
             Directory.CreateDirectory(linkDir);
         }
 
+        // Overwrite by deleting existing file first
+        if (File.Exists(absoluteLink))
+        {
+            File.Delete(absoluteLink);
+        }
+
         bool success = CreateHardLinkW(absoluteLink, absoluteTarget, IntPtr.Zero);
         if (!success)
         {

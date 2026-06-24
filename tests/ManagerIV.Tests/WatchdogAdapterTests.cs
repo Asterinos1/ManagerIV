@@ -89,6 +89,25 @@ public class WatchdogAdapterTests : IDisposable
         Assert.Equal(DeployTarget.Scripts, _adapter.ResolveTarget(scriptFile));
     }
 
+    [Theory]
+    [InlineData("1.0.4.0", false)]
+    [InlineData("1.0.7.0", false)]
+    [InlineData("1.0.8.0", false)]
+    [InlineData("1, 0, 7, 0", false)]
+    [InlineData(" 1.0.8.0 ", false)]
+    [InlineData("1.0.7.0 (release)", false)]
+    [InlineData("1.2.0.43", true)]
+    [InlineData("1.2.0.32", true)]
+    [InlineData("1.2.0.0", true)]
+    [InlineData("1.0.5.0", true)]
+    [InlineData("1.1.0.0", true)]
+    [InlineData("", true)]
+    [InlineData(null, true)]
+    public void TestGameVersionDetection(string version, bool expectedIsCompleteEdition)
+    {
+        Assert.Equal(expectedIsCompleteEdition, GameVersionProfile.CheckIsCompleteEdition(version));
+    }
+
     public void Dispose()
     {
         try

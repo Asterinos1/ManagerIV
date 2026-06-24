@@ -49,7 +49,7 @@ public class CompleteEditionAdapter : IBackendAdapter
             // Fallback for custom or dummy files
         }
 
-        bool isCompleteEdition = version.StartsWith("1.2.") || size > 50 * 1024 * 1024;
+        bool isCompleteEdition = GameVersionProfile.CheckIsCompleteEdition(version);
         return new GameVersionProfile(version, size, hash, isCompleteEdition);
     }
 
@@ -73,16 +73,44 @@ public class CompleteEditionAdapter : IBackendAdapter
         
         if (target == DeployTarget.Update)
         {
-            // For Update/Asset mods, create a directory junction for the entire mod folder in update/
-            string folderName = _loadOrderService.GetDeployedFolderName(mod, priority);
-            string junctionPath = Path.Combine(_gameDir, "update", folderName);
-
-            if (_journal != null)
+            bool hasImgFiles = mod.Files.Any(f => !IsLooseUpdateFile(f.RelativePath));
+            if (hasImgFiles)
             {
-                _journal.Record(new JournalEntry(JournalOpType.CreateJunction, junctionPath, mod.LibraryPath, IsDirectory: true));
+                // For mods containing compiled .img files, create a directory junction for the mod folder in update/
+                string folderName = _loadOrderService.GetDeployedFolderName(mod, priority);
+                string junctionPath = Path.Combine(_gameDir, "update", folderName);
+
+                if (_journal != null)
+                {
+                    _journal.Record(new JournalEntry(JournalOpType.CreateJunction, junctionPath, mod.LibraryPath, IsDirectory: true));
+                }
+                
+                await Task.Run(() => _linker.CreateJunction(junctionPath, mod.LibraryPath));
             }
-            
-            await Task.Run(() => _linker.CreateJunction(junctionPath, mod.LibraryPath));
+
+            // Deploy loose files directly inside update/ as individual hardlinks
+            foreach (var file in mod.Files)
+            {
+                if (IsLooseUpdateFile(file.RelativePath))
+                {
+                    string libraryFilePath = Path.Combine(mod.LibraryPath, file.RelativePath);
+                    string targetFilePath = Path.Combine(_gameDir, "update", file.RelativePath);
+
+                    // Ensure target subdirectories inside update/ exist
+                    string? targetDir = Path.GetDirectoryName(targetFilePath);
+                    if (targetDir != null && !Directory.Exists(targetDir))
+                    {
+                        Directory.CreateDirectory(targetDir);
+                    }
+
+                    if (_journal != null)
+                    {
+                        _journal.Record(new JournalEntry(JournalOpType.CreateHardLink, targetFilePath, libraryFilePath));
+                    }
+
+                    await Task.Run(() => _linker.CreateHardLink(targetFilePath, libraryFilePath));
+                }
+            }
         }
         else
         {
@@ -117,7 +145,24 @@ public class CompleteEditionAdapter : IBackendAdapter
 
         if (target == DeployTarget.Update)
         {
-            // Locate directory junctions inside update/ matching the mod Name
+            // 1. Delete individual linked loose files under update/
+            foreach (var file in mod.Files)
+            {
+                if (IsLooseUpdateFile(file.RelativePath))
+                {
+                    string targetFilePath = Path.Combine(_gameDir, "update", file.RelativePath);
+                    if (_linker.FileExists(targetFilePath))
+                    {
+                        if (_journal != null)
+                        {
+                            _journal.Record(new JournalEntry(JournalOpType.DeleteFile, targetFilePath, null));
+                        }
+                        await Task.Run(() => _linker.DeleteFile(targetFilePath));
+                    }
+                }
+            }
+
+            // 2. Locate directory junctions inside update/ matching the mod Name
             string updateDir = Path.Combine(_gameDir, "update");
             if (_linker.DirectoryExists(updateDir))
             {
@@ -170,6 +215,12 @@ public class CompleteEditionAdapter : IBackendAdapter
                 }
             }
         }
+    }
+
+    private bool IsLooseUpdateFile(string relativePath)
+    {
+        string path = relativePath.Replace('\\', '/').ToLowerInvariant();
+        return !path.EndsWith(".img") && !path.Contains(".img/");
     }
 
     public async Task<LoadOrderModel> ReadLoadOrderAsync()

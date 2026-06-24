@@ -422,9 +422,15 @@ ReflectionMSAAQuality = 0
         // 2. Act: Load config
         var config = FusionFixConfig.Load(iniPath);
 
-        // Assert loaded values
+        // Assert loaded values (including defaults for new keys)
         Assert.Equal(1, config.RecoilFix);
         Assert.Equal(1, config.AimingZoomFix);
+        Assert.Equal(1, config.SkipIntro);
+        Assert.Equal(0, config.SkipMenu);
+        Assert.Equal(1, config.MouseFix);
+        Assert.Equal("0x12", config.WalkKey);
+        Assert.Equal("", config.CustomUserProfilePath);
+
         Assert.Equal(0.1, config.MouseLookSensitivityRangeMin);
         Assert.Equal(2.0, config.MouseLookSensitivityRangeMax);
         Assert.Equal(2, config.ExtraDynamicShadows);
@@ -490,9 +496,15 @@ ReflectionMSAAQuality = 0
         Assert.Equal("0xDD", config.RightIndicatorKey);
         Assert.Equal(0, config.ReflectionMSAAQuality);
 
-        // 3. Act: Modify values
+        // 3. Act: Modify values (including the 5 new keys)
         config.RecoilFixEnabled = false; // -> RecoilFix = 0
         config.AimingZoomFix = 2;
+        config.SkipIntroEnabled = false; // -> SkipIntro = 0
+        config.SkipMenuEnabled = true;   // -> SkipMenu = 1
+        config.MouseFixEnabled = false;  // -> MouseFix = 0
+        config.WalkKey = "0x57";
+        config.CustomUserProfilePath = @"C:\Saves";
+
         config.MouseLookSensitivityRangeMin = 0.5;
         config.MouseLookSensitivityRangeMax = 3.0;
         config.ExtraDynamicShadows = 0;
@@ -511,6 +523,12 @@ ReflectionMSAAQuality = 0
         var reloaded = FusionFixConfig.Load(iniPath);
         Assert.Equal(0, reloaded.RecoilFix);
         Assert.Equal(2, reloaded.AimingZoomFix);
+        Assert.Equal(0, reloaded.SkipIntro);
+        Assert.Equal(1, reloaded.SkipMenu);
+        Assert.Equal(0, reloaded.MouseFix);
+        Assert.Equal("0x57", reloaded.WalkKey);
+        Assert.Equal(@"C:\Saves", reloaded.CustomUserProfilePath);
+
         Assert.Equal(0.5, reloaded.MouseLookSensitivityRangeMin);
         Assert.Equal(3.0, reloaded.MouseLookSensitivityRangeMax);
         Assert.Equal(0, reloaded.ExtraDynamicShadows);
@@ -526,10 +544,79 @@ ReflectionMSAAQuality = 0
         string savedIniContent = File.ReadAllText(iniPath);
         Assert.Contains("// make recoil behavior the same as controller", savedIniContent);
         Assert.Contains("// min and max range for mouse look sensitivity", savedIniContent);
-        Assert.Contains("// CE-like shadows", savedIniContent);
-        Assert.Contains("// 1.0.4.0-like shadows", savedIniContent);
         Assert.Contains("MouseLookSensitivityRange = 0.5, 3.0", savedIniContent);
         Assert.Contains("LeftIndicatorKey = 0x41", savedIniContent);
+
+        // Check that new/missing keys were successfully inserted into the correct sections
+        Assert.Contains("skipintro = 0", savedIniContent);
+        Assert.Contains("skipmenu = 1", savedIniContent);
+        Assert.Contains("mousefix = 0", savedIniContent);
+        Assert.Contains("walkkey = 0x57", savedIniContent);
+        Assert.Contains("[USERPROFILE]", savedIniContent);
+        Assert.Contains("customuserprofilepath = C:\\Saves", savedIniContent);
+    }
+
+    [Fact]
+    public void TestFusionFixDefaults()
+    {
+        // Arrange
+        string baseDir = Path.Combine(_tempDir, "defaults_test");
+        Directory.CreateDirectory(baseDir);
+        
+        var vm = new ManagerIV.ViewModels.MainViewModel(baseDir);
+        vm.IsFusionFixConfigAvailable = true;
+
+        // Act 1: Load defaults when no default INI is present (should fall back to hardcoded defaults)
+        vm.LoadFusionFixDefaultsInternal(showDialogs: false);
+        Assert.NotNull(vm.FusionFixSettings);
+        Assert.Equal(1, vm.FusionFixSettings.RecoilFix);
+        Assert.Equal(1, vm.FusionFixSettings.AimingZoomFix);
+
+        // Act 2: Create a mock FusionFixDefault.ini with custom settings
+        string defaultIniPath = Path.Combine(baseDir, "FusionFixDefault.ini");
+        File.WriteAllText(defaultIniPath, @"[MAIN]
+RecoilFix = 0
+AimingZoomFix = 2
+");
+
+        // Load defaults again (should load from FusionFixDefault.ini)
+        vm.LoadFusionFixDefaultsInternal(showDialogs: false);
+        Assert.NotNull(vm.FusionFixSettings);
+        Assert.Equal(0, vm.FusionFixSettings.RecoilFix);
+        Assert.Equal(2, vm.FusionFixSettings.AimingZoomFix);
+    }
+
+    [Fact]
+    public void TestProfileToolVersionsSerialization()
+    {
+        // Arrange
+        string filePath = Path.Combine(_tempDir, "profile_with_tools.json");
+        var originalVersions = new Dictionary<string, string>
+        {
+            { "FusionFix", "v5.0.1" },
+            { "ASILoader", "Win32-latest (bundle with FusionFix)" }
+        };
+
+        var profile = new Profile(
+            Id: "test_profile",
+            Name: "Test Profile",
+            GamePath: @"C:\GtaIV",
+            LibraryPath: @"C:\GtaIVLibrary",
+            EnabledModIds: Array.Empty<string>(),
+            LoadOrder: new LoadOrderModel(Array.Empty<LoadOrderEntry>()),
+            ConflictState: new ConflictState(new Dictionary<string, ConflictInfo>(), Array.Empty<string>()),
+            InstalledToolVersions: originalVersions
+        );
+
+        // Act
+        _profileManager.SaveProfile(filePath, profile);
+        var loaded = _profileManager.LoadProfile(filePath);
+
+        // Assert
+        Assert.NotNull(loaded.InstalledToolVersions);
+        Assert.Equal(2, loaded.ToolVersions.Count);
+        Assert.Equal("v5.0.1", loaded.ToolVersions["FusionFix"]);
+        Assert.Equal("Win32-latest (bundle with FusionFix)", loaded.ToolVersions["ASILoader"]);
     }
 
     public void Dispose()

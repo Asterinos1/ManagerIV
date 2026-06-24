@@ -84,6 +84,24 @@ public class ArchiveMetadataTests : IDisposable
         }
     }
 
+    private void CreateUpdateNestedTestZip(string filePath)
+    {
+        using var fs = new FileStream(filePath, FileMode.Create);
+        using var zip = new ZipArchive(fs, ZipArchiveMode.Create);
+
+        var datEntry = zip.CreateEntry("ReleaseFiles/SubDir/update/pc/data/scripts.rpf/custom.dat");
+        using (var writer = new StreamWriter(datEntry.Open()))
+        {
+            writer.Write("dummy dat data");
+        }
+
+        var docEntry = zip.CreateEntry("ReleaseFiles/SubDir/readme.txt");
+        using (var writer = new StreamWriter(docEntry.Open()))
+        {
+            writer.Write("instructions");
+        }
+    }
+
     [Fact]
     public async Task TestSafeExtractionAndMetadataParsing()
     {
@@ -136,6 +154,10 @@ public class ArchiveMetadataTests : IDisposable
     [InlineData("ModLoader2.2.7z", "ModLoader", "2.2")]
     [InlineData("Ultimate_Asi_Loader_v2.0.1_release.zip", "Ultimate Asi Loader", "2.0.1")]
     [InlineData("fix_handling_final_v3.4.5_build123a.zip", "Fix Handling", "3.4.5")]
+    [InlineData("Better_Handling-v1.0.8-fix.zip", "Better Handling", "1.0.8")]
+    [InlineData("LibertyCity-v2.0-beta.zip", "LibertyCity", "2.0")]
+    [InlineData("MyMod-V1.0.8-Description.zip", "MyMod", "1.0.8")]
+    [InlineData("ScriptHook-v1.0-.zip", "ScriptHook", "1.0")]
     public void TestFilenameParsingEdgeCases(string fileName, string expectedName, string expectedVersion)
     {
         var (parsedName, parsedVersion) = _metadataService.ParseFilename(fileName);
@@ -164,6 +186,26 @@ public class ArchiveMetadataTests : IDisposable
         Assert.False(Directory.Exists(nestedFolder), "The original nested folder should be removed.");
         Assert.True(File.Exists(promotedImg), "The image file should be promoted to the root.");
         Assert.True(File.Exists(promotedReadme), "The readme file should be promoted to the root.");
+    }
+
+    [Fact]
+    public async Task TestModRootPromotionWithUpdateFolder()
+    {
+        // Arrange
+        string nestedZipPath = Path.Combine(_testBaseDir, "update_nested_mod.zip");
+        string extractionDir = Path.Combine(_testBaseDir, "UpdateNestedExtracted");
+        CreateUpdateNestedTestZip(nestedZipPath);
+
+        // Act
+        await _archiveHandler.ExtractAsync(nestedZipPath, extractionDir);
+        _archiveHandler.PromoteModRoot(extractionDir);
+
+        // Assert
+        string nestedFolder = Path.Combine(extractionDir, "ReleaseFiles");
+        string promotedDat = Path.Combine(extractionDir, "pc", "data", "scripts.rpf", "custom.dat");
+
+        Assert.False(Directory.Exists(nestedFolder), "The original nested folders should be cleaned up.");
+        Assert.True(File.Exists(promotedDat), "The files inside the nested 'update' folder should be promoted to the root.");
     }
 
     public void Dispose()

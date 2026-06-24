@@ -237,6 +237,13 @@
                         <TextBlock Text="Mods Library Directory" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         <TextBlock Text="{Binding ActiveProfile.LibraryPath}" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,2,0,12" TextWrapping="Wrap" />
 
+                        <TextBlock Text="Detected Game Version" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,12">
+                            <TextBlock Text="{Binding ActiveProfile.LastKnownVersion.Version, FallbackValue='Unknown'}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock Text=" (Complete Edition)" FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="4,0,0,0" Visibility="{Binding ActiveProfile.LastKnownVersion.IsCompleteEdition, FallbackValue=Collapsed, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <TextBlock Text=" (Legacy)" FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="4,0,0,0" Visibility="{Binding ActiveProfile.LastKnownVersion.IsCompleteEdition, FallbackValue=Collapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                        </StackPanel>
+
                         <TextBlock Text="Last Known Executable Hash" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         <TextBlock Text="{Binding ActiveProfile.LastKnownVersion.ExecutableHash, FallbackValue='None recorded'}" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,2,0,12" TextWrapping="Wrap" />
 
@@ -268,6 +275,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Ultimate ASI Loader" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                     <TextBlock Text="dinput8.dll" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock Text="{Binding BackendStatus.AsiLoaderVersionInfo}" FontSize="10" Foreground="#FF0078D4" Margin="0,2,0,0" />
                                 </StackPanel>
                                 <Border Grid.Column="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
                                         Background="{Binding BackendStatus.AsiLoaderBrush}">
@@ -286,6 +294,7 @@
                                 <StackPanel>
                                     <TextBlock Text="FusionFix" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                     <TextBlock Text="plugins/GTAIV.FusionFix.asi" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock Text="{Binding BackendStatus.FusionFixVersionInfo}" FontSize="10" Foreground="#FF0078D4" Margin="0,2,0,0" />
                                 </StackPanel>
                                 <Border Grid.Column="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
                                         Background="{Binding BackendStatus.FusionFixBrush}">
@@ -304,6 +313,7 @@
                                 <StackPanel>
                                     <TextBlock Text="DXVK (Vulkan Translation)" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                     <TextBlock Text="d3d9.dll / vulkan.dll" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock Text="{Binding BackendStatus.DxvkVersionInfo}" FontSize="10" Foreground="#FF0078D4" Margin="0,2,0,0" />
                                 </StackPanel>
                                 <Border Grid.Column="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
                                         Background="{Binding BackendStatus.DxvkBrush}">
@@ -338,7 +348,7 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <ui:Button Grid.Column="0" Content="Install / Update" 
+                                <ui:Button Grid.Column="0" Content="{Binding BackendStatus.FusionFixButtonText}" 
                                            Icon="{ui:SymbolIcon ArrowDownload24}" 
                                            Command="{Binding InstallFusionFixCommand}"
                                            Appearance="Primary"
@@ -358,7 +368,7 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <ui:Button Grid.Column="0" Content="Install / Update" 
+                                <ui:Button Grid.Column="0" Content="{Binding BackendStatus.AsiLoaderButtonText}" 
                                            Icon="{ui:SymbolIcon ArrowDownload24}" 
                                            Command="{Binding InstallAsiLoaderCommand}"
                                            Appearance="Primary"
@@ -378,7 +388,7 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <ui:Button Grid.Column="0" Content="Install / Update" 
+                                <ui:Button Grid.Column="0" Content="{Binding BackendStatus.DxvkButtonText}" 
                                            Icon="{ui:SymbolIcon ArrowDownload24}" 
                                            Command="{Binding InstallDxvkCommand}"
                                            Appearance="Primary"

@@ -69,7 +69,34 @@ public record GameVersionProfile(
     long ExecutableSize,
     string ExecutableHash,
     bool IsCompleteEdition
-);
+)
+{
+    /// <summary>
+    /// Checks if a version string represents Complete Edition or Legacy.
+    /// Legacy version is detected if the version string normalized starts with "1.0.4.0", "1.0.7.0", or "1.0.8.0".
+    /// </summary>
+    public static bool CheckIsCompleteEdition(string version)
+    {
+        if (string.IsNullOrWhiteSpace(version))
+        {
+            return true;
+        }
+
+        // Normalize version string: commas to dots, remove spaces
+        string normalized = version.Replace(",", ".").Replace(" ", "").Trim();
+
+        // Legacy check
+        if (normalized.StartsWith("1.0.4.0") ||
+            normalized.StartsWith("1.0.7.0") ||
+            normalized.StartsWith("1.0.8.0"))
+        {
+            return false;
+        }
+
+        return true;
+    }
+}
+
 
 /// <summary>
 /// Represents detailed conflict information for a specific virtual file target path.
@@ -114,8 +141,12 @@ public record Profile(
     LoadOrderModel LoadOrder,
     ConflictState ConflictState,
     GameVersionProfile? LastKnownVersion = null,
-    int GpuVramMb = 2048
-);
+    int GpuVramMb = 2048,
+    IReadOnlyDictionary<string, string>? InstalledToolVersions = null
+)
+{
+    public IReadOnlyDictionary<string, string> ToolVersions => InstalledToolVersions ?? new Dictionary<string, string>();
+}
 
 /// <summary>
 /// Records a single file deployed by a backend tool.

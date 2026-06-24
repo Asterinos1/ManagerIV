@@ -29,7 +29,7 @@ public class MetadataService
     );
 
     private static readonly Regex VersionRegex = new(
-        @"(?:[_\-\s]+v?|v|(?<=[a-zA-Z])v?)(\d+(?:\.\d+)+)$",
+        @"(?:[_\-\s]+v?|v|(?<=[a-zA-Z])v?)(\d+(?:\.\d+)+)(?:-.*)?$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled
     );
 

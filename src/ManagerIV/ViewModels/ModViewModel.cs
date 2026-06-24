@@ -112,6 +112,14 @@ public class ModViewModel : ViewModelBase
         set => SetProperty(ref _hasConflict, value);
     }
 
+    private string? _conflictDetails;
+
+    public string? ConflictDetails
+    {
+        get => _conflictDetails;
+        set => SetProperty(ref _conflictDetails, value);
+    }
+
     public string TypeTag => Target.ToString();
 
     public StagedMod Model => _mod;

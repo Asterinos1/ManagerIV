@@ -302,6 +302,7 @@ public class MainViewModel : ViewModelBase
     public ICommand SetVramPresetCommand { get; }
     public ICommand ClearLibraryCommand { get; }
     public ICommand SaveFusionFixConfigCommand { get; }
+    public ICommand LoadFusionFixDefaultsCommand { get; }
     public ICommand BrowseSaveProfilesPathCommand { get; }
     public ICommand ActivateSaveProfileCommand { get; }
     public ICommand CreateSaveProfileCommand { get; }
@@ -359,6 +360,7 @@ public class MainViewModel : ViewModelBase
         SetVramPresetCommand = new RelayCommand<object>(SetVramPreset);
         ClearLibraryCommand = new RelayCommand(async () => await ClearLibraryAsync(), () => !IsBusy && LibraryMods.Any());
         SaveFusionFixConfigCommand = new RelayCommand(SaveFusionFixConfig, () => IsFusionFixConfigAvailable && !IsBusy);
+        LoadFusionFixDefaultsCommand = new RelayCommand(LoadFusionFixDefaults, () => IsFusionFixConfigAvailable && !IsBusy);
 
         BrowseSaveProfilesPathCommand = new RelayCommand(BrowseSaveProfilesPath);
         ActivateSaveProfileCommand = new RelayCommand<object>(ActivateSaveProfile);
@@ -576,26 +578,63 @@ public class MainViewModel : ViewModelBase
         // Detect conflicts
         var conflictState = _conflictDetector.DetectConflicts(enabledModels, currentLoadOrder);
 
-        // Map conflicts back to ViewModels
+        // Map conflicts and structure validations back to ViewModels
+        var validator = new UpdateFolderValidator();
         foreach (var modVm in LibraryMods)
         {
+            var validationIssues = validator.Validate(modVm.Model);
             var targetConflicts = conflictState.Conflicts.Values.Where(c => c.WinnerModId == modVm.Id || c.ConflictingModIds.Contains(modVm.Id)).ToList();
+            
+            var details = new System.Collections.Generic.List<string>();
+            
+            // Add validation issues first
+            foreach (var issue in validationIssues)
+            {
+                details.Add($"[{issue.Severity}] {issue.Message}");
+            }
+            
+            // Add conflicts next
+            string conflictSummary = "";
             if (targetConflicts.Any())
             {
                 var losses = targetConflicts.Where(c => c.WinnerModId != modVm.Id).ToList();
                 if (losses.Any())
                 {
-                    modVm.ConflictStatus = $"Overridden by {losses.Count} mod(s)";
+                    conflictSummary = $"Overridden by {losses.Count} mod(s)";
+                    details.Add($"[Conflict] Overridden by other mods on {losses.Count} file(s):");
+                    foreach (var loss in losses)
+                    {
+                        var winnerName = LibraryMods.FirstOrDefault(m => m.Id == loss.WinnerModId)?.Name ?? "Another Mod";
+                        details.Add($"  - '{loss.TargetPath}' overridden by '{winnerName}'");
+                    }
                 }
                 else
                 {
-                    modVm.ConflictStatus = $"Overrides {targetConflicts.Sum(c => c.ConflictingModIds.Count)} mod(s)";
+                    var winsCount = targetConflicts.Sum(c => c.ConflictingModIds.Count);
+                    conflictSummary = $"Overrides {winsCount} mod(s)";
+                    details.Add($"[Conflict] Overrides other mods on {targetConflicts.Count} file(s).");
                 }
+            }
+
+            // Determine status label
+            if (validationIssues.Any(i => i.Severity == "Error"))
+            {
+                modVm.ConflictStatus = "❌ Structure Error";
+            }
+            else if (validationIssues.Any(i => i.Severity == "Warning"))
+            {
+                modVm.ConflictStatus = "⚠️ Structure Warning";
+            }
+            else if (!string.IsNullOrEmpty(conflictSummary))
+            {
+                modVm.ConflictStatus = conflictSummary;
             }
             else
             {
                 modVm.ConflictStatus = "";
             }
+            
+            modVm.ConflictDetails = details.Count > 0 ? string.Join(System.Environment.NewLine, details) : null;
         }
 
         // Calculate custom .img archive count
@@ -604,7 +643,30 @@ public class MainViewModel : ViewModelBase
         {
             if (modVm.IsEnabled && modVm.Target == DeployTarget.Update)
             {
-                imgCount += modVm.Model.Files.Count(f => f.RelativePath.EndsWith(".img", System.StringComparison.OrdinalIgnoreCase));
+                var uniqueImgs = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+                foreach (var file in modVm.Model.Files)
+                {
+                    string relPath = file.RelativePath.Replace('\\', '/');
+                    var parts = relPath.Split('/');
+                    string currentPath = "";
+                    for (int i = 0; i < parts.Length; i++)
+                    {
+                        string part = parts[i];
+                        if (string.IsNullOrEmpty(part)) continue;
+                        
+                        currentPath = currentPath == "" ? part : currentPath + "/" + part;
+                        if (part.EndsWith(".img", System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            uniqueImgs.Add(currentPath);
+                            break; // Folder found; no need to parse deeper files in this branch
+                        }
+                        else if (i == parts.Length - 1 && part.EndsWith(".img", System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            uniqueImgs.Add(currentPath);
+                        }
+                    }
+                }
+                imgCount += uniqueImgs.Count;
             }
         }
         
@@ -668,7 +730,54 @@ public class MainViewModel : ViewModelBase
                                 (Directory.Exists(pluginsDir) && Directory.GetFiles(pluginsDir, "*ScriptHook*.dll").Any()) ||
                                 (Directory.Exists(Path.Combine(gamePath, "scripts")) && Directory.GetFiles(Path.Combine(gamePath, "scripts"), "*ScriptHook*.dll").Any());
 
-        BackendStatus = new BackendStatusViewModel(asiLoaderExists, fusionFixExists, dxvkExists, scriptHookExists);
+        string ffVer = "Unknown";
+        string asiVer = "Unknown";
+        string dxvkVer = "Unknown";
+
+        if (ActiveProfile != null)
+        {
+            if (ActiveProfile.ToolVersions.TryGetValue("FusionFix", out string? vff)) ffVer = vff;
+            if (ActiveProfile.ToolVersions.TryGetValue("ASILoader", out string? vasi)) asiVer = vasi;
+            if (ActiveProfile.ToolVersions.TryGetValue("DXVK", out string? vdxvk)) dxvkVer = vdxvk;
+        }
+
+        BackendStatus = new BackendStatusViewModel(asiLoaderExists, asiVer, fusionFixExists, ffVer, dxvkExists, dxvkVer, scriptHookExists);
+
+        // Fetch latest versions from GitHub in the background
+        _ = FetchLatestToolVersionsAsync(BackendStatus);
+    }
+
+    private async Task FetchLatestToolVersionsAsync(BackendStatusViewModel statusVm)
+    {
+        try
+        {
+            var asiRelease = await _backendToolManager.GetLatestReleaseAsync("ThirteenAG", "Ultimate-ASI-Loader");
+            statusVm.AsiLoaderLatest = asiRelease.TagName;
+        }
+        catch
+        {
+            statusVm.AsiLoaderLatest = "Unavailable";
+        }
+
+        try
+        {
+            var ffRelease = await _backendToolManager.GetLatestReleaseAsync("ThirteenAG", "GTAIV.EFLC.FusionFix");
+            statusVm.FusionFixLatest = ffRelease.TagName;
+        }
+        catch
+        {
+            statusVm.FusionFixLatest = "Unavailable";
+        }
+
+        try
+        {
+            var dxvkRelease = await _backendToolManager.GetLatestReleaseAsync("doitsujin", "dxvk");
+            statusVm.DxvkLatest = dxvkRelease.TagName;
+        }
+        catch
+        {
+            statusVm.DxvkLatest = "Unavailable";
+        }
     }
 
     private async Task RunWatchdogCheckAsync()
@@ -1338,6 +1447,48 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    private void LoadFusionFixDefaults()
+    {
+        LoadFusionFixDefaultsInternal(showDialogs: true);
+    }
+
+    public void LoadFusionFixDefaultsInternal(bool showDialogs)
+    {
+        string defaultIniPath = Path.Combine(_baseDir, "FusionFixDefault.ini");
+        if (File.Exists(defaultIniPath))
+        {
+            try
+            {
+                FusionFixSettings = FusionFixConfig.Load(defaultIniPath);
+                StatusText = "Restored default settings from installed FusionFix package.";
+                if (showDialogs)
+                {
+                    MessageBox.Show("FusionFix default configuration loaded from the installation package. Click 'Save Configuration' to apply changes to the active game profile.", "Defaults Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (showDialogs)
+                {
+                    MessageBox.Show($"Failed to load FusionFix defaults: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+        }
+        else
+        {
+            FusionFixSettings = new FusionFixConfig();
+            StatusText = "Restored built-in default settings.";
+            if (showDialogs)
+            {
+                MessageBox.Show("No default configuration file from installation package was found. Restored built-in defaults instead. Click 'Save Configuration' to apply changes to the active game profile.", "Built-in Defaults Loaded", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+    }
+
     private void LoadSaveProfilesData()
     {
         BaseProfileIds.Clear();
@@ -1719,6 +1870,39 @@ public class MainViewModel : ViewModelBase
                 }
             }
 
+            // Cache the default .ini from the extracted folder for "Defaults" configuration restore
+            try
+            {
+                string? defaultIniSourcePath = null;
+                var iniFiles = Directory.GetFiles(tempExtractionDir, "*.ini", SearchOption.AllDirectories);
+                foreach (var iniFile in iniFiles)
+                {
+                    string? parentDir = Path.GetFileName(Path.GetDirectoryName(iniFile))?.ToLowerInvariant();
+                    string fileName = Path.GetFileName(iniFile).ToLowerInvariant();
+
+                    if ((parentDir == "plugins" || parentDir == "plugin") && fileName.Contains("fusionfix"))
+                    {
+                        defaultIniSourcePath = iniFile;
+                        break;
+                    }
+                }
+
+                if (defaultIniSourcePath == null)
+                {
+                    defaultIniSourcePath = iniFiles.FirstOrDefault(f => Path.GetFileName(f).ToLowerInvariant().Contains("fusionfix"));
+                }
+
+                if (defaultIniSourcePath != null && File.Exists(defaultIniSourcePath))
+                {
+                    string defaultIniDestPath = Path.Combine(_baseDir, "FusionFixDefault.ini");
+                    File.Copy(defaultIniSourcePath, defaultIniDestPath, overwrite: true);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to cache default FusionFix .ini: {ex.Message}");
+            }
+
             // Copy all extracted files into GTAIV game directory
             StatusText = "Installing FusionFix files to game directory...";
             string gamePath = ActiveProfile.GamePath;
@@ -1729,6 +1913,32 @@ public class MainViewModel : ViewModelBase
             CopyDirectoryWithToolManifest(tempExtractionDir, gamePath, gamePath, "FusionFix", newInstalled);
             manifest.AddRange(newInstalled);
             await SaveToolsManifestAsync(manifest);
+
+            // Update tool versions dictionary in profile
+            var toolVersions = new Dictionary<string, string>(ActiveProfile.ToolVersions.ToDictionary(k => k.Key, v => v.Value));
+            toolVersions["FusionFix"] = release.TagName;
+
+            // Resolve Ultimate ASI Loader's version dynamically from GitHub
+            string asiVersionTag = "Win32-latest";
+            try
+            {
+                var asiRelease = await _backendToolManager.GetLatestReleaseAsync("ThirteenAG", "Ultimate-ASI-Loader");
+                if (asiRelease != null && !string.IsNullOrEmpty(asiRelease.TagName))
+                {
+                    asiVersionTag = asiRelease.TagName;
+                }
+            }
+            catch
+            {
+                // Fallback to Win32-latest if offline or rate-limited
+            }
+
+            toolVersions["ASILoader"] = $"{asiVersionTag} (bundle with FusionFix)";
+            toolVersions["DXVK"] = "v2.6.2 (bundle with FusionFix)";
+            
+            var updatedProfile = ActiveProfile with { InstalledToolVersions = toolVersions };
+            _profileManager.SaveProfile(Path.Combine(_profilesDir, $"{updatedProfile.Id}.json"), updatedProfile);
+            ActiveProfile = updatedProfile;
 
             // Apply configuration bug fixes (VRAM, aspect ratio)
             await ApplyPostInstallationPatchesAsync(gamePath, "FusionFix");
@@ -1925,6 +2135,35 @@ public class MainViewModel : ViewModelBase
                 }
             }
 
+            // Update tool versions dictionary in profile
+            var toolVersions = new Dictionary<string, string>(ActiveProfile.ToolVersions.ToDictionary(k => k.Key, v => v.Value));
+            if (string.Equals(toolName, "FusionFix", StringComparison.OrdinalIgnoreCase))
+            {
+                toolVersions.Remove("FusionFix");
+                if (toolVersions.TryGetValue("ASILoader", out string? vAsi) &&
+                    (vAsi == "Bundled with FusionFix" ||
+                     vAsi.Contains("bundled with FusionFix", StringComparison.OrdinalIgnoreCase) ||
+                     vAsi.Contains("bundle with FusionFix", StringComparison.OrdinalIgnoreCase)))
+                {
+                    toolVersions.Remove("ASILoader");
+                }
+                if (toolVersions.TryGetValue("DXVK", out string? vDxvk) &&
+                    (vDxvk == "Bundled with FusionFix" ||
+                     vDxvk.Contains("bundled with FusionFix", StringComparison.OrdinalIgnoreCase) ||
+                     vDxvk.Contains("bundle with FusionFix", StringComparison.OrdinalIgnoreCase)))
+                {
+                    toolVersions.Remove("DXVK");
+                }
+            }
+            else
+            {
+                toolVersions.Remove(toolName);
+            }
+            
+            var updatedProfile = ActiveProfile with { InstalledToolVersions = toolVersions };
+            _profileManager.SaveProfile(Path.Combine(_profilesDir, $"{updatedProfile.Id}.json"), updatedProfile);
+            ActiveProfile = updatedProfile;
+
             StatusText = $"{displayName} uninstalled successfully.";
             MessageBox.Show($"{displayName} has been uninstalled successfully.", "Uninstall Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -2032,6 +2271,14 @@ public class MainViewModel : ViewModelBase
             manifest.Add(new InstalledToolFile("ASILoader", targetDll, hash));
             await SaveToolsManifestAsync(manifest);
 
+            // Update tool versions dictionary in profile
+            var toolVersions = new Dictionary<string, string>(ActiveProfile.ToolVersions.ToDictionary(k => k.Key, v => v.Value));
+            toolVersions["ASILoader"] = release.TagName;
+            
+            var updatedProfile = ActiveProfile with { InstalledToolVersions = toolVersions };
+            _profileManager.SaveProfile(Path.Combine(_profilesDir, $"{updatedProfile.Id}.json"), updatedProfile);
+            ActiveProfile = updatedProfile;
+
             // Clean up temp files
             try
             {
@@ -2066,6 +2313,15 @@ public class MainViewModel : ViewModelBase
         if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath) || !Directory.Exists(ActiveProfile.GamePath))
         {
             MessageBox.Show("Please select a valid game directory first.", "Cannot Install", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        // Install guard: If FusionFix is already installed, skip standalone DXVK installation entirely
+        var manifest = await LoadToolsManifestAsync();
+        bool hasFusionFix = manifest.Any(f => string.Equals(f.SourceTool, "FusionFix", StringComparison.OrdinalIgnoreCase));
+        if (hasFusionFix || BackendStatus.FusionFixInstalled)
+        {
+            MessageBox.Show("FusionFix is already installed and contains its own DXVK layer. Standalone DXVK installation is skipped.", "Installation Skipped", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -2127,10 +2383,7 @@ public class MainViewModel : ViewModelBase
             string gamePath = ActiveProfile.GamePath;
             
             // If FusionFix is present, rename to vulkan.dll. Otherwise d3d9.dll
-            var manifest = await LoadToolsManifestAsync();
-            bool hasFusionFix = manifest.Any(f => string.Equals(f.SourceTool, "FusionFix", StringComparison.OrdinalIgnoreCase)) || BackendStatus.FusionFixInstalled;
-
-            string targetFileName = hasFusionFix ? "vulkan.dll" : "d3d9.dll";
+            string targetFileName = (hasFusionFix || BackendStatus.FusionFixInstalled) ? "vulkan.dll" : "d3d9.dll";
             string targetPath = Path.Combine(gamePath, targetFileName);
 
             File.Copy(d3d9Source, targetPath, overwrite: true);
@@ -2141,6 +2394,14 @@ public class MainViewModel : ViewModelBase
             manifest.RemoveAll(f => string.Equals(f.SourceTool, "DXVK", StringComparison.OrdinalIgnoreCase));
             manifest.Add(new InstalledToolFile("DXVK", targetPath, hash));
             await SaveToolsManifestAsync(manifest);
+
+            // Update tool versions dictionary in profile
+            var toolVersions = new Dictionary<string, string>(ActiveProfile.ToolVersions.ToDictionary(k => k.Key, v => v.Value));
+            toolVersions["DXVK"] = release.TagName;
+            
+            var updatedProfile = ActiveProfile with { InstalledToolVersions = toolVersions };
+            _profileManager.SaveProfile(Path.Combine(_profilesDir, $"{updatedProfile.Id}.json"), updatedProfile);
+            ActiveProfile = updatedProfile;
 
             // Apply configuration bug fixes
             await ApplyPostInstallationPatchesAsync(gamePath, "DXVK");

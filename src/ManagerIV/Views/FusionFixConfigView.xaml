@@ -89,12 +89,68 @@
                                                 <TextBlock Text="Aiming Zoom Fix" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                                 <TextBlock Text="Specifies desaturated aiming zoom settings across game episodes." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                             </StackPanel>
-                                            <ComboBox Grid.Column="1" SelectedValue="{Binding FusionFixSettings.AimingZoomFix, Mode=TwoWay}" SelectedValuePath="Tag" Height="32" VerticalAlignment="Center">
+                                            <ComboBox Grid.Column="1" SelectedValue="{Binding FusionFixSettings.AimingZoomFix, Mode=TwoWay}" SelectedValuePath="Tag" VerticalAlignment="Center">
                                                 <ComboBoxItem Content="Disabled" Tag="0" />
                                                 <ComboBoxItem Content="Xbox Parity (TBoGT only)" Tag="1" />
                                                 <ComboBoxItem Content="Global (IV, TLaD, and TBoGT)" Tag="2" />
                                                 <ComboBoxItem Content="Legacy (TBoGT zoom like IV)" Tag="-1" />
                                             </ComboBox>
+                                        </Grid>
+
+                                        <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,6" />
+
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0">
+                                                <TextBlock Text="Skip Intro Cutscenes" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                <TextBlock Text="Skips the startup logo videos to load the game faster." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding FusionFixSettings.SkipIntroEnabled, Mode=TwoWay}" VerticalAlignment="Center" />
+                                        </Grid>
+
+                                        <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,6" />
+
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0">
+                                                <TextBlock Text="Skip Main Menu" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                <TextBlock Text="Bypasses the main menu and loads directly into the last save game." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding FusionFixSettings.SkipMenuEnabled, Mode=TwoWay}" VerticalAlignment="Center" />
+                                        </Grid>
+
+                                        <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,6" />
+
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0">
+                                                <TextBlock Text="Mouse Input Fix" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                <TextBlock Text="Improves mouse aiming and fixes sensitivity bugs on modern systems." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding FusionFixSettings.MouseFixEnabled, Mode=TwoWay}" VerticalAlignment="Center" />
+                                        </Grid>
+
+                                        <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,6" />
+
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="100" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0">
+                                                <TextBlock Text="Walk Key Bind" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                <TextBlock Text="Virtual key hex code for walking toggle (Default: 0x12 for Alt)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.WalkKey, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" />
                                         </Grid>
                                     </StackPanel>
                                 </ui:Card>
@@ -121,18 +177,18 @@
 
                                         <!-- Mouse Look -->
                                         <TextBlock Grid.Row="1" Grid.Column="0" Text="Mouse Look Sensitivity" VerticalAlignment="Center" FontSize="13" />
-                                        <ui:TextBox Grid.Row="1" Grid.Column="1" Text="{Binding FusionFixSettings.MouseLookSensitivityRangeMin, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center"/>
-                                        <ui:TextBox Grid.Row="1" Grid.Column="2" Text="{Binding FusionFixSettings.MouseLookSensitivityRangeMax, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center"/>
+                                        <ui:TextBox Grid.Row="1" Grid.Column="1" Text="{Binding FusionFixSettings.MouseLookSensitivityRangeMin, Mode=TwoWay}" Margin="5,4" TextAlignment="Center"/>
+                                        <ui:TextBox Grid.Row="1" Grid.Column="2" Text="{Binding FusionFixSettings.MouseLookSensitivityRangeMax, Mode=TwoWay}" Margin="5,4" TextAlignment="Center"/>
 
                                         <!-- Gamepad Look -->
                                         <TextBlock Grid.Row="2" Grid.Column="0" Text="Gamepad Look Sensitivity" VerticalAlignment="Center" FontSize="13" />
-                                        <ui:TextBox Grid.Row="2" Grid.Column="1" Text="{Binding FusionFixSettings.GamepadLookSensitivityRangeMin, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center"/>
-                                        <ui:TextBox Grid.Row="2" Grid.Column="2" Text="{Binding FusionFixSettings.GamepadLookSensitivityRangeMax, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center"/>
+                                        <ui:TextBox Grid.Row="2" Grid.Column="1" Text="{Binding FusionFixSettings.GamepadLookSensitivityRangeMin, Mode=TwoWay}" Margin="5,4" TextAlignment="Center"/>
+                                        <ui:TextBox Grid.Row="2" Grid.Column="2" Text="{Binding FusionFixSettings.GamepadLookSensitivityRangeMax, Mode=TwoWay}" Margin="5,4" TextAlignment="Center"/>
 
                                         <!-- Mouse Aim -->
                                         <TextBlock Grid.Row="3" Grid.Column="0" Text="Mouse Aim Sensitivity" VerticalAlignment="Center" FontSize="13" />
-                                        <ui:TextBox Grid.Row="3" Grid.Column="1" Text="{Binding FusionFixSettings.MouseAimSensitivityRangeMin, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center"/>
-                                        <ui:TextBox Grid.Row="3" Grid.Column="2" Text="{Binding FusionFixSettings.MouseAimSensitivityRangeMax, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center"/>
+                                        <ui:TextBox Grid.Row="3" Grid.Column="1" Text="{Binding FusionFixSettings.MouseAimSensitivityRangeMin, Mode=TwoWay}" Margin="5,4" TextAlignment="Center"/>
+                                        <ui:TextBox Grid.Row="3" Grid.Column="2" Text="{Binding FusionFixSettings.MouseAimSensitivityRangeMax, Mode=TwoWay}" Margin="5,4" TextAlignment="Center"/>
                                     </Grid>
                                 </ui:Card>
 
@@ -144,8 +200,8 @@
                                             <ColumnDefinition Width="100" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="Gamepad Aim Sensitivity Range" VerticalAlignment="Center" FontSize="13" />
-                                        <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.GamepadAimSensitivityRangeMin, Mode=TwoWay}" Margin="5,0" Height="28" TextAlignment="Center"/>
-                                        <ui:TextBox Grid.Column="2" Text="{Binding FusionFixSettings.GamepadAimSensitivityRangeMax, Mode=TwoWay}" Margin="5,0" Height="28" TextAlignment="Center"/>
+                                        <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.GamepadAimSensitivityRangeMin, Mode=TwoWay}" Margin="5,0" TextAlignment="Center"/>
+                                        <ui:TextBox Grid.Column="2" Text="{Binding FusionFixSettings.GamepadAimSensitivityRangeMax, Mode=TwoWay}" Margin="5,0" TextAlignment="Center"/>
                                     </Grid>
                                 </ui:Card>
 
@@ -184,7 +240,7 @@
                                                 <TextBlock Text="Extra Dynamic Shadows" FontSize="13" FontWeight="SemiBold" />
                                                 <TextBlock Text="Adds missing shadows back to vegetation, grates, and fences." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <ComboBox Grid.Column="1" SelectedValue="{Binding FusionFixSettings.ExtraDynamicShadows, Mode=TwoWay}" SelectedValuePath="Tag" Height="32" VerticalAlignment="Center">
+                                            <ComboBox Grid.Column="1" SelectedValue="{Binding FusionFixSettings.ExtraDynamicShadows, Mode=TwoWay}" SelectedValuePath="Tag" VerticalAlignment="Center">
                                                 <ComboBoxItem Content="Disabled (Vanilla shadows)" Tag="0" />
                                                 <ComboBoxItem Content="Vegetation Only" Tag="1" />
                                                 <ComboBoxItem Content="Full Environment" Tag="2" />
@@ -202,7 +258,7 @@
                                                 <TextBlock Text="Cascade Blend Size" FontSize="13" FontWeight="SemiBold" />
                                                 <TextBlock Text="Controls the blending range region between cascades [0.0; 1.0]." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.CascadeBlendSize, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" Height="28" />
+                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.CascadeBlendSize, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" />
                                         </Grid>
 
                                         <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,6" />
@@ -216,7 +272,7 @@
                                                 <TextBlock Text="Force Shadow Filter" FontSize="13" FontWeight="SemiBold" />
                                                 <TextBlock Text="Forces shadow blur quality profile parameters." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <ComboBox Grid.Column="1" SelectedValue="{Binding FusionFixSettings.ForceShadowFilter, Mode=TwoWay}" SelectedValuePath="Tag" Height="32" VerticalAlignment="Center">
+                                            <ComboBox Grid.Column="1" SelectedValue="{Binding FusionFixSettings.ForceShadowFilter, Mode=TwoWay}" SelectedValuePath="Tag" VerticalAlignment="Center">
                                                 <ComboBoxItem Content="Tied to definition (0)" Tag="0" />
                                                 <ComboBoxItem Content="Force Low Quality (1)" Tag="1" />
                                                 <ComboBoxItem Content="Force High Quality (2)" Tag="2" />
@@ -249,21 +305,21 @@
 
                                         <!-- Sharp -->
                                         <TextBlock Grid.Row="1" Grid.Column="0" Text="Sharp Shadows (CE-like)" VerticalAlignment="Center" FontSize="13" />
-                                        <ui:TextBox Grid.Row="1" Grid.Column="1" Text="{Binding FusionFixSettings.SharpShadowSoftness, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center" />
-                                        <ui:TextBox Grid.Row="1" Grid.Column="2" Text="{Binding FusionFixSettings.SharpShadowBias, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center" />
+                                        <ui:TextBox Grid.Row="1" Grid.Column="1" Text="{Binding FusionFixSettings.SharpShadowSoftness, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
+                                        <ui:TextBox Grid.Row="1" Grid.Column="2" Text="{Binding FusionFixSettings.SharpShadowBias, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                         <TextBlock Grid.Row="1" Grid.Column="3" Text="N/A" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource TextFillColorDisabledBrush}" />
 
                                         <!-- Soft -->
                                         <TextBlock Grid.Row="2" Grid.Column="0" Text="Soft Shadows (1.0.4.0-like)" VerticalAlignment="Center" FontSize="13" />
-                                        <ui:TextBox Grid.Row="2" Grid.Column="1" Text="{Binding FusionFixSettings.SoftShadowSoftness, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center" />
-                                        <ui:TextBox Grid.Row="2" Grid.Column="2" Text="{Binding FusionFixSettings.SoftShadowBias, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center" />
+                                        <ui:TextBox Grid.Row="2" Grid.Column="1" Text="{Binding FusionFixSettings.SoftShadowSoftness, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
+                                        <ui:TextBox Grid.Row="2" Grid.Column="2" Text="{Binding FusionFixSettings.SoftShadowBias, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                         <TextBlock Grid.Row="2" Grid.Column="3" Text="N/A" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource TextFillColorDisabledBrush}" />
 
                                         <!-- CHSS -->
                                         <TextBlock Grid.Row="3" Grid.Column="0" Text="CHSS Shadows (PCSS)" VerticalAlignment="Center" FontSize="13" />
-                                        <ui:TextBox Grid.Row="3" Grid.Column="1" Text="{Binding FusionFixSettings.ChssShadowSoftness, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center" />
-                                        <ui:TextBox Grid.Row="3" Grid.Column="2" Text="{Binding FusionFixSettings.ChssShadowBias, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center" />
-                                        <ui:TextBox Grid.Row="3" Grid.Column="3" Text="{Binding FusionFixSettings.ChssMaxSoftness, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center" />
+                                        <ui:TextBox Grid.Row="3" Grid.Column="1" Text="{Binding FusionFixSettings.ChssShadowSoftness, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
+                                        <ui:TextBox Grid.Row="3" Grid.Column="2" Text="{Binding FusionFixSettings.ChssShadowBias, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
+                                        <ui:TextBox Grid.Row="3" Grid.Column="3" Text="{Binding FusionFixSettings.ChssMaxSoftness, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                     </Grid>
                                 </ui:Card>
 
@@ -279,7 +335,7 @@
                                                 <TextBlock Text="Volumetric Fog Far Clip" FontSize="13" FontWeight="SemiBold" />
                                                 <TextBlock Text="Overrides rendering limit clip for volumetric fog (Default: 4500.0)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.VolFogFarClip, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" Height="28" />
+                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.VolFogFarClip, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" />
                                         </Grid>
                                         
                                         <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,6" />
@@ -344,15 +400,15 @@
                                             <TextBlock Grid.Row="0" Grid.Column="3" Text="Blur Radius" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
 
                                             <TextBlock Grid.Row="1" Grid.Column="0" Text="Ambient Occlusion Details" FontSize="13" VerticalAlignment="Center" />
-                                            <ui:TextBox Grid.Row="1" Grid.Column="1" Text="{Binding FusionFixSettings.AmbientOcclusionSamples, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center" />
-                                            <ui:TextBox Grid.Row="1" Grid.Column="2" Text="{Binding FusionFixSettings.AmbientOcclusionBlurPasses, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center" />
-                                            <ui:TextBox Grid.Row="1" Grid.Column="3" Text="{Binding FusionFixSettings.AmbientOcclusionBlurRadius, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center" />
+                                            <ui:TextBox Grid.Row="1" Grid.Column="1" Text="{Binding FusionFixSettings.AmbientOcclusionSamples, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
+                                            <ui:TextBox Grid.Row="1" Grid.Column="2" Text="{Binding FusionFixSettings.AmbientOcclusionBlurPasses, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
+                                            <ui:TextBox Grid.Row="1" Grid.Column="3" Text="{Binding FusionFixSettings.AmbientOcclusionBlurRadius, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
 
                                             <!-- Radius, Bias, Intensity -->
                                             <TextBlock Grid.Row="2" Grid.Column="0" Text="AO Radius / Bias / Intensity" FontSize="13" VerticalAlignment="Center" Margin="0,5,0,0"/>
-                                            <ui:TextBox Grid.Row="2" Grid.Column="1" Text="{Binding FusionFixSettings.AmbientOcclusionRadius, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center" />
-                                            <ui:TextBox Grid.Row="2" Grid.Column="2" Text="{Binding FusionFixSettings.AmbientOcclusionBias, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center" />
-                                            <ui:TextBox Grid.Row="2" Grid.Column="3" Text="{Binding FusionFixSettings.AmbientOcclusionIntensity, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center" />
+                                            <ui:TextBox Grid.Row="2" Grid.Column="1" Text="{Binding FusionFixSettings.AmbientOcclusionRadius, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
+                                            <ui:TextBox Grid.Row="2" Grid.Column="2" Text="{Binding FusionFixSettings.AmbientOcclusionBias, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
+                                            <ui:TextBox Grid.Row="2" Grid.Column="3" Text="{Binding FusionFixSettings.AmbientOcclusionIntensity, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                         </Grid>
 
                                         <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,6" />
@@ -365,9 +421,9 @@
                                                 <ColumnDefinition Width="100" />
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" Text="AO Log Offset / Far Clip / Max Mip Level" VerticalAlignment="Center" FontSize="13" />
-                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.AmbientOcclusionLogMaxOffset, Mode=TwoWay}" Margin="5,0" Height="28" TextAlignment="Center" ToolTip="Log Max Offset" />
-                                            <ui:TextBox Grid.Column="2" Text="{Binding FusionFixSettings.AmbientOcclusionFarClip, Mode=TwoWay}" Margin="5,0" Height="28" TextAlignment="Center" ToolTip="Far Clip" />
-                                            <ui:TextBox Grid.Column="3" Text="{Binding FusionFixSettings.AmbientOcclusionMaxMipLevel, Mode=TwoWay}" Margin="5,0" Height="28" TextAlignment="Center" ToolTip="Max Mip Level" />
+                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.AmbientOcclusionLogMaxOffset, Mode=TwoWay}" Margin="5,0" TextAlignment="Center" ToolTip="Log Max Offset" />
+                                            <ui:TextBox Grid.Column="2" Text="{Binding FusionFixSettings.AmbientOcclusionFarClip, Mode=TwoWay}" Margin="5,0" TextAlignment="Center" ToolTip="Far Clip" />
+                                            <ui:TextBox Grid.Column="3" Text="{Binding FusionFixSettings.AmbientOcclusionMaxMipLevel, Mode=TwoWay}" Margin="5,0" TextAlignment="Center" ToolTip="Max Mip Level" />
                                         </Grid>
                                     </StackPanel>
                                 </ui:Card>
@@ -384,8 +440,8 @@
                                             <TextBlock Text="Sunshafts Intensity" FontSize="13" FontWeight="SemiBold" />
                                             <TextBlock Text="Adjust Density (length) and Decay (fade out rate)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
-                                        <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.SunShaftsDensity, Mode=TwoWay}" Margin="5,0" Height="28" TextAlignment="Center" />
-                                        <ui:TextBox Grid.Column="2" Text="{Binding FusionFixSettings.SunShaftsDecay, Mode=TwoWay}" Margin="5,0" Height="28" TextAlignment="Center" />
+                                        <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.SunShaftsDensity, Mode=TwoWay}" Margin="5,0" TextAlignment="Center" />
+                                        <ui:TextBox Grid.Column="2" Text="{Binding FusionFixSettings.SunShaftsDecay, Mode=TwoWay}" Margin="5,0" TextAlignment="Center" />
                                     </Grid>
                                 </ui:Card>
 
@@ -402,8 +458,8 @@
                                                 <TextBlock Text="Corona Multipliers" FontSize="13" FontWeight="SemiBold" />
                                                 <TextBlock Text="Scale Radius and Opacity Alpha values for light halos." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.CoronaRadiusMultiplier, Mode=TwoWay}" Margin="5,0" Height="28" TextAlignment="Center" />
-                                            <ui:TextBox Grid.Column="2" Text="{Binding FusionFixSettings.CoronaAlphaMultiplier, Mode=TwoWay}" Margin="5,0" Height="28" TextAlignment="Center" />
+                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.CoronaRadiusMultiplier, Mode=TwoWay}" Margin="5,0" TextAlignment="Center" />
+                                            <ui:TextBox Grid.Column="2" Text="{Binding FusionFixSettings.CoronaAlphaMultiplier, Mode=TwoWay}" Margin="5,0" TextAlignment="Center" />
                                         </Grid>
 
                                         <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,6" />
@@ -642,9 +698,9 @@
                                         <TextBlock Grid.Row="0" Grid.Column="3" Text="Menu Startup" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
 
                                         <TextBlock Grid.Row="1" Grid.Column="0" Text="UI Delay Timers" VerticalAlignment="Center" FontSize="13" />
-                                        <ui:TextBox Grid.Row="1" Grid.Column="1" Text="{Binding FusionFixSettings.MenuEnteringDelay, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center" />
-                                        <ui:TextBox Grid.Row="1" Grid.Column="2" Text="{Binding FusionFixSettings.MenuExitingDelay, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center" />
-                                        <ui:TextBox Grid.Row="1" Grid.Column="3" Text="{Binding FusionFixSettings.MenuAccessDelayOnStartup, Mode=TwoWay}" Margin="5,4" Height="28" TextAlignment="Center" />
+                                        <ui:TextBox Grid.Row="1" Grid.Column="1" Text="{Binding FusionFixSettings.MenuEnteringDelay, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
+                                        <ui:TextBox Grid.Row="1" Grid.Column="2" Text="{Binding FusionFixSettings.MenuExitingDelay, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
+                                        <ui:TextBox Grid.Row="1" Grid.Column="3" Text="{Binding FusionFixSettings.MenuAccessDelayOnStartup, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                     </Grid>
                                 </ui:Card>
 
@@ -659,7 +715,7 @@
                                                 <TextBlock Text="Radar Zoom Scale Delay" FontSize="13" FontWeight="SemiBold" />
                                                 <TextBlock Text="Delays radar zoom calculations inside vehicles (Default: 3000 ms)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.RadarZoomDelay, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" Height="28" />
+                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.RadarZoomDelay, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" />
                                         </Grid>
 
                                         <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,6" />
@@ -687,7 +743,7 @@
                                                 <TextBlock Text="Tree Opacity Alpha Override" FontSize="13" FontWeight="SemiBold" />
                                                 <TextBlock Text="Custom alpha values for trees (e.g. 0.625 for PC, 2.5 for PS3, 4.0 for Xbox)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.OverrideTreeAlpha, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" Height="28" />
+                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.OverrideTreeAlpha, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" />
                                         </Grid>
                                     </StackPanel>
                                 </ui:Card>
@@ -713,7 +769,7 @@
                                                 <TextBlock Text="Frame Limit Method" FontSize="13" FontWeight="SemiBold" />
                                                 <TextBlock Text="Realtime (Thread-Lock) or Sleep-Yield (Accurate, saves CPU resources)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <ComboBox Grid.Column="1" SelectedValue="{Binding FusionFixSettings.FrameLimitType, Mode=TwoWay}" SelectedValuePath="Tag" Height="32" VerticalAlignment="Center">
+                                            <ComboBox Grid.Column="1" SelectedValue="{Binding FusionFixSettings.FrameLimitType, Mode=TwoWay}" SelectedValuePath="Tag" VerticalAlignment="Center">
                                                 <ComboBoxItem Content="Thread-Lock Realtime (1)" Tag="1" />
                                                 <ComboBoxItem Content="Sleep-Yield Accurate (2)" Tag="2" />
                                             </ComboBox>
@@ -730,7 +786,7 @@
                                                 <TextBlock Text="Gameplay FPS Limit" FontSize="13" FontWeight="SemiBold" />
                                                 <TextBlock Text="Framerate lock parameter (-2 for refresh rate, -1 disabled)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.FpsLimit, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" Height="28" />
+                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.FpsLimit, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" />
                                         </Grid>
 
                                         <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,6" />
@@ -744,7 +800,7 @@
                                                 <TextBlock Text="Cutscenes Framerate Ceiling" FontSize="13" FontWeight="SemiBold" />
                                                 <TextBlock Text="Limits framerate only during cutscenes to prevent zoom glitches (0 disabled)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.CutsceneFpsLimit, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" Height="28" />
+                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.CutsceneFpsLimit, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" />
                                         </Grid>
 
                                         <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,6" />
@@ -758,7 +814,7 @@
                                                 <TextBlock Text="Loading Screen Cap" FontSize="13" FontWeight="SemiBold" />
                                                 <TextBlock Text="Standard cap to prevent loading freeze bugs (Recommended: 30 FPS)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.LoadingFpsLimit, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" Height="28" />
+                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.LoadingFpsLimit, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" />
                                         </Grid>
 
                                         <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,6" />
@@ -786,7 +842,7 @@
                                                 <TextBlock Text="Minigames FPS Limit" FontSize="13" FontWeight="SemiBold" />
                                                 <TextBlock Text="Locks framerate during minigames to prevent physics bugs." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.MinigamesFpsLimit, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" Height="28" />
+                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.MinigamesFpsLimit, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" />
                                         </Grid>
 
                                         <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,6" />
@@ -800,7 +856,7 @@
                                                 <TextBlock Text="Affected Minigames List" FontSize="13" FontWeight="SemiBold" />
                                                 <TextBlock Text="Identifiers of games locked to the limit parameter." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <ui:TextBox Grid.Row="1" Text="{Binding FusionFixSettings.MinigamesList, Mode=TwoWay}" Height="28" />
+                                            <ui:TextBox Grid.Row="1" Text="{Binding FusionFixSettings.MinigamesList, Mode=TwoWay}" />
                                         </Grid>
                                     </StackPanel>
                                 </ui:Card>
@@ -817,7 +873,7 @@
                                                 <TextBlock Text="Vehicle Budget Limit" FontSize="13" FontWeight="SemiBold" />
                                                 <TextBlock Text="Exposes model memory allocations to prevent taxi spawns bug (0 default)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.VehicleBudget, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" Height="28" />
+                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.VehicleBudget, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" />
                                         </Grid>
 
                                         <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,6" />
@@ -831,7 +887,7 @@
                                                 <TextBlock Text="Pedestrian Budget Limit" FontSize="13" FontWeight="SemiBold" />
                                                 <TextBlock Text="Exposes pedestrian model memory sizes to prevent spawns freeze bugs." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.PedBudget, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" Height="28" />
+                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.PedBudget, Mode=TwoWay}" VerticalAlignment="Center" TextAlignment="Center" />
                                         </Grid>
 
                                         <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,6" />
@@ -975,8 +1031,8 @@
                                                 <ColumnDefinition Width="100" />
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" Text="Left &amp; Right Key Hex Code" VerticalAlignment="Center" FontSize="13" />
-                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.LeftIndicatorKey, Mode=TwoWay}" Margin="5,0" Height="28" TextAlignment="Center"/>
-                                            <ui:TextBox Grid.Column="2" Text="{Binding FusionFixSettings.RightIndicatorKey, Mode=TwoWay}" Margin="5,0" Height="28" TextAlignment="Center"/>
+                                            <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.LeftIndicatorKey, Mode=TwoWay}" Margin="5,0" TextAlignment="Center"/>
+                                            <ui:TextBox Grid.Column="2" Text="{Binding FusionFixSettings.RightIndicatorKey, Mode=TwoWay}" Margin="5,0" TextAlignment="Center"/>
                                         </Grid>
 
                                         <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,6" />
@@ -990,7 +1046,7 @@
                                                 <TextBlock Text="Reflection MSAA Quality" FontSize="13" FontWeight="SemiBold" />
                                                 <TextBlock Text="Applies multi-sample anti-aliasing to mirrors, water, and car maps." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <ComboBox Grid.Column="1" SelectedValue="{Binding FusionFixSettings.ReflectionMSAAQuality, Mode=TwoWay}" SelectedValuePath="Tag" Height="32" VerticalAlignment="Center">
+                                            <ComboBox Grid.Column="1" SelectedValue="{Binding FusionFixSettings.ReflectionMSAAQuality, Mode=TwoWay}" SelectedValuePath="Tag" VerticalAlignment="Center">
                                                 <ComboBoxItem Content="Disabled (0)" Tag="0" />
                                                 <ComboBoxItem Content="2x MSAA (2)" Tag="2" />
                                                 <ComboBoxItem Content="4x MSAA (4)" Tag="4" />
@@ -998,6 +1054,21 @@
                                             </ComboBox>
                                         </Grid>
                                     </StackPanel>
+                                </ui:Card>
+
+                                <TextBlock Text="User Profile &amp; Save Paths" FontSize="15" FontWeight="Bold" Margin="0,5,0,8" Foreground="#FF107C41" />
+                                <ui:Card Margin="0,0,0,15" Padding="15">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="250" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0">
+                                            <TextBlock Text="Custom User Profile Path" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                            <TextBlock Text="Redirects save games and user settings directory to a custom path (Leave blank for default)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.CustomUserProfilePath, Mode=TwoWay}" VerticalAlignment="Center" PlaceholderText="e.g. C:\MySaves" />
+                                    </Grid>
                                 </ui:Card>
 
                             </StackPanel>
@@ -1014,13 +1085,20 @@
                                    FontSize="11" 
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         
-                        <ui:Button Content="Save Configuration" 
-                                   Icon="{ui:SymbolIcon Save24}"
-                                   Command="{Binding SaveFusionFixConfigCommand}"
-                                   Appearance="Primary"
-                                   HorizontalAlignment="Right" 
-                                   Width="180" 
-                                   Height="36" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <ui:Button Content="Defaults" 
+                                       Icon="{ui:SymbolIcon ArrowReset24}"
+                                       Command="{Binding LoadFusionFixDefaultsCommand}"
+                                       Margin="0,0,10,0"
+                                       Width="140" 
+                                       Height="36" />
+                            <ui:Button Content="Save Configuration" 
+                                       Icon="{ui:SymbolIcon Save24}"
+                                       Command="{Binding SaveFusionFixConfigCommand}"
+                                       Appearance="Primary"
+                                       Width="180" 
+                                       Height="36" />
+                        </StackPanel>
                     </Grid>
                 </ui:Card>
             </Grid>

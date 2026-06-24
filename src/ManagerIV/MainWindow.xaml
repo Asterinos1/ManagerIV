@@ -138,21 +138,21 @@
                     Padding="0">
             <TabControl.Resources>
                 <!-- Hide the TabControl header strip completely -->
-                <Style TargetType="TabItem">
+                <Style x:Key="CollapsedTabItemStyle" TargetType="TabItem">
                     <Setter Property="Visibility" Value="Collapsed" />
                 </Style>
             </TabControl.Resources>
 
-            <TabItem>
+            <TabItem Style="{StaticResource CollapsedTabItemStyle}">
                 <views:ModLibraryView DataContext="{Binding}" />
             </TabItem>
-            <TabItem>
+            <TabItem Style="{StaticResource CollapsedTabItemStyle}">
                 <views:ProfileSwitcherView DataContext="{Binding}" />
             </TabItem>
-            <TabItem>
+            <TabItem Style="{StaticResource CollapsedTabItemStyle}">
                 <views:FusionFixConfigView DataContext="{Binding}" />
             </TabItem>
-            <TabItem>
+            <TabItem Style="{StaticResource CollapsedTabItemStyle}">
                 <views:SettingsView DataContext="{Binding}" />
             </TabItem>
         </TabControl>

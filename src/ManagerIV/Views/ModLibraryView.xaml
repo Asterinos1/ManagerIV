@@ -197,7 +197,18 @@
                                         <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                             <TextBlock Text="{Binding Version, StringFormat='Version: \{0\}'}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                            <TextBlock Text="{Binding ConflictStatus, StringFormat='  •  \{0\}'}" FontSize="11" Foreground="#FFD83B01" FontWeight="SemiBold" Visibility="{Binding HasConflict, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <TextBlock Text="{Binding ConflictStatus, StringFormat='  •  \{0\}'}" ToolTip="{Binding ConflictDetails}" FontSize="11" FontWeight="SemiBold" Visibility="{Binding HasConflict, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                        <Setter Property="Foreground" Value="#FFD83B01" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding ConflictStatus}" Value="❌ Structure Error">
+                                                                <Setter Property="Foreground" Value="#FFE81123" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </StackPanel>
                                     </StackPanel>
 

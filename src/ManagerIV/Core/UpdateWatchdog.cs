@@ -56,7 +56,7 @@ public class UpdateWatchdog
             // Standard fallback if file version metadata is missing (e.g. dummy test file)
         }
 
-        bool isCompleteEdition = version.StartsWith("1.2.") || size > 50 * 1024 * 1024;
+        bool isCompleteEdition = GameVersionProfile.CheckIsCompleteEdition(version);
         return new GameVersionProfile(version, size, hash, isCompleteEdition);
     }
 
