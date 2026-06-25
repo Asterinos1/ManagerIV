@@ -51,11 +51,7 @@ public partial class ModLibraryView : UserControl
 
     private void UserControl_DragLeave(object sender, DragEventArgs e)
     {
-        var position = e.GetPosition(this);
-        if (position.X < 0 || position.Y < 0 || position.X > ActualWidth || position.Y > ActualHeight)
-        {
-            HideDragOverlay();
-        }
+        HideDragOverlay();
     }
 
     private void UserControl_Drop(object sender, DragEventArgs e)

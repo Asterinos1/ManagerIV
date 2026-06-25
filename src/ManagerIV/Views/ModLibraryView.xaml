@@ -31,7 +31,8 @@
         </Storyboard>
     </UserControl.Resources>
     
-    <Grid Margin="20">
+    <Grid>
+        <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -371,14 +372,13 @@
                 </Grid>
             </ui:Card>
         </Grid>
+    </Grid>
 
-        <!-- Drag Over Overlay Grid -->
         <Grid x:Name="DragOverOverlay" 
-              Grid.Row="0"
-              Grid.RowSpan="3" 
               Visibility="Collapsed" 
               Opacity="0"
-              IsHitTestVisible="False">
+              IsHitTestVisible="True"
+              AllowDrop="True">
             <!-- Semi-transparent backdrop blur overlay -->
             <Border Background="#90000000" CornerRadius="8" />
             
