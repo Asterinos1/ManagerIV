@@ -34,7 +34,9 @@ public record StagedMod(
     string LibraryPath,
     IReadOnlyList<ModFile> Files,
     bool IsEnabled,
-    string Compatibility
+    string Compatibility,
+    string DisplayName = "",
+    IReadOnlyList<string>? Tags = null
 );
 
 /// <summary>

@@ -37,6 +37,32 @@ public class ModViewModel : ViewModelBase
         }
     }
 
+    public string DisplayName
+    {
+        get => string.IsNullOrEmpty(_mod.DisplayName) ? _mod.Name : _mod.DisplayName;
+        set
+        {
+            if (_mod.DisplayName != value)
+            {
+                _mod = _mod with { DisplayName = value };
+                OnPropertyChanged(nameof(DisplayName));
+            }
+        }
+    }
+
+    public IReadOnlyList<string> Tags
+    {
+        get => _mod.Tags ?? new System.Collections.Generic.List<string>();
+        set
+        {
+            if (_mod.Tags != value)
+            {
+                _mod = _mod with { Tags = value };
+                OnPropertyChanged(nameof(Tags));
+            }
+        }
+    }
+
     public string Version
     {
         get => _mod.Version;

@@ -10,9 +10,25 @@
              d:DesignHeight="600" d:DesignWidth="800"
              AllowDrop="True"
              Drop="UserControl_Drop"
-             DragOver="UserControl_DragOver">
+             DragOver="UserControl_DragOver"
+             DragEnter="UserControl_DragEnter"
+             DragLeave="UserControl_DragLeave"
+             SizeChanged="UserControl_SizeChanged">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <Storyboard x:Key="MarchingAnts">
+            <DoubleAnimation Storyboard.TargetName="DashedBorder" 
+                             Storyboard.TargetProperty="StrokeDashOffset" 
+                             From="0" To="12" 
+                             Duration="0:0:1" 
+                             RepeatBehavior="Forever" />
+        </Storyboard>
+        <Storyboard x:Key="FadeInOverlay">
+            <DoubleAnimation Storyboard.TargetName="DragOverOverlay"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1"
+                             Duration="0:0:0.25" />
+        </Storyboard>
     </UserControl.Resources>
     
     <Grid Margin="20">
@@ -30,7 +46,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0">
                 <TextBlock Text="Mod Library" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                <TextBlock Text="Drag and drop mod archives (.zip, .rar, .7z) here to import them." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0" />
+                <TextBlock Text="Drag and drop mod archives (.zip, .rar, .7z) here to import them." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
             </StackPanel>
             
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -160,13 +176,17 @@
         </ui:Card>
 
         <!-- Library List with Drag-and-Drop Reordering -->
-        <Grid Grid.Row="2">
+        <Grid x:Name="LibraryContentGrid" Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="3*" />
                 <ColumnDefinition Width="2*" />
             </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-            <ui:Card Grid.Column="0" Margin="0,0,10,0" Padding="0">
+            <ui:Card x:Name="LibraryListCard" Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Margin="0,0,10,0" Padding="0">
                 <ListBox x:Name="LibraryListBox" ItemsSource="{Binding LibraryMods}"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          PreviewMouseLeftButtonDown="ListBox_PreviewMouseLeftButtonDown"
@@ -257,7 +277,7 @@
             </ui:Card>
 
             <!-- Inspector panel for selected Mod details -->
-            <ui:Card Grid.Column="1" Margin="10,0,0,0" Padding="15">
+            <ui:Card x:Name="InspectorCard" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2" Margin="10,0,0,0" Padding="15">
                 <Grid>
                     <!-- Placeholder when null -->
                     <TextBlock Text="Select a mod to view and edit details." 
@@ -350,6 +370,37 @@
                     </Grid>
                 </Grid>
             </ui:Card>
+        </Grid>
+
+        <!-- Drag Over Overlay Grid -->
+        <Grid x:Name="DragOverOverlay" 
+              Grid.Row="0"
+              Grid.RowSpan="3" 
+              Visibility="Collapsed" 
+              Opacity="0"
+              IsHitTestVisible="False">
+            <!-- Semi-transparent backdrop blur overlay -->
+            <Border Background="#90000000" CornerRadius="8" />
+            
+            <Grid Margin="15">
+                <!-- Glowing/Animated Border Shape -->
+                <Rectangle x:Name="DashedBorder"
+                           Stroke="#FF107C41" 
+                           StrokeThickness="3" 
+                           StrokeDashArray="4 2" 
+                           RadiusX="8" RadiusY="8"
+                           Fill="#EE1A2F22">
+                    <Rectangle.Effect>
+                        <DropShadowEffect Color="#FF107C41" BlurRadius="25" ShadowDepth="0" Opacity="0.55" />
+                    </Rectangle.Effect>
+                </Rectangle>
+                
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <ui:SymbolIcon Symbol="FolderAdd48" Filled="True" Foreground="#FF107C41" FontSize="56" Margin="0,0,0,16" HorizontalAlignment="Center" />
+                    <TextBlock Text="Drop Mod Archives here to import" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                    <TextBlock Text="Supports .zip, .rar, and .7z packages" FontSize="13" Foreground="#FFA0A0A0" Margin="0,8,0,0" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Grid>
         </Grid>
     </Grid>
 </UserControl>

@@ -17,12 +17,12 @@
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,20">
             <TextBlock Text="Settings" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-            <TextBlock Text="Configure global application settings, themes, and aesthetics." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0" />
+            <TextBlock Text="Configure global application settings, themes, and aesthetics." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
         </StackPanel>
 
         <!-- Settings Content -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel MaxWidth="600" HorizontalAlignment="Left" Width="550">
+            <StackPanel MaxWidth="600" HorizontalAlignment="Stretch" Margin="0,0,15,0">
                 <!-- Theme Settings Card -->
                 <ui:Card Padding="15" Margin="0,0,0,15">
                     <Grid>

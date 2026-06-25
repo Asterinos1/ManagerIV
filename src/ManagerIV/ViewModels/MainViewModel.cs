@@ -915,8 +915,17 @@ public class MainViewModel : ViewModelBase
                     // Scan folder
                     var metadata = _metadataService.ScanExtractedDirectory(extractionTarget, Path.GetFileName(archivePath));
 
+                    // Ingest via ParseArchiveFileName
+                    var parsed = _metadataService.ParseArchiveFileName(Path.GetFileName(archivePath));
+                    string displayName = parsed.DisplayName;
+                    
+                    // Respect parsed version from filename as fallback if readme did not yield one
+                    // (Currently scan extracted directory uses the old ParseFilename, but we default to parsed.Version if found)
+                    string version = parsed.Version ?? metadata.Version;
+                    var tags = parsed.Tags.ToList();
+
                     // Move extraction folder to a clean mod name folder
-                    string cleanModName = string.Concat(metadata.Name.Split(Path.GetInvalidFileNameChars())).Replace(" ", "");
+                    string cleanModName = string.Concat(displayName.Split(Path.GetInvalidFileNameChars())).Replace(" ", "");
                     string finalModPath = Path.Combine(_libraryDir, cleanModName);
                     if (Directory.Exists(finalModPath))
                     {
@@ -929,13 +938,15 @@ public class MainViewModel : ViewModelBase
                     // Build StagedMod record
                     var stagedMod = new StagedMod(
                         Id: Guid.NewGuid().ToString("N"),
-                        Name: metadata.Name,
-                        Version: metadata.Version,
+                        Name: displayName,
+                        Version: version,
                         Description: metadata.Description,
                         LibraryPath: finalModPath,
                         Files: metadata.FileManifest.Select(f => new ModFile(f, new FileInfo(Path.Combine(finalModPath, f)).Length, null)).ToList(),
                         IsEnabled: false,
-                        Compatibility: metadata.Compatibility
+                        Compatibility: metadata.Compatibility,
+                        DisplayName: displayName,
+                        Tags: tags
                     );
 
                     // Add to library

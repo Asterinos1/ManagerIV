@@ -22,7 +22,7 @@
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,15">
             <TextBlock Text="FusionFix Configuration" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-            <TextBlock Text="Modify aiming zoom, shadows, limits, postFX, and compatibility settings directly saved inside the plugins folder." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,3,0,0" />
+            <TextBlock Text="Modify aiming zoom, shadows, limits, postFX, and compatibility settings directly saved inside the plugins folder." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
         </StackPanel>
 
         <!-- Main Content Area -->

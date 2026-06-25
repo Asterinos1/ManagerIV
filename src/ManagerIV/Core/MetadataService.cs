@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ManagerIV.Tests")]
+
 namespace ManagerIV.Core;
 
 /// <summary>
@@ -42,6 +44,38 @@ public class MetadataService
         @"\b(1\.0\.4\.0|1\.0\.7\.0|1\.0\.8\.0|downgrade|GFWL)\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled
     );
+
+    private static readonly Regex LeadingNumericIdRegex = new(
+        @"^(?:\d+_)+",
+        RegexOptions.Compiled
+    );
+
+    private static readonly Regex NoiseSlugRegex = new(
+        @"-\d+(?:-\d+)+(?:-[a-zA-Z0-9]+)*-\d{10}$",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase
+    );
+
+    private static readonly Regex VVersionRegex = new(
+        @"\bv\s*(\d+(?:\.\d+)*)\b",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase
+    );
+
+    private static readonly Regex DottedVersionRegex = new(
+        @"(?<!\.\d)\b(\d+\.\d+(?:\.\d+)?)\b(?!\.\d)",
+        RegexOptions.Compiled
+    );
+
+    private static readonly Regex LoaderNoiseRegex = new(
+        @"[_\-\s]*(?:fusion[_\-\s]*fix|fusionfix)$",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase
+    );
+
+    private static readonly HashSet<string> KnownTags = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "manual", "stable", "beta", "alpha", "rc", "final", "release",
+        "hd", "4k", "lite", "busted", "complete", "remaster", "patch",
+        "fix", "addon", "dlc"
+    };
 
     /// <summary>
     /// Parses a filename to extract the Mod Name and Version.
@@ -91,6 +125,129 @@ public class MetadataService
         }
 
         return (parsedName, version);
+    }
+
+    /// <summary>
+    /// Parses a raw archive filename (with or without extension) into a structured
+    /// metadata result containing a clean display name, a version string, and any
+    /// trailing qualifier tags.
+    /// </summary>
+    public ModFileNameParseResult ParseArchiveFileName(string archiveFileName)
+    {
+        string working = archiveFileName;
+
+        // Step 1 — Strip file extension
+        if (working.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ||
+            working.EndsWith(".rar", StringComparison.OrdinalIgnoreCase) ||
+            working.EndsWith(".7z", StringComparison.OrdinalIgnoreCase))
+        {
+            working = working.Substring(0, working.Length - 4);
+        }
+
+        // Step 2 — Strip leading numeric ID prefixes
+        working = LeadingNumericIdRegex.Replace(working, "");
+
+        // Step 3 — Strip trailing ModDB/NexusMods noise slug
+        working = NoiseSlugRegex.Replace(working, "");
+
+        // Step 4 — Replace underscores with spaces
+        working = working.Replace('_', ' ');
+
+        // Step 5 — Extract version
+        string? version = null;
+        var vMatch = VVersionRegex.Match(working);
+        if (vMatch.Success)
+        {
+            version = vMatch.Groups[1].Value;
+            working = working.Remove(vMatch.Index, vMatch.Length);
+        }
+        else
+        {
+            var dottedMatch = DottedVersionRegex.Match(working);
+            if (dottedMatch.Success)
+            {
+                version = dottedMatch.Groups[1].Value;
+                working = working.Remove(dottedMatch.Index, dottedMatch.Length);
+            }
+        }
+
+        // Strip loader/tool noise from the end of the working string
+        working = LoaderNoiseRegex.Replace(working, "");
+
+        // Step 6 — Extract trailing qualifier tags
+        var words = working.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        var tags = new List<string>();
+        var nameWords = new List<string>(words);
+
+        for (int i = nameWords.Count - 1; i >= 0; i--)
+        {
+            string word = nameWords[i];
+            string cleanWord = word.Trim('-', ',', '(', ')', '[', ']', '{', '}');
+            if (string.IsNullOrWhiteSpace(cleanWord))
+            {
+                nameWords.RemoveAt(i);
+                continue;
+            }
+
+            if (KnownTags.Contains(cleanWord.ToLowerInvariant()))
+            {
+                tags.Insert(0, cleanWord); // Preserve original casing
+                nameWords.RemoveAt(i);
+            }
+            else
+            {
+                break; // Stop at first word that is not a known tag
+            }
+        }
+
+        string finalNameBase = string.Join(" ", nameWords);
+
+        // Step 7 — Clean up the display name
+        string displayName = TitleCase(finalNameBase).Trim();
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            string fallback = archiveFileName;
+            if (fallback.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ||
+                fallback.EndsWith(".rar", StringComparison.OrdinalIgnoreCase) ||
+                fallback.EndsWith(".7z", StringComparison.OrdinalIgnoreCase))
+            {
+                fallback = fallback.Substring(0, fallback.Length - 4);
+            }
+            displayName = TitleCase(fallback.Replace('_', ' ')).Trim();
+        }
+
+        return new ModFileNameParseResult(displayName, version, tags.AsReadOnly());
+    }
+
+    internal string TitleCase(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return string.Empty;
+        }
+
+        var words = input.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        var excluded = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "for", "and", "the", "of", "in", "to", "a"
+        };
+
+        for (int i = 0; i < words.Length; i++)
+        {
+            string word = words[i];
+            if (word.Length == 0) continue;
+
+            if (i > 0 && excluded.Contains(word))
+            {
+                words[i] = word.ToLowerInvariant();
+            }
+            else
+            {
+                words[i] = char.ToUpper(word[0]) + word.Substring(1);
+            }
+        }
+
+        return string.Join(" ", words);
     }
 
     /// <summary>

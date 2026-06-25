@@ -15,7 +15,11 @@ public class ArchiveHandler
     /// <summary>
     /// Extracts the specified archive to the destination directory asynchronously.
     /// </summary>
-    public async Task ExtractAsync(string archivePath, string destinationDir)
+    public async Task ExtractAsync(
+        string archivePath, 
+        string destinationDir, 
+        ModStructureReport? report = null, 
+        VersionCompatibility? preference = null)
     {
         if (!File.Exists(archivePath))
         {
@@ -31,7 +35,7 @@ public class ArchiveHandler
         }
 
         // Run extraction on background thread to keep UI responsive
-        await Task.Run(() => Extract(archivePath, fullDestinationPath));
+        await Task.Run(() => Extract(archivePath, fullDestinationPath, report, preference));
     }
 
     public enum ModLayout
@@ -229,10 +233,46 @@ public class ArchiveHandler
     }
 
 
-    private void Extract(string archivePath, string destinationDir)
+    private void Extract(
+        string archivePath, 
+        string destinationDir, 
+        ModStructureReport? report, 
+        VersionCompatibility? preference)
     {
         using var archive = ArchiveFactory.OpenArchive(archivePath);
         
+        Dictionary<string, string> targetPaths = new(StringComparer.OrdinalIgnoreCase);
+
+        if (report != null)
+        {
+            var groupsToExtract = report.DetectedTargets.AsEnumerable();
+            if (report.IsDualTarget && preference.HasValue)
+            {
+                groupsToExtract = groupsToExtract.Where(g => GroupMatchesPreference(g, preference.Value));
+            }
+
+            foreach (var group in groupsToExtract)
+            {
+                foreach (var entryPath in group.Entries)
+                {
+                    string relativePath = entryPath;
+                    if (!string.IsNullOrEmpty(group.SourcePathPrefix))
+                    {
+                        if (relativePath.StartsWith(group.SourcePathPrefix, StringComparison.OrdinalIgnoreCase))
+                        {
+                            relativePath = relativePath.Substring(group.SourcePathPrefix.Length);
+                        }
+                    }
+                    relativePath = relativePath.TrimStart('/', '\\');
+                    
+                    if (!string.IsNullOrEmpty(relativePath))
+                    {
+                        targetPaths[entryPath] = relativePath;
+                    }
+                }
+            }
+        }
+
         foreach (var entry in archive.Entries)
         {
             if (entry.IsDirectory)
@@ -247,8 +287,6 @@ public class ArchiveHandler
             }
 
             // Zip-slip/path-traversal protection:
-            // 1. Reject paths containing directory traversal ("..")
-            // 2. Reject absolute paths inside the archive key
             if (Path.IsPathRooted(entryKey) || entryKey.Contains(".."))
             {
                 throw new InvalidOperationException(
@@ -256,10 +294,24 @@ public class ArchiveHandler
                 );
             }
 
-            // Combine destination with entry key and resolve absolute path
-            string targetFilePath = Path.GetFullPath(Path.Combine(destinationDir, entryKey));
+            string relativeTargetPath;
+            if (report != null)
+            {
+                if (!targetPaths.TryGetValue(entryKey, out var cleanPath))
+                {
+                    continue; // Skip unresolved/filtered files
+                }
+                relativeTargetPath = cleanPath;
+            }
+            else
+            {
+                relativeTargetPath = entryKey;
+            }
 
-            // 3. Reject paths that resolve outside the destination directory
+            // Combine destination with target path and resolve absolute path
+            string targetFilePath = Path.GetFullPath(Path.Combine(destinationDir, relativeTargetPath));
+
+            // Reject paths that resolve outside the destination directory
             if (!targetFilePath.StartsWith(destinationDir, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
@@ -281,5 +333,20 @@ public class ArchiveHandler
                 ExtractFullPath = true
             });
         }
+    }
+
+    private static bool GroupMatchesPreference(DetectedFileGroup group, VersionCompatibility preference)
+    {
+        if (preference == VersionCompatibility.CompleteEditionOnly)
+        {
+            return group.Target == DeploymentTarget.UpdateFolder || 
+                   group.Target == DeploymentTarget.PluginsFolder || 
+                   group.Target == DeploymentTarget.ScriptsFolder;
+        }
+        if (preference == VersionCompatibility.LegacyOnly)
+        {
+            return group.Target != DeploymentTarget.UpdateFolder;
+        }
+        return true;
     }
 }

@@ -10,6 +10,7 @@
         mc:Ignorable="d"
         Title="GTA IV Mod Loader" 
         Height="700" Width="1050"
+        MinWidth="850" MinHeight="600"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource ApplicationBackgroundBrush}"
         Foreground="{DynamicResource TextFillColorPrimaryBrush}">
