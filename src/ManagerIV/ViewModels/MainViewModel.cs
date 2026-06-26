@@ -42,6 +42,7 @@ public class MainViewModel : ViewModelBase
     private bool _isBusy;
     private BackendStatusViewModel _backendStatus = new();
     private bool _isDarkTheme = true;
+    private MusicViewModel _music;
 
     // Save Profiles fields
     private SaveProfileManager _saveProfileManager;
@@ -147,6 +148,12 @@ public class MainViewModel : ViewModelBase
         set => SetProperty(ref _backendStatus, value);
     }
 
+    public MusicViewModel Music
+    {
+        get => _music;
+        set => SetProperty(ref _music, value);
+    }
+
     public bool IsDarkTheme
     {
         get => _isDarkTheme;
@@ -179,6 +186,8 @@ public class MainViewModel : ViewModelBase
         get => _baseProfileIds;
         set => SetProperty(ref _baseProfileIds, value);
     }
+
+    public bool HasBaseProfiles => BaseProfileIds.Count > 0;
 
     public string? SelectedBaseProfileId
     {
@@ -221,6 +230,41 @@ public class MainViewModel : ViewModelBase
     {
         get => _selectedIndex;
         set => SetProperty(ref _selectedIndex, value);
+    }
+
+    private string _searchQuery = "";
+    public string SearchQuery
+    {
+        get => _searchQuery;
+        set
+        {
+            if (SetProperty(ref _searchQuery, value))
+            {
+                ApplyFilter();
+            }
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        var view = System.Windows.Data.CollectionViewSource.GetDefaultView(LibraryMods);
+        if (view == null) return;
+
+        if (string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            view.Filter = null;
+        }
+        else
+        {
+            view.Filter = (obj) =>
+            {
+                if (obj is ModViewModel mod)
+                {
+                    return mod.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase);
+                }
+                return false;
+            };
+        }
     }
 
     private int _activeImgArchiveCount;
@@ -395,6 +439,7 @@ public class MainViewModel : ViewModelBase
 
         _saveProfileManager = new SaveProfileManager(_gtaSaveProfilesPath);
         LoadSaveProfilesData();
+        _music = new MusicViewModel(_baseDir, _linker);
     }
 
     private void LoadLibrary()
@@ -447,6 +492,19 @@ public class MainViewModel : ViewModelBase
             try
             {
                 var profile = _profileManager.LoadProfile(file);
+                if (Path.GetFileName(file).Equals("default.json", StringComparison.OrdinalIgnoreCase))
+                {
+                    string newPath = Path.Combine(_profilesDir, $"{profile.Id}.json");
+                    _profileManager.SaveProfile(newPath, profile);
+                    try
+                    {
+                        File.Delete(file);
+                    }
+                    catch
+                    {
+                        // Ignore delete failure for migration
+                    }
+                }
                 Profiles.Add(profile);
             }
             catch
@@ -468,7 +526,7 @@ public class MainViewModel : ViewModelBase
                 LoadOrder: new LoadOrderModel(Array.Empty<LoadOrderEntry>()),
                 ConflictState: new ConflictState(new System.Collections.Generic.Dictionary<string, ConflictInfo>(), Array.Empty<string>())
             );
-            _profileManager.SaveProfile(Path.Combine(_profilesDir, "default.json"), defaultProfile);
+            _profileManager.SaveProfile(Path.Combine(_profilesDir, $"{defaultProfile.Id}.json"), defaultProfile);
             Profiles.Add(defaultProfile);
         }
 
@@ -560,6 +618,7 @@ public class MainViewModel : ViewModelBase
         }
 
         UpdateConflictsAndWatchdog();
+        ApplyFilter();
     }
 
     private void UpdateConflictsAndWatchdog()
@@ -1717,6 +1776,7 @@ public class MainViewModel : ViewModelBase
             BaseProfileIds.Add(b);
         }
         SelectedBaseProfileId = BaseProfileIds.FirstOrDefault();
+        OnPropertyChanged(nameof(HasBaseProfiles));
     }
 
     private void RefreshSaveProfilesList()
@@ -1749,11 +1809,9 @@ public class MainViewModel : ViewModelBase
     {
         if (SelectedSaveProfile == null || string.IsNullOrEmpty(SelectedBaseProfileId)) return;
 
-        var renameActiveInput = param as string ?? RenameActiveSaveTo;
-        
         try
         {
-            _saveProfileManager.ActivateSaveProfile(SelectedBaseProfileId, SelectedSaveProfile, renameActiveInput);
+            _saveProfileManager.ActivateSaveProfile(SelectedBaseProfileId, SelectedSaveProfile, string.Empty);
             RenameActiveSaveTo = "";
             RefreshSaveProfilesList();
             StatusText = $"Activated save profile: '{SelectedSaveProfile.DisplayName}'";
@@ -1844,11 +1902,13 @@ public class MainViewModel : ViewModelBase
             if (isDark)
             {
                 Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
+                Wpf.Ui.Appearance.ApplicationAccentColorManager.Apply(System.Windows.Media.Color.FromArgb(255, 255, 165, 0), Wpf.Ui.Appearance.ApplicationTheme.Dark);
                 ApplyCustomPalette(true);
             }
             else
             {
                 Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Light);
+                Wpf.Ui.Appearance.ApplicationAccentColorManager.Apply(System.Windows.Media.Color.FromArgb(255, 230, 145, 0), Wpf.Ui.Appearance.ApplicationTheme.Light);
                 ApplyCustomPalette(false);
             }
         }
@@ -1889,8 +1949,13 @@ public class MainViewModel : ViewModelBase
                 // Accents: Active Menu Amber (#FFFFA500), Hover (#FFFFBC42)
                 SetResourceColor(resources, "SystemAccentColor", "#FFFFA500");
                 SetResourceBrush(resources, "SystemAccentBrush", "#FFFFA500");
+                SetResourceColor(resources, "SystemAccentColorPrimary", "#FFFFA500");
+                SetResourceBrush(resources, "SystemAccentColorPrimaryBrush", "#FFFFA500");
+                
                 SetResourceColor(resources, "SystemAccentColorSecondary", "#FFFFBC42");
                 SetResourceBrush(resources, "SystemAccentColorSecondaryBrush", "#FFFFBC42");
+                SetResourceColor(resources, "SystemAccentColorTertiary", "#FFFFBC42");
+                SetResourceBrush(resources, "SystemAccentColorTertiaryBrush", "#FFFFBC42");
                 
                 SetResourceColor(resources, "SystemAccentColorLight1", "#FFFFBC42");
                 SetResourceBrush(resources, "SystemAccentColorLight1Brush", "#FFFFBC42");
@@ -1942,8 +2007,13 @@ public class MainViewModel : ViewModelBase
                 // Accents: Active Menu Amber Deeper (#FFE69100), Hover (#FFFFA500)
                 SetResourceColor(resources, "SystemAccentColor", "#FFE69100");
                 SetResourceBrush(resources, "SystemAccentBrush", "#FFE69100");
+                SetResourceColor(resources, "SystemAccentColorPrimary", "#FFE69100");
+                SetResourceBrush(resources, "SystemAccentColorPrimaryBrush", "#FFE69100");
+
                 SetResourceColor(resources, "SystemAccentColorSecondary", "#FFFFA500");
                 SetResourceBrush(resources, "SystemAccentColorSecondaryBrush", "#FFFFA500");
+                SetResourceColor(resources, "SystemAccentColorTertiary", "#FFFFA500");
+                SetResourceBrush(resources, "SystemAccentColorTertiaryBrush", "#FFFFA500");
 
                 SetResourceColor(resources, "SystemAccentColorLight1", "#FFFFA500");
                 SetResourceBrush(resources, "SystemAccentColorLight1Brush", "#FFFFA500");

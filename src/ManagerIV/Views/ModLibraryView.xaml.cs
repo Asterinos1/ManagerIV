@@ -1,10 +1,13 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using ManagerIV.ViewModels;
+using Wpf.Ui.Controls;
 
 namespace ManagerIV.Views;
 
@@ -170,12 +173,32 @@ public partial class ModLibraryView : UserControl
         if (LibraryContentGrid == null || LibraryListCard == null || InspectorCard == null)
             return;
 
+        // Apply scale transform if screen is small
+        double scale = 1.0;
+        if (e.NewSize.Width < 950)
+        {
+            scale = Math.Min(scale, Math.Max(0.85, e.NewSize.Width / 950.0));
+        }
+        if (e.NewSize.Height < 650)
+        {
+            scale = Math.Min(scale, Math.Max(0.85, e.NewSize.Height / 650.0));
+        }
+
+        if (RootScale != null)
+        {
+            RootScale.ScaleX = scale;
+            RootScale.ScaleY = scale;
+        }
+
         // If the view width is narrow (< 800px), switch to stacked rows.
         if (e.NewSize.Width < 800)
         {
             // Set 1-column layout
             LibraryContentGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
             LibraryContentGrid.ColumnDefinitions[1].Width = new GridLength(0, GridUnitType.Pixel);
+            
+            LibraryContentGrid.RowDefinitions[0].Height = new GridLength(1, GridUnitType.Star);
+            LibraryContentGrid.RowDefinitions[1].Height = new GridLength(1, GridUnitType.Star);
 
             Grid.SetColumn(LibraryListCard, 0);
             Grid.SetRow(LibraryListCard, 0);
@@ -194,6 +217,9 @@ public partial class ModLibraryView : UserControl
             // Set 2-column layout (3* and 2* width)
             LibraryContentGrid.ColumnDefinitions[0].Width = new GridLength(3, GridUnitType.Star);
             LibraryContentGrid.ColumnDefinitions[1].Width = new GridLength(2, GridUnitType.Star);
+            
+            LibraryContentGrid.RowDefinitions[0].Height = new GridLength(1, GridUnitType.Star);
+            LibraryContentGrid.RowDefinitions[1].Height = new GridLength(0, GridUnitType.Pixel);
 
             Grid.SetColumn(LibraryListCard, 0);
             Grid.SetRow(LibraryListCard, 0);
@@ -217,5 +243,25 @@ public partial class ModLibraryView : UserControl
             current = VisualTreeHelper.GetParent(current);
         } while (current != null);
         return null;
+    }
+}
+
+public class SeverityToInfoBarSeverityConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is string severityStr)
+        {
+            if (severityStr.Equals("Warning", StringComparison.OrdinalIgnoreCase))
+                return InfoBarSeverity.Warning;
+            if (severityStr.Equals("Danger", StringComparison.OrdinalIgnoreCase))
+                return InfoBarSeverity.Error;
+        }
+        return InfoBarSeverity.Informational;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
     }
 }

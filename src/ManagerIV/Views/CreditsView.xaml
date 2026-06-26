@@ -1,0 +1,90 @@
+<UserControl x:Class="ManagerIV.Views.CreditsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:local="clr-namespace:ManagerIV.Views"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800"
+             SizeChanged="UserControl_SizeChanged">
+    <Grid x:Name="MainGrid" Margin="20">
+        <Grid.LayoutTransform>
+            <ScaleTransform x:Name="RootScale" ScaleX="1" ScaleY="1" />
+        </Grid.LayoutTransform>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Credits &amp; Integrations" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+            <TextBlock Text="Integrations and authors behind the core components that power this mod manager." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel MaxWidth="600" HorizontalAlignment="Left" Margin="0,0,15,0">
+                <!-- FusionFix Card -->
+                <ui:Card Padding="15" Margin="0,0,0,15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                            <TextBlock Text="GTA IV EFLC FusionFix" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock Text="Created by ThirteenAG" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,2,0,6" />
+                            <TextBlock Text="The premier modding framework for GTA IV. Fixes graphics bugs, restores features, integrates Vulkan API shaders, and powers asset loading through FusionOverloader." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ui:Button Grid.Column="1" Content="GitHub" Icon="{ui:SymbolIcon Open24}" Click="Button_GitHub_Click" Tag="https://github.com/ThirteenAG/GTAIV.EFLC.FusionFix" VerticalAlignment="Center" />
+                    </Grid>
+                </ui:Card>
+
+                <!-- Ultimate ASI Loader Card -->
+                <ui:Card Padding="15" Margin="0,0,0,15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                            <TextBlock Text="Ultimate ASI Loader" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock Text="Created by ThirteenAG" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,2,0,6" />
+                            <TextBlock Text="A DLL wrapper that enables loading custom ASI script plugins into Grand Theft Auto IV dynamically via standard DLL injections." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ui:Button Grid.Column="1" Content="GitHub" Icon="{ui:SymbolIcon Open24}" Click="Button_GitHub_Click" Tag="https://github.com/ThirteenAG/Ultimate-ASI-Loader" VerticalAlignment="Center" />
+                    </Grid>
+                </ui:Card>
+
+                <!-- DXVK Card -->
+                <ui:Card Padding="15" Margin="0,0,0,15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                            <TextBlock Text="DXVK (Vulkan Translation Layer)" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock Text="Created by doitsujin" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,2,0,6" />
+                            <TextBlock Text="Translates DirectX 9 calls into Vulkan, massively improving draw-call rendering performance and solving stuttering issues on modern GPUs." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ui:Button Grid.Column="1" Content="GitHub" Icon="{ui:SymbolIcon Open24}" Click="Button_GitHub_Click" Tag="https://github.com/doitsujin/dxvk" VerticalAlignment="Center" />
+                    </Grid>
+                </ui:Card>
+
+                <!-- General Credits -->
+                <ui:Card Padding="15" Margin="0,0,0,15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <StackPanel>
+                        <TextBlock Text="Additional Integrations" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,10" />
+                        <TextBlock Text="• ScriptHook / ScriptHookDotNet (Modding Community)" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2" />
+                        <TextBlock Text="• SharpCompress (Zip, Rar &amp; 7z extraction archive libraries)" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2" />
+                        <TextBlock Text="• Octokit.NET (GitHub Releases integrations API client)" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2" />
+                        <TextBlock Text="• WPF-UI (Modern Win11 Fluent UI style controls library)" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2" />
+                    </StackPanel>
+                </ui:Card>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

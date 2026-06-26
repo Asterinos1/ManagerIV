@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
+using ManagerIV.Core;
+using ManagerIV.ViewModels;
 
 namespace ManagerIV.Views;
 
@@ -17,6 +19,23 @@ public partial class ProfileSwitcherView : UserControl
     {
         if (ContentGrid == null || LeftPanel == null || ConfigCard == null || StatusPanel == null)
             return;
+
+        // Apply scale transform if screen is small
+        double scale = 1.0;
+        if (e.NewSize.Width < 950)
+        {
+            scale = Math.Min(scale, Math.Max(0.85, e.NewSize.Width / 950.0));
+        }
+        if (e.NewSize.Height < 650)
+        {
+            scale = Math.Min(scale, Math.Max(0.85, e.NewSize.Height / 650.0));
+        }
+
+        if (RootScale != null)
+        {
+            RootScale.ScaleX = scale;
+            RootScale.ScaleY = scale;
+        }
 
         // 1. Wide layout (>= 1150px): 3 columns, each card gets its own column
         if (e.NewSize.Width >= 1150)
@@ -92,6 +111,20 @@ public partial class ProfileSwitcherView : UserControl
             LeftPanel.Margin = new Thickness(0, 0, 0, 15);
             ConfigCard.Margin = new Thickness(0, 0, 0, 15);
             StatusPanel.Margin = new Thickness(0, 0, 0, 15);
+        }
+    }
+
+    private void ListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (e.AddedItems.Count > 0 && e.AddedItems[0] is Profile profile)
+        {
+            if (DataContext is MainViewModel vm && vm.ActiveProfile != profile)
+            {
+                if (vm.SwitchProfileCommand.CanExecute(profile))
+                {
+                    vm.SwitchProfileCommand.Execute(profile);
+                }
+            }
         }
     }
 }

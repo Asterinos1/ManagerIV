@@ -114,9 +114,30 @@ public class SaveProfileManager
         // 1. Deactivate current active profile if it exists
         if (Directory.Exists(activePath))
         {
-            string cleanRenameTo = string.IsNullOrWhiteSpace(renameActiveTo)
-                ? $"Backup_{DateTime.Now:yyyyMMdd_HHmmss}"
-                : renameActiveTo.Replace(" ", "_").Trim();
+            string? existingName = null;
+            string activeMetadata = Path.Combine(activePath, "manageriv_save_name.txt");
+            if (File.Exists(activeMetadata))
+            {
+                try
+                {
+                    existingName = File.ReadAllText(activeMetadata).Trim();
+                }
+                catch { }
+            }
+
+            string cleanRenameTo;
+            if (!string.IsNullOrWhiteSpace(renameActiveTo))
+            {
+                cleanRenameTo = renameActiveTo.Replace(" ", "_").Trim();
+            }
+            else if (!string.IsNullOrWhiteSpace(existingName) && !existingName.Equals("Active Save (Default)", StringComparison.OrdinalIgnoreCase))
+            {
+                cleanRenameTo = existingName.Replace(" ", "_").Trim();
+            }
+            else
+            {
+                cleanRenameTo = $"Backup_{DateTime.Now:yyyyMMdd_HHmmss}";
+            }
 
             // Sanitize file/folder name
             foreach (char c in Path.GetInvalidFileNameChars())
@@ -133,10 +154,12 @@ public class SaveProfileManager
             }
 
             // Write metadata name before renaming
-            string activeMetadata = Path.Combine(activePath, "manageriv_save_name.txt");
             try
             {
-                File.WriteAllText(activeMetadata, string.IsNullOrWhiteSpace(renameActiveTo) ? "Auto Backup" : renameActiveTo);
+                string metadataName = !string.IsNullOrWhiteSpace(renameActiveTo)
+                    ? renameActiveTo
+                    : (!string.IsNullOrWhiteSpace(existingName) ? existingName : "Auto Backup");
+                File.WriteAllText(activeMetadata, metadataName);
             }
             catch { }
 
@@ -175,9 +198,30 @@ public class SaveProfileManager
         // 1. Deactivate current active profile if it exists
         if (Directory.Exists(activePath))
         {
-            string cleanRenameTo = string.IsNullOrWhiteSpace(renameActiveTo)
-                ? $"Backup_{DateTime.Now:yyyyMMdd_HHmmss}"
-                : renameActiveTo.Replace(" ", "_").Trim();
+            string? existingName = null;
+            string activeMetadata = Path.Combine(activePath, "manageriv_save_name.txt");
+            if (File.Exists(activeMetadata))
+            {
+                try
+                {
+                    existingName = File.ReadAllText(activeMetadata).Trim();
+                }
+                catch { }
+            }
+
+            string cleanRenameTo;
+            if (!string.IsNullOrWhiteSpace(renameActiveTo))
+            {
+                cleanRenameTo = renameActiveTo.Replace(" ", "_").Trim();
+            }
+            else if (!string.IsNullOrWhiteSpace(existingName) && !existingName.Equals("Active Save (Default)", StringComparison.OrdinalIgnoreCase))
+            {
+                cleanRenameTo = existingName.Replace(" ", "_").Trim();
+            }
+            else
+            {
+                cleanRenameTo = $"Backup_{DateTime.Now:yyyyMMdd_HHmmss}";
+            }
 
             foreach (char c in Path.GetInvalidFileNameChars())
             {
@@ -190,10 +234,12 @@ public class SaveProfileManager
                 inactivePath += "_" + Guid.NewGuid().ToString("N").Substring(0, 6);
             }
 
-            string activeMetadata = Path.Combine(activePath, "manageriv_save_name.txt");
             try
             {
-                File.WriteAllText(activeMetadata, string.IsNullOrWhiteSpace(renameActiveTo) ? "Auto Backup" : renameActiveTo);
+                string metadataName = !string.IsNullOrWhiteSpace(renameActiveTo)
+                    ? renameActiveTo
+                    : (!string.IsNullOrWhiteSpace(existingName) ? existingName : "Auto Backup");
+                File.WriteAllText(activeMetadata, metadataName);
             }
             catch { }
 

@@ -22,7 +22,7 @@
 
         <!-- Settings Content -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel MaxWidth="600" HorizontalAlignment="Stretch" Margin="0,0,15,0">
+            <StackPanel MaxWidth="600" HorizontalAlignment="Left" Margin="0,0,15,0">
                 <!-- Theme Settings Card -->
                 <ui:Card Padding="15" Margin="0,0,0,15">
                     <Grid>

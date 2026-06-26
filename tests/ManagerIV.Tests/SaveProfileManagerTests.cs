@@ -105,6 +105,39 @@ public class SaveProfileManagerTests : IDisposable
     }
 
     [Fact]
+    public void TestActivateSaveProfile_RetainsCreatedName()
+    {
+        // Arrange
+        string baseId = "975EF3C9";
+        string activePath = Path.Combine(_tempDir, baseId);
+        string targetPath = Path.Combine(_tempDir, $"{baseId}_Mission20");
+
+        Directory.CreateDirectory(activePath);
+        Directory.CreateDirectory(targetPath);
+
+        File.WriteAllText(Path.Combine(activePath, "savefile.dat"), "active save contents");
+        File.WriteAllText(Path.Combine(activePath, "manageriv_save_name.txt"), "My Story Run");
+        File.WriteAllText(Path.Combine(targetPath, "savefile.dat"), "target save contents");
+
+        var targetProfile = new SaveProfile($"{baseId}_Mission20", "Mission 20 Save", false, targetPath);
+
+        // Act
+        _manager.ActivateSaveProfile(baseId, targetProfile, string.Empty);
+
+        // Assert
+        // Active should now contain target content
+        Assert.True(Directory.Exists(activePath));
+        Assert.Equal("target save contents", File.ReadAllText(Path.Combine(activePath, "savefile.dat")));
+        Assert.Equal("Mission 20 Save", File.ReadAllText(Path.Combine(activePath, "manageriv_save_name.txt")).Trim());
+
+        // Old active should be renamed using "My Story Run"
+        string expectedInactivePath = Path.Combine(_tempDir, $"{baseId}_My_Story_Run");
+        Assert.True(Directory.Exists(expectedInactivePath));
+        Assert.Equal("active save contents", File.ReadAllText(Path.Combine(expectedInactivePath, "savefile.dat")));
+        Assert.Equal("My Story Run", File.ReadAllText(Path.Combine(expectedInactivePath, "manageriv_save_name.txt")).Trim());
+    }
+
+    [Fact]
     public void TestCreateNewSaveProfile()
     {
         // Arrange

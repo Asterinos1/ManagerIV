@@ -35,7 +35,7 @@
 
             <!-- App Header -->
             <StackPanel Grid.Row="0" Margin="20,25,20,25">
-                <TextBlock Text="GTA IV MOD LOADER" FontSize="18" FontWeight="Black" Foreground="#FF107C41" />
+                <TextBlock Text="GTA IV MOD LOADER" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
                 <TextBlock Text="Complete Edition Manager" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" />
             </StackPanel>
 
@@ -45,6 +45,7 @@
                      SelectedIndex="0" 
                      Background="Transparent" 
                      BorderThickness="0" 
+                     VirtualizingPanel.ScrollUnit="Pixel"
                      Margin="10,0">
                 <ListBox.Resources>
                     <Style TargetType="ListBoxItem">
@@ -76,7 +77,7 @@
                 <!-- Nav Item 1: Mod Library -->
                 <ListBoxItem>
                     <StackPanel Orientation="Horizontal">
-                        <ui:SymbolIcon Symbol="Library24" Filled="True" Foreground="#FF107C41" />
+                        <ui:SymbolIcon Symbol="Library24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
                         <TextBlock Text="Mod Library" FontSize="14" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     </StackPanel>
                 </ListBoxItem>
@@ -84,7 +85,7 @@
                 <!-- Nav Item 2: Profiles & Config -->
                 <ListBoxItem>
                     <StackPanel Orientation="Horizontal">
-                        <ui:SymbolIcon Symbol="Settings24" Filled="True" Foreground="#FF107C41" />
+                        <ui:SymbolIcon Symbol="Settings24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
                         <TextBlock Text="Profiles &amp; Config" FontSize="14" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     </StackPanel>
                 </ListBoxItem>
@@ -92,16 +93,32 @@
                 <!-- Nav Item 3: FusionFix Config -->
                 <ListBoxItem>
                     <StackPanel Orientation="Horizontal">
-                        <ui:SymbolIcon Symbol="Options24" Filled="True" Foreground="#FF107C41" />
+                        <ui:SymbolIcon Symbol="Options24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
                         <TextBlock Text="FusionFix Config" FontSize="14" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     </StackPanel>
                 </ListBoxItem>
 
-                <!-- Nav Item 4: Settings -->
+                <!-- Nav Item 4: Music Manager -->
                 <ListBoxItem>
                     <StackPanel Orientation="Horizontal">
-                        <ui:SymbolIcon Symbol="Wrench24" Filled="True" Foreground="#FF107C41" />
+                        <ui:SymbolIcon Symbol="MusicNote224" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                        <TextBlock Text="Music Manager" FontSize="14" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    </StackPanel>
+                </ListBoxItem>
+
+                <!-- Nav Item 5: Settings -->
+                <ListBoxItem>
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="Wrench24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
                         <TextBlock Text="Settings" FontSize="14" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    </StackPanel>
+                </ListBoxItem>
+
+                <!-- Nav Item 6: Credits -->
+                <ListBoxItem>
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="People24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                        <TextBlock Text="Credits" FontSize="14" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     </StackPanel>
                 </ListBoxItem>
             </ListBox>
@@ -118,7 +135,6 @@
 
                 <!-- Apply Deployment Button -->
                 <ui:Button Content="Apply Load Order" 
-                           Icon="{ui:SymbolIcon Play24}" 
                            Command="{Binding ApplyDeploymentCommand}"
                            Appearance="Primary" 
                            Height="42" 
@@ -154,7 +170,13 @@
                 <views:FusionFixConfigView DataContext="{Binding}" />
             </TabItem>
             <TabItem Style="{StaticResource CollapsedTabItemStyle}">
+                <views:MusicView DataContext="{Binding}" />
+            </TabItem>
+            <TabItem Style="{StaticResource CollapsedTabItemStyle}">
                 <views:SettingsView DataContext="{Binding}" />
+            </TabItem>
+            <TabItem Style="{StaticResource CollapsedTabItemStyle}">
+                <views:CreditsView DataContext="{Binding}" />
             </TabItem>
         </TabControl>
     </Grid>

@@ -16,6 +16,9 @@
     </UserControl.Resources>
 
     <Grid Margin="20" x:Name="MainGrid">
+        <Grid.LayoutTransform>
+            <ScaleTransform x:Name="RootScale" ScaleX="1" ScaleY="1" />
+        </Grid.LayoutTransform>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -44,7 +47,7 @@
                 <!-- Left Panel (Profiles list, Create profile, Theme settings) -->
                 <StackPanel x:Name="LeftPanel" Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Margin="0,0,10,15">
                     <!-- Create Profile Card -->
-                    <ui:Card Padding="15" Margin="0,0,0,15">
+                    <ui:Card Padding="15" Margin="0,0,0,15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
                         <StackPanel>
                             <TextBlock Text="Create New Profile" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,10" />
                             <ui:TextBox x:Name="ProfileNameInput" PlaceholderText="Profile Name (e.g. Graphics Mod Set)" Margin="0,0,0,10" />
@@ -57,12 +60,14 @@
                     </ui:Card>
 
                     <!-- Select Profile Card -->
-                    <ui:Card Padding="15">
+                    <ui:Card Padding="15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
                         <StackPanel>
                             <TextBlock Text="Available Profiles" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,10" />
                             <ListBox ItemsSource="{Binding Profiles}"
-                                     SelectedItem="{Binding ActiveProfile}"
+                                     SelectedItem="{Binding ActiveProfile, Mode=OneWay}"
+                                     SelectionChanged="ListBox_SelectionChanged"
                                      MaxHeight="300"
+                                     VirtualizingPanel.ScrollUnit="Pixel"
                                      Background="Transparent"
                                      BorderThickness="0">
                                 <ListBox.ItemTemplate>
@@ -85,44 +90,37 @@
                     </ui:Card>
 
                     <!-- Save Profiles Card -->
-                    <ui:Card Padding="15" Margin="0,15,0,0">
+                    <ui:Card Padding="15" Margin="0,15,0,0" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
                         <StackPanel>
-                            <TextBlock Text="GTA IV Save Game Profiles" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,5" />
-                            <TextBlock Text="GTA IV stores your save files in user profiles. Switch save states or start a new story." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,12" TextWrapping="Wrap" />
-
-                            <!-- Select base profile ID dropdown -->
-                            <TextBlock Text="Social Club Profile ID" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
-                            <Grid Margin="0,0,0,12">
+                            <Grid Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <ComboBox Grid.Column="0" 
-                                          ItemsSource="{Binding BaseProfileIds}" 
-                                          SelectedItem="{Binding SelectedBaseProfileId}" 
-                                          HorizontalAlignment="Stretch"
-                                          Visibility="{Binding BaseProfileIds.Count, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Visible}" />
+                                <TextBlock Grid.Column="0" Text="GTA IV Save Game Profiles" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
                                 <ui:Button Grid.Column="1" 
                                            Icon="{ui:SymbolIcon ArrowClockwise24}" 
                                            Command="{Binding RefreshSaveProfilesCommand}" 
-                                           Margin="8,0,0,0" 
-                                           ToolTip="Refresh Save Profiles" />
+                                           ToolTip="Refresh Save Profiles" 
+                                           VerticalAlignment="Center" />
                             </Grid>
+                            <TextBlock Text="GTA IV stores your save files in user profiles. Switch save states or start a new story." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,12" TextWrapping="Wrap" />
                             
                             <!-- If no profiles are found, show error -->
-                            <TextBlock Text="No Social Club Profile directories detected. Check the path in Settings." 
+                            <TextBlock Text="No GTA IV save profile directories detected. Check the path in Settings." 
                                        Foreground="#FFD83B01" 
                                        FontSize="12" 
                                        FontWeight="SemiBold" 
                                        TextWrapping="Wrap" 
                                        Margin="0,0,0,10"
-                                       Visibility="{Binding BaseProfileIds.Count, Converter={StaticResource InverseBooleanToVisibilityConverter}, FallbackValue=Collapsed}" />
+                                       Visibility="{Binding HasBaseProfiles, Converter={StaticResource InverseBooleanToVisibilityConverter}, FallbackValue=Collapsed}" />
 
                             <!-- Save Profiles List -->
                             <TextBlock Text="Save States" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
                             <ListBox ItemsSource="{Binding SaveProfiles}"
                                      SelectedItem="{Binding SelectedSaveProfile}"
                                      MaxHeight="180"
+                                     VirtualizingPanel.ScrollUnit="Pixel"
                                      Background="Transparent"
                                      BorderThickness="0"
                                      Margin="0,0,0,12">
@@ -155,17 +153,10 @@
                             <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="0,10,0,0"
                                     Visibility="{Binding SelectedSaveProfile, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <StackPanel>
-                                    <!-- Activate Selected -->
-                                    <TextBlock Text="Activate Save State" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4" />
-                                    <TextBlock Text="Before activating, name the current active save to archive it (e.g. StoryModSave):" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,6" />
-                                    <Grid Margin="0,0,0,10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <ui:TextBox Grid.Column="0" Text="{Binding RenameActiveSaveTo, Mode=TwoWay}" PlaceholderText="Archive active save as..." Margin="0,0,8,0" />
-                                        <ui:Button Grid.Column="1" Content="Activate" Icon="{ui:SymbolIcon Checkmark24}" Command="{Binding ActivateSaveProfileCommand}" CommandParameter="{Binding RenameActiveSaveTo}" Appearance="Primary" />
-                                    </Grid>
+                                     <!-- Activate Selected -->
+                                     <TextBlock Text="Activate Save State" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4" />
+                                     <TextBlock Text="Deactivates and archives the current active save (preserving the name it was created with) and restores the selected backup." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8" />
+                                     <ui:Button Content="Activate Save State" Icon="{ui:SymbolIcon Checkmark24}" Command="{Binding ActivateSaveProfileCommand}" Appearance="Primary" HorizontalAlignment="Left" Margin="0,0,0,10" />
 
                                     <!-- Rename Save State -->
                                     <TextBlock Text="Rename Save State" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,5,0,4" />
@@ -211,7 +202,7 @@
                 </StackPanel>
 
                 <!-- Active Details Card -->
-                <ui:Card x:Name="ConfigCard" Grid.Column="1" Grid.Row="0" Padding="15" Margin="10,0,0,15">
+                <ui:Card x:Name="ConfigCard" Grid.Column="1" Grid.Row="0" Padding="15" Margin="10,0,0,15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
                     <StackPanel>
                         <TextBlock Text="Active Configuration" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,15" />
 
@@ -276,7 +267,7 @@
                 <!-- Status & Warning Panel -->
                 <StackPanel x:Name="StatusPanel" Grid.Column="1" Grid.Row="1" Margin="10,0,0,15">
                     <!-- Backend Loaders Status Card -->
-                    <ui:Card Padding="15" Margin="0,0,0,15">
+                    <ui:Card Padding="15" Margin="0,0,0,15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
                         <StackPanel>
                             <TextBlock Text="Loader &amp; Hook Status" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,15" />
 
