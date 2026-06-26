@@ -364,6 +364,36 @@ public class StateAndConflictTests : IDisposable
     }
 
     [Fact]
+    public async System.Threading.Tasks.Task TestImportAsiFileDirectlyAsync()
+    {
+        // Arrange
+        string baseDir = Path.Combine(_tempDir, "asi_import_test");
+        Directory.CreateDirectory(baseDir);
+
+        var vm = new ManagerIV.ViewModels.MainViewModel(baseDir);
+        Assert.Empty(vm.LibraryMods);
+
+        // Create a dummy .asi file
+        string asiPath = Path.Combine(baseDir, "test_plugin.asi");
+        await File.WriteAllTextAsync(asiPath, "dummy asi binary data");
+
+        // Act: Import raw .asi file
+        await vm.ImportArchiveAsync(asiPath);
+
+        // Assert
+        Assert.Single(vm.LibraryMods);
+        var importedMod = vm.LibraryMods[0];
+        Assert.Equal("Test Plugin", importedMod.Name);
+        Assert.Equal(DeployTarget.Plugins, importedMod.Target);
+        Assert.Contains(importedMod.Model.Files, f => f.RelativePath == "test_plugin.asi");
+        
+        // Verify file was copied to the library directory under a folder matching clean name
+        string expectedModDir = Path.Combine(baseDir, "Library", "TestPlugin");
+        Assert.True(Directory.Exists(expectedModDir));
+        Assert.True(File.Exists(Path.Combine(expectedModDir, "test_plugin.asi")));
+    }
+
+    [Fact]
     public void TestFusionFixConfigReadWrite()
     {
         // 1. Arrange: Create a temporary GTAIV.EFLC.FusionFix.ini content

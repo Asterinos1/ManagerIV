@@ -139,7 +139,8 @@ public class MetadataService
         // Step 1 — Strip file extension
         if (working.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ||
             working.EndsWith(".rar", StringComparison.OrdinalIgnoreCase) ||
-            working.EndsWith(".7z", StringComparison.OrdinalIgnoreCase))
+            working.EndsWith(".7z", StringComparison.OrdinalIgnoreCase) ||
+            working.EndsWith(".asi", StringComparison.OrdinalIgnoreCase))
         {
             working = working.Substring(0, working.Length - 4);
         }
@@ -209,7 +210,8 @@ public class MetadataService
             string fallback = archiveFileName;
             if (fallback.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ||
                 fallback.EndsWith(".rar", StringComparison.OrdinalIgnoreCase) ||
-                fallback.EndsWith(".7z", StringComparison.OrdinalIgnoreCase))
+                fallback.EndsWith(".7z", StringComparison.OrdinalIgnoreCase) ||
+                fallback.EndsWith(".asi", StringComparison.OrdinalIgnoreCase))
             {
                 fallback = fallback.Substring(0, fallback.Length - 4);
             }

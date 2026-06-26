@@ -30,6 +30,82 @@
                              From="0" To="1"
                              Duration="0:0:0.25" />
         </Storyboard>
+
+        <DataTemplate x:Key="ModItemTemplate" DataType="{x:Type vm:ModViewModel}">
+            <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Padding="6,4" Margin="0" HorizontalAlignment="Stretch">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />  <!-- Priority / Enable Checkbox -->
+                        <ColumnDefinition Width="*" />     <!-- Mod Info (Name, Version) -->
+                        <ColumnDefinition Width="Auto" />  <!-- Visual Tags (Type, Compatibility) -->
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Priority Indicator and Toggle Checkbox -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Priority, StringFormat='\{0:D3\}'}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Width="25" VerticalAlignment="Center" TextAlignment="Center" />
+                        <CheckBox IsChecked="{Binding IsEnabled, Mode=OneWay}" Command="{Binding DataContext.ToggleModEnabledCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Margin="6,0,6,0" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <!-- Mod Name & Version -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,1,0,0">
+                            <TextBlock Text="{Binding Version, StringFormat='Version: \{0\}'}" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="{Binding ConflictStatus, StringFormat='  •  \{0\}'}" ToolTip="{Binding ConflictDetails}" FontSize="10" FontWeight="SemiBold" Visibility="{Binding HasConflict, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                        <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ConflictStatus}" Value="❌ Structure Error">
+                                                <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Tags -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Type Tag (Asset, ASI, Script) -->
+                        <Border x:Name="TypeTagBorder" CornerRadius="3" Padding="4,1" Margin="3,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="TypeTagText" FontSize="9" FontWeight="Bold" Foreground="White" />
+                        </Border>
+
+                        <Border x:Name="CompatBorder" CornerRadius="3" Padding="4,1" Margin="3,0" VerticalAlignment="Center" Background="{DynamicResource ControlFillColorDefaultBrush}">
+                            <TextBlock Text="{Binding Compatibility}" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            <DataTemplate.Triggers>
+                <!-- Map Target tags -->
+                <DataTrigger Binding="{Binding TypeTag}" Value="Update">
+                    <Setter TargetName="TypeTagBorder" Property="Background" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                    <Setter TargetName="TypeTagText" Property="Text" Value="ASSET" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding TypeTag}" Value="Plugins">
+                    <Setter TargetName="TypeTagBorder" Property="Background" Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                    <Setter TargetName="TypeTagText" Property="Text" Value="ASI" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding TypeTag}" Value="Scripts">
+                    <Setter TargetName="TypeTagBorder" Property="Background" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                    <Setter TargetName="TypeTagText" Property="Text" Value="SCRIPT" />
+                </DataTrigger>
+
+                <!-- Highlight compatibility status -->
+                <DataTrigger Binding="{Binding Compatibility}" Value="CE-compatible">
+                    <Setter TargetName="CompatBorder" Property="Background" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Compatibility}" Value="Legacy">
+                    <Setter TargetName="CompatBorder" Property="Background" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Compatibility}" Value="Mixed">
+                    <Setter TargetName="CompatBorder" Property="Background" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
     </UserControl.Resources>
     
     <Grid x:Name="RootGrid">
@@ -51,7 +127,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0">
                 <TextBlock Text="Mod Library" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                <TextBlock Text="Drag and drop mod archives (.zip, .rar, .7z) here to import them." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                <TextBlock Text="Drag and drop mod files (.asi) or archives (.zip, .rar, .7z) here to import them." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
             </StackPanel>
             
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -61,7 +137,7 @@
                            Appearance="Danger"
                            Margin="0,0,10,0" />
                 <ui:Button Icon="{ui:SymbolIcon FolderAdd24}" 
-                           Content="Import Archive" 
+                           Content="Import Mod" 
                            Command="{Binding ImportModArchiveCommand}" />
             </StackPanel>
         </Grid>
@@ -161,126 +237,87 @@
                 <ColumnDefinition Width="2*" />
             </Grid.ColumnDefinitions>
 
-            <ui:Card x:Name="LibraryListCard" Grid.Column="0" Margin="0,0,10,0" Padding="0" VerticalAlignment="Stretch" VerticalContentAlignment="Top" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    
-                    <StackPanel Grid.Row="0" Margin="15,15,15,10">
-                        <TextBlock Text="Mod priority list" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                        <TextBlock Text="Note: Every mod will be placed higher than the FusionFix folder in the update folder." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,10" TextWrapping="Wrap" />
-                        <ui:TextBox Text="{Binding SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                    PlaceholderText="Search mods..."
-                                    Icon="{ui:SymbolIcon Search24}" />
-                    </StackPanel>
-                    
-                    <ListBox Grid.Row="1" x:Name="LibraryListBox" ItemsSource="{Binding LibraryMods}"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             VirtualizingPanel.ScrollUnit="Pixel"
-                             PreviewMouseLeftButtonDown="ListBox_PreviewMouseLeftButtonDown"
-                             MouseMove="ListBox_MouseMove"
-                             DragOver="ListBox_DragOver"
-                             Drop="ListBox_Drop"
-                             AllowDrop="True"
-                             Background="Transparent"
-                             BorderThickness="0">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:ModViewModel}">
-                                <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Padding="10,8" Margin="0" HorizontalAlignment="Stretch">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />  <!-- Priority / Enable Checkbox -->
-                                            <ColumnDefinition Width="*" />     <!-- Mod Info (Name, Version) -->
-                                            <ColumnDefinition Width="Auto" />  <!-- Visual Tags (Type, Compatibility) -->
-                                        </Grid.ColumnDefinitions>
+            <Grid x:Name="ListsContainerGrid" Grid.Column="0" Margin="0,0,10,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-                                        <!-- Priority Indicator and Toggle Checkbox -->
-                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Priority, StringFormat='\{0:D3\}'}" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Width="30" VerticalAlignment="Center" TextAlignment="Center" />
-                                            <CheckBox IsChecked="{Binding IsEnabled, Mode=OneWay}" Command="{Binding DataContext.ToggleModEnabledCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Margin="10,0,10,0" VerticalAlignment="Center" />
-                                        </StackPanel>
+                <ui:Card x:Name="LibraryListCard" Grid.Row="0" Margin="0,0,0,4" Padding="0" VerticalAlignment="Stretch" VerticalContentAlignment="Top" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        
+                        <StackPanel Grid.Row="0" Margin="12,12,12,8">
+                            <TextBlock Text="Mod library (Assets &amp; Scripts)" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock Text="Note: Every mod will be placed higher than the FusionFix folder in the update folder." FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,8" TextWrapping="Wrap" />
+                            <ui:TextBox Text="{Binding SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        PlaceholderText="Search mods &amp; plugins..."
+                                        Icon="{ui:SymbolIcon Search24}" />
+                        </StackPanel>
+                        
+                        <ListBox Grid.Row="1" x:Name="LibraryListBox" ItemsSource="{Binding MainModsCollection}"
+                                 SelectedItem="{Binding SelectedLibraryMod, Mode=TwoWay}"
+                                 ItemTemplate="{StaticResource ModItemTemplate}"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 VirtualizingPanel.ScrollUnit="Pixel"
+                                 PreviewMouseLeftButtonDown="ListBox_PreviewMouseLeftButtonDown"
+                                 MouseMove="ListBox_MouseMove"
+                                 DragOver="ListBox_DragOver"
+                                 Drop="ListBox_Drop"
+                                 AllowDrop="True"
+                                 Background="Transparent"
+                                 BorderThickness="0" />
+                    </Grid>
+                </ui:Card>
 
-                                        <!-- Mod Name & Version -->
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                                <TextBlock Text="{Binding Version, StringFormat='Version: \{0\}'}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                                <TextBlock Text="{Binding ConflictStatus, StringFormat='  •  \{0\}'}" ToolTip="{Binding ConflictDetails}" FontSize="11" FontWeight="SemiBold" Visibility="{Binding HasConflict, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-                                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding ConflictStatus}" Value="❌ Structure Error">
-                                                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                            </StackPanel>
-                                        </StackPanel>
+                <GridSplitter Grid.Row="1" Height="4" HorizontalAlignment="Stretch" VerticalAlignment="Center" Background="Transparent" ResizeBehavior="PreviousAndNext" ShowsPreview="True" Margin="0,4" />
 
-                                        <!-- Tags -->
-                                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <!-- Type Tag (Asset, ASI, Script) -->
-                                            <Border x:Name="TypeTagBorder" CornerRadius="4" Padding="6,2" Margin="5,0" VerticalAlignment="Center">
-                                                <TextBlock x:Name="TypeTagText" FontSize="10" FontWeight="Bold" Foreground="White" />
-                                            </Border>
-
-                                            <Border x:Name="CompatBorder" CornerRadius="4" Padding="6,2" Margin="5,0" VerticalAlignment="Center" Background="{DynamicResource ControlFillColorDefaultBrush}">
-                                                <TextBlock Text="{Binding Compatibility}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                            </Border>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                                <DataTemplate.Triggers>
-                                    <!-- Map Target tags -->
-                                    <DataTrigger Binding="{Binding TypeTag}" Value="Update">
-                                        <Setter TargetName="TypeTagBorder" Property="Background" Value="{DynamicResource SystemFillColorSuccessBrush}" />
-                                        <Setter TargetName="TypeTagText" Property="Text" Value="ASSET" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding TypeTag}" Value="Plugins">
-                                        <Setter TargetName="TypeTagBorder" Property="Background" Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
-                                        <Setter TargetName="TypeTagText" Property="Text" Value="ASI" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding TypeTag}" Value="Scripts">
-                                        <Setter TargetName="TypeTagBorder" Property="Background" Value="{DynamicResource SystemFillColorCautionBrush}" />
-                                        <Setter TargetName="TypeTagText" Property="Text" Value="SCRIPT" />
-                                    </DataTrigger>
-
-                                    <!-- Highlight compatibility status -->
-                                    <DataTrigger Binding="{Binding Compatibility}" Value="CE-compatible">
-                                        <Setter TargetName="CompatBorder" Property="Background" Value="{DynamicResource SystemFillColorSuccessBrush}" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding Compatibility}" Value="Legacy">
-                                        <Setter TargetName="CompatBorder" Property="Background" Value="{DynamicResource SystemFillColorCriticalBrush}" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding Compatibility}" Value="Mixed">
-                                        <Setter TargetName="CompatBorder" Property="Background" Value="{DynamicResource SystemFillColorCautionBrush}" />
-                                    </DataTrigger>
-                                </DataTemplate.Triggers>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </Grid>
-            </ui:Card>
+                <ui:Card x:Name="PluginsListCard" Grid.Row="2" Margin="0,4,0,0" Padding="0" VerticalAlignment="Stretch" VerticalContentAlignment="Top" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        
+                        <StackPanel Grid.Row="0" Margin="12,12,12,8">
+                            <TextBlock Text="Plugins List (.ASI)" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock Text="Note: ASI plugins are loaded alphabetically. Change their priority to control load order." FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+                        
+                        <ListBox Grid.Row="1" x:Name="PluginsListBox" ItemsSource="{Binding PluginsCollection}"
+                                 SelectedItem="{Binding SelectedPluginMod, Mode=TwoWay}"
+                                 ItemTemplate="{StaticResource ModItemTemplate}"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 VirtualizingPanel.ScrollUnit="Pixel"
+                                 PreviewMouseLeftButtonDown="ListBox_PreviewMouseLeftButtonDown"
+                                 MouseMove="ListBox_MouseMove"
+                                 DragOver="ListBox_DragOver"
+                                 Drop="ListBox_Drop"
+                                 AllowDrop="True"
+                                 Background="Transparent"
+                                 BorderThickness="0" />
+                    </Grid>
+                </ui:Card>
+            </Grid>
 
             <!-- Inspector panel for selected Mod details -->
-            <ui:Card x:Name="InspectorCard" Grid.Column="1" Margin="10,0,0,0" Padding="15" VerticalAlignment="Stretch" VerticalContentAlignment="Top" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+            <ui:Card x:Name="InspectorCard" Grid.Column="1" Margin="10,0,0,0" Padding="12" VerticalAlignment="Stretch" VerticalContentAlignment="Top" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
                 <Grid>
                     <!-- Placeholder when null -->
                     <TextBlock Text="Select a mod to view and edit details." 
                                HorizontalAlignment="Center" 
                                VerticalAlignment="Center" 
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" 
-                               FontSize="14">
+                               FontSize="13">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Visibility" Value="Collapsed" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedItem, ElementName=LibraryListBox}" Value="{x:Null}">
+                                    <DataTrigger Binding="{Binding SelectedMod}" Value="{x:Null}">
                                         <Setter Property="Visibility" Value="Visible" />
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -289,12 +326,12 @@
                     </TextBlock>
 
                     <!-- Details Editor when NOT null -->
-                    <Grid DataContext="{Binding SelectedItem, ElementName=LibraryListBox}">
+                    <Grid DataContext="{Binding SelectedMod}">
                         <Grid.Style>
                             <Style TargetType="Grid">
                                 <Setter Property="Visibility" Value="Visible" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedItem, ElementName=LibraryListBox}" Value="{x:Null}">
+                                    <DataTrigger Binding="{Binding DataContext.SelectedMod, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="{x:Null}">
                                         <Setter Property="Visibility" Value="Collapsed" />
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -307,31 +344,31 @@
 
                         <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
                             <StackPanel>
-                                <TextBlock Text="Edit Mod Details" FontSize="18" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                <TextBlock Text="Edit Mod Details" FontSize="15" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
 
-                                <TextBlock Text="Name" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
-                                <ui:TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" />
+                                <TextBlock Text="Name" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,2" />
+                                <ui:TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
 
-                                <TextBlock Text="Version" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
-                                <ui:TextBox Text="{Binding Version, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" />
+                                <TextBlock Text="Version" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,2" />
+                                <ui:TextBox Text="{Binding Version, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
 
-                                <TextBlock Text="Compatibility" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
-                                <ui:TextBox Text="{Binding Compatibility, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" />
+                                <TextBlock Text="Compatibility" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,2" />
+                                <ui:TextBox Text="{Binding Compatibility, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
 
-                                <TextBlock Text="Description" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
+                                <TextBlock Text="Description" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,2" />
                                 <ui:TextBox Text="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                             AcceptsReturn="True" 
                                             TextWrapping="Wrap" 
                                             MinLines="3" 
-                                            Margin="0,0,0,12" />
+                                            Margin="0,0,0,8" />
 
-                                <TextBlock Text="File Layout (Manifest)" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
-                                <ListBox ItemsSource="{Binding Model.Files}" MaxHeight="150" Background="Transparent" BorderThickness="0" VirtualizingPanel.ScrollUnit="Pixel" Margin="0,0,0,15">
+                                <TextBlock Text="File Layout (Manifest)" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,2" />
+                                <ListBox ItemsSource="{Binding Model.Files}" MaxHeight="120" Background="Transparent" BorderThickness="0" VirtualizingPanel.ScrollUnit="Pixel" Margin="0,0,0,8">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                            <StackPanel Orientation="Horizontal" Margin="0,1">
                                                 <ui:SymbolIcon Symbol="Document24" Margin="0,0,8,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                                <TextBlock Text="{Binding RelativePath}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding RelativePath}" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                             </StackPanel>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
@@ -340,7 +377,7 @@
                         </ScrollViewer>
 
                         <!-- Action Buttons at the bottom -->
-                        <Grid Grid.Row="1" Margin="0,10,0,0">
+                        <Grid Grid.Row="1" Margin="0,6,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
@@ -390,8 +427,8 @@
                 
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                     <ui:SymbolIcon Symbol="FolderAdd48" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" FontSize="56" Margin="0,0,0,16" HorizontalAlignment="Center" />
-                    <TextBlock Text="Drop Mod Archives here to import" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
-                    <TextBlock Text="Supports .zip, .rar, and .7z packages" FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,8,0,0" HorizontalAlignment="Center" />
+                    <TextBlock Text="Drop Mods or Archives here to import" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                    <TextBlock Text="Supports .zip, .rar, .7z archives and .asi files" FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,8,0,0" HorizontalAlignment="Center" />
                 </StackPanel>
             </Grid>
         </Grid>

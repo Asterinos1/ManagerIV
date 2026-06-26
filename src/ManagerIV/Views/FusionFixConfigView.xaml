@@ -55,13 +55,24 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <!-- Tabbed Layout for All Settings -->
-                <TabControl Grid.Row="0" TabStripPlacement="Top" Background="Transparent" BorderThickness="0" Padding="0,10,0,0">
-                    
-                    <!-- TAB 1: Gameplay & Camera -->
-                    <TabItem Header="Gameplay &amp; Camera">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,5,0,0">
-                            <StackPanel MaxWidth="800" HorizontalAlignment="Left" Margin="0,0,15,0">
+                <Grid Grid.Row="0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <ui:TextBox x:Name="SearchBox" 
+                                Grid.Row="0"
+                                PlaceholderText="Search settings by title or description..."
+                                TextChanged="SearchBox_TextChanged"
+                                Icon="{ui:SymbolIcon Search24}"
+                                Margin="0,5,15,10"
+                                MaxWidth="800"
+                                HorizontalAlignment="Left"
+                                Width="400" />
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,5,0,0">
+                        <StackPanel x:Name="SettingsStackPanel" MaxWidth="800" HorizontalAlignment="Left" Margin="0,0,15,10">
                                 
                                 <TextBlock Text="Gameplay Mechanics" FontSize="15" FontWeight="Bold" Margin="0,0,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
                                 
@@ -180,16 +191,7 @@
                                     </StackPanel>
                                 </ui:CardControl>
 
-                            </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
-
-                    <!-- TAB 2: Graphics & Shadows -->
-                    <TabItem Header="Graphics &amp; Shadows">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,5,0,0">
-                            <StackPanel MaxWidth="800" HorizontalAlignment="Left" Margin="0,0,15,0">
-                                
-                                <TextBlock Text="Shadow Map Configuration" FontSize="15" FontWeight="Bold" Margin="0,0,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                <TextBlock Text="Shadow Map Configuration" FontSize="15" FontWeight="Bold" Margin="0,20,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
                                 
                                 <ui:CardControl Margin="0,0,0,8">
                                     <ui:CardControl.Header>
@@ -303,16 +305,7 @@
                                     <ui:ToggleSwitch IsChecked="{Binding FusionFixSettings.ExtendedTimecycEditingEnabled, Mode=TwoWay}" VerticalAlignment="Center" />
                                 </ui:CardControl>
 
-                            </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
-
-                    <!-- TAB 3: PostFX & 2DFX -->
-                    <TabItem Header="PostFX &amp; 2DFX">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,5,0,0">
-                            <StackPanel MaxWidth="800" HorizontalAlignment="Left" Margin="0,0,15,0">
-                                
-                                <TextBlock Text="Ambient Occlusion &amp; Transparency" FontSize="15" FontWeight="Bold" Margin="0,0,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                <TextBlock Text="Ambient Occlusion &amp; Transparency" FontSize="15" FontWeight="Bold" Margin="0,20,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
                                 
                                 <ui:CardControl Margin="0,0,0,8">
                                     <ui:CardControl.Header>
@@ -424,16 +417,7 @@
                                     <ui:ToggleSwitch IsChecked="{Binding FusionFixSettings.DisableDefaultLodLightsEnabled, Mode=TwoWay}" VerticalAlignment="Center" />
                                 </ui:CardControl>
 
-                            </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
-
-                    <!-- TAB 4: Gameplay & Parity -->
-                    <TabItem Header="Gameplay &amp; Parity">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,5,0,0">
-                            <StackPanel MaxWidth="800" HorizontalAlignment="Left" Margin="0,0,15,0">
-                                
-                                <TextBlock Text="Console Parity Features" FontSize="15" FontWeight="Bold" Margin="0,0,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                <TextBlock Text="Console Parity Features" FontSize="15" FontWeight="Bold" Margin="0,20,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
                                 
                                 <ui:CardControl Margin="0,0,0,8">
                                     <ui:CardControl.Header>
@@ -611,16 +595,7 @@
                                     <ui:TextBox Text="{Binding FusionFixSettings.OverrideTreeAlpha, Mode=TwoWay}" Width="100" VerticalAlignment="Center" TextAlignment="Center" />
                                 </ui:CardControl>
 
-                            </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
-
-                    <!-- TAB 5: Performance & Engine -->
-                    <TabItem Header="Performance &amp; Engine">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,5,0,0">
-                            <StackPanel MaxWidth="800" HorizontalAlignment="Left" Margin="0,0,15,0">
-                                
-                                <TextBlock Text="Frame Limiter Engine" FontSize="15" FontWeight="Bold" Margin="0,0,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                <TextBlock Text="Frame Limiter Engine" FontSize="15" FontWeight="Bold" Margin="0,20,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
                                 
                                 <ui:CardControl Margin="0,0,0,8">
                                     <ui:CardControl.Header>
@@ -697,15 +672,43 @@
 
                                 <TextBlock Text="BudgetedIV &amp; Resource Pools" FontSize="15" FontWeight="Bold" Margin="0,5,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
                                 
-                                <ui:CardControl Margin="0,0,0,8">
-                                    <ui:CardControl.Header>
-                                        <StackPanel>
-                                            <TextBlock Text="Vehicle Budget Limit" FontSize="13" FontWeight="SemiBold" />
-                                            <TextBlock Text="Exposes model memory allocations to prevent taxi spawns bug (0 default)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <ui:Card Margin="0,0,0,8" Padding="15">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,15,0">
+                                            <TextBlock Text="Vehicle Budget Limit (Taxi Bug Fix)" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                            <TextBlock Text="Sets vehicle model memory pool. Auto-detect from vehicles.img size, choose a preset, or input manually." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
                                         </StackPanel>
-                                    </ui:CardControl.Header>
-                                    <ui:TextBox Text="{Binding FusionFixSettings.VehicleBudget, Mode=TwoWay}" Width="100" VerticalAlignment="Center" TextAlignment="Center" />
-                                </ui:CardControl>
+
+                                        <ui:TextBox Grid.Row="0" Grid.Column="1" 
+                                                    Text="{Binding FusionFixSettings.VehicleBudget, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                    Width="120" 
+                                                    VerticalAlignment="Center" />
+
+                                        <!-- Quick select presets -->
+                                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,12,0,0">
+                                            <TextBlock Text="Presets:" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,8,0" />
+                                            <ui:Button Content="Auto-Detect Budget" Command="{Binding AutoCalculateVehicleBudgetCommand}" Margin="0,0,5,0" Padding="10,4" FontSize="11" />
+                                            <ui:Button Content="120 MB (Low/Vanilla)" Command="{Binding SetVehicleBudgetPresetCommand}" CommandParameter="120000000" Margin="0,0,5,0" Padding="10,4" FontSize="11" />
+                                            <ui:Button Content="260 MB (Heavy Mods)" Command="{Binding SetVehicleBudgetPresetCommand}" CommandParameter="260000000" Margin="0,0,5,0" Padding="10,4" FontSize="11" />
+                                            <ui:Button Content="Default (0)" Command="{Binding SetVehicleBudgetPresetCommand}" CommandParameter="0" Margin="0,0,5,0" Padding="10,4" FontSize="11" />
+                                        </StackPanel>
+
+                                        <!-- Warning Message -->
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" 
+                                                   Text="{Binding VehicleBudgetWarning}" FontSize="11" Foreground="#FFCC00" TextWrapping="Wrap" Margin="0,8,0,0" 
+                                                   Visibility="{Binding HasVehicleBudgetWarning, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}" />
+                                    </Grid>
+                                </ui:Card>
 
                                 <ui:CardControl Margin="0,0,0,8">
                                     <ui:CardControl.Header>
@@ -850,11 +853,9 @@
                                     <ui:TextBox Text="{Binding FusionFixSettings.CustomUserProfilePath, Mode=TwoWay}" Width="250" VerticalAlignment="Center" PlaceholderText="e.g. C:\MySaves" />
                                 </ui:CardControl>
 
-                            </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
-
-                </TabControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
 
                 <!-- Actions Footer bar -->
                 <ui:Card Grid.Row="1" Margin="0,10,0,0" Padding="12" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
@@ -865,6 +866,12 @@
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <ui:Button Content="Refresh" 
+                                       Icon="{ui:SymbolIcon ArrowClockwise24}"
+                                       Command="{Binding RefreshFusionFixConfigCommand}"
+                                       Margin="0,0,10,0"
+                                       Width="140" 
+                                       Height="36" />
                             <ui:Button Content="Defaults" 
                                        Icon="{ui:SymbolIcon ArrowReset24}"
                                        Command="{Binding LoadFusionFixDefaultsCommand}"

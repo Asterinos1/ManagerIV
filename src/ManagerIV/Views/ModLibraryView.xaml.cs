@@ -132,10 +132,9 @@ public partial class ModLibraryView : UserControl
                 var targetMod = (ModViewModel)listBox.ItemContainerGenerator.ItemFromContainer(item);
                 if (targetMod != null)
                 {
-                    int newIndex = listBox.Items.IndexOf(targetMod);
                     if (DataContext is MainViewModel vm)
                     {
-                        vm.ReorderModCommand.Execute(new Tuple<ModViewModel, int>(droppedMod, newIndex + 1));
+                        vm.ReorderModCommand.Execute(new Tuple<ModViewModel, int>(droppedMod, targetMod.Priority));
                     }
                 }
             }
@@ -155,7 +154,7 @@ public partial class ModLibraryView : UserControl
             foreach (string file in files)
             {
                 string ext = Path.GetExtension(file).ToLowerInvariant();
-                if (ext == ".zip" || ext == ".rar" || ext == ".7z")
+                if (ext == ".zip" || ext == ".rar" || ext == ".7z" || ext == ".asi")
                 {
                     validFiles.Add(file);
                 }
@@ -170,7 +169,7 @@ public partial class ModLibraryView : UserControl
 
     private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        if (LibraryContentGrid == null || LibraryListCard == null || InspectorCard == null)
+        if (LibraryContentGrid == null || ListsContainerGrid == null || InspectorCard == null)
             return;
 
         // Apply scale transform if screen is small
@@ -200,16 +199,16 @@ public partial class ModLibraryView : UserControl
             LibraryContentGrid.RowDefinitions[0].Height = new GridLength(1, GridUnitType.Star);
             LibraryContentGrid.RowDefinitions[1].Height = new GridLength(1, GridUnitType.Star);
 
-            Grid.SetColumn(LibraryListCard, 0);
-            Grid.SetRow(LibraryListCard, 0);
-            Grid.SetRowSpan(LibraryListCard, 1);
+            Grid.SetColumn(ListsContainerGrid, 0);
+            Grid.SetRow(ListsContainerGrid, 0);
+            Grid.SetRowSpan(ListsContainerGrid, 1);
 
             Grid.SetColumn(InspectorCard, 0);
             Grid.SetRow(InspectorCard, 1);
             Grid.SetRowSpan(InspectorCard, 1);
 
             // Refine margins for 1-column stack
-            LibraryListCard.Margin = new Thickness(0, 0, 0, 15);
+            ListsContainerGrid.Margin = new Thickness(0, 0, 0, 15);
             InspectorCard.Margin = new Thickness(0, 0, 0, 0);
         }
         else
@@ -221,16 +220,16 @@ public partial class ModLibraryView : UserControl
             LibraryContentGrid.RowDefinitions[0].Height = new GridLength(1, GridUnitType.Star);
             LibraryContentGrid.RowDefinitions[1].Height = new GridLength(0, GridUnitType.Pixel);
 
-            Grid.SetColumn(LibraryListCard, 0);
-            Grid.SetRow(LibraryListCard, 0);
-            Grid.SetRowSpan(LibraryListCard, 2);
+            Grid.SetColumn(ListsContainerGrid, 0);
+            Grid.SetRow(ListsContainerGrid, 0);
+            Grid.SetRowSpan(ListsContainerGrid, 2);
 
             Grid.SetColumn(InspectorCard, 1);
             Grid.SetRow(InspectorCard, 0);
             Grid.SetRowSpan(InspectorCard, 2);
 
             // Refine margins for 2-column side-by-side
-            LibraryListCard.Margin = new Thickness(0, 0, 10, 0);
+            ListsContainerGrid.Margin = new Thickness(0, 0, 10, 0);
             InspectorCard.Margin = new Thickness(10, 0, 0, 0);
         }
     }

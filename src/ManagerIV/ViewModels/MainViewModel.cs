@@ -43,6 +43,9 @@ public class MainViewModel : ViewModelBase
     private BackendStatusViewModel _backendStatus = new();
     private bool _isDarkTheme = true;
     private MusicViewModel _music;
+    private ModViewModel? _selectedLibraryMod;
+    private ModViewModel? _selectedPluginMod;
+    private ModViewModel? _selectedMod;
 
     // Save Profiles fields
     private SaveProfileManager _saveProfileManager;
@@ -80,6 +83,55 @@ public class MainViewModel : ViewModelBase
     {
         get => _libraryMods;
         set => SetProperty(ref _libraryMods, value);
+    }
+
+    public System.ComponentModel.ICollectionView? MainModsCollection { get; }
+    public System.ComponentModel.ICollectionView? PluginsCollection { get; }
+
+    public ModViewModel? SelectedLibraryMod
+    {
+        get => _selectedLibraryMod;
+        set
+        {
+            if (SetProperty(ref _selectedLibraryMod, value))
+            {
+                if (value != null)
+                {
+                    SelectedPluginMod = null;
+                    SelectedMod = value;
+                }
+                else if (SelectedPluginMod == null)
+                {
+                    SelectedMod = null;
+                }
+            }
+        }
+    }
+
+    public ModViewModel? SelectedPluginMod
+    {
+        get => _selectedPluginMod;
+        set
+        {
+            if (SetProperty(ref _selectedPluginMod, value))
+            {
+                if (value != null)
+                {
+                    SelectedLibraryMod = null;
+                    SelectedMod = value;
+                }
+                else if (SelectedLibraryMod == null)
+                {
+                    SelectedMod = null;
+                }
+            }
+        }
+    }
+
+    public ModViewModel? SelectedMod
+    {
+        get => _selectedMod;
+        set => SetProperty(ref _selectedMod, value);
     }
 
     public string GameDir
@@ -247,24 +299,19 @@ public class MainViewModel : ViewModelBase
 
     private void ApplyFilter()
     {
-        var view = System.Windows.Data.CollectionViewSource.GetDefaultView(LibraryMods);
-        if (view == null) return;
+        if (Application.Current == null || Application.Current.Dispatcher == null)
+        {
+            return;
+        }
 
-        if (string.IsNullOrWhiteSpace(_searchQuery))
+        if (!Application.Current.Dispatcher.CheckAccess())
         {
-            view.Filter = null;
+            Application.Current.Dispatcher.BeginInvoke(new Action(ApplyFilter));
+            return;
         }
-        else
-        {
-            view.Filter = (obj) =>
-            {
-                if (obj is ModViewModel mod)
-                {
-                    return mod.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase);
-                }
-                return false;
-            };
-        }
+
+        MainModsCollection?.Refresh();
+        PluginsCollection?.Refresh();
     }
 
     private int _activeImgArchiveCount;
@@ -316,8 +363,52 @@ public class MainViewModel : ViewModelBase
     public FusionFixConfig FusionFixSettings
     {
         get => _fusionFixSettings;
-        set => SetProperty(ref _fusionFixSettings, value);
+        set
+        {
+            if (value == null) return;
+            if (_fusionFixSettings != value)
+            {
+                if (_fusionFixSettings != null)
+                {
+                    _fusionFixSettings.PropertyChanged -= FusionFixSettings_PropertyChanged;
+                }
+                _fusionFixSettings = value;
+                OnPropertyChanged(nameof(FusionFixSettings));
+                _fusionFixSettings.PropertyChanged += FusionFixSettings_PropertyChanged;
+                OnPropertyChanged(nameof(VehicleBudgetWarning));
+                OnPropertyChanged(nameof(HasVehicleBudgetWarning));
+            }
+        }
     }
+
+    private void FusionFixSettings_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(FusionFixConfig.VehicleBudget))
+        {
+            OnPropertyChanged(nameof(VehicleBudgetWarning));
+            OnPropertyChanged(nameof(HasVehicleBudgetWarning));
+        }
+    }
+
+    public string VehicleBudgetWarning
+    {
+        get
+        {
+            if (FusionFixSettings == null) return string.Empty;
+            int val = FusionFixSettings.VehicleBudget;
+            if (val > 300000000)
+            {
+                return "⚠️ Warning: Budget exceeds 300MB limit. This may starve the audio pool (causing muted engine sounds) or trigger severe texture popping and crashes.";
+            }
+            if (val > 0 && val < 120000000)
+            {
+                return "ℹ️ Note: Standard taxi bug fix recommends at least 120,000,000 bytes (120MB) to 150,000,000 bytes (150MB).";
+            }
+            return string.Empty;
+        }
+    }
+
+    public bool HasVehicleBudgetWarning => !string.IsNullOrEmpty(VehicleBudgetWarning);
 
     public bool IsFusionFixConfigAvailable
     {
@@ -348,6 +439,9 @@ public class MainViewModel : ViewModelBase
     public ICommand ResetGameDirectoryCommand { get; }
     public ICommand SaveFusionFixConfigCommand { get; }
     public ICommand LoadFusionFixDefaultsCommand { get; }
+    public ICommand RefreshFusionFixConfigCommand { get; }
+    public ICommand SetVehicleBudgetPresetCommand { get; }
+    public ICommand AutoCalculateVehicleBudgetCommand { get; }
     public ICommand BrowseSaveProfilesPathCommand { get; }
     public ICommand ActivateSaveProfileCommand { get; }
     public ICommand CreateSaveProfileCommand { get; }
@@ -407,6 +501,9 @@ public class MainViewModel : ViewModelBase
         ResetGameDirectoryCommand = new RelayCommand(async () => await ResetGameDirectoryAsync(), () => !IsBusy && ActiveProfile != null && !string.IsNullOrEmpty(ActiveProfile.GamePath));
         SaveFusionFixConfigCommand = new RelayCommand(SaveFusionFixConfig, () => IsFusionFixConfigAvailable && !IsBusy);
         LoadFusionFixDefaultsCommand = new RelayCommand(LoadFusionFixDefaults, () => IsFusionFixConfigAvailable && !IsBusy);
+        RefreshFusionFixConfigCommand = new RelayCommand(RefreshFusionFixConfig, () => IsFusionFixConfigAvailable && !IsBusy);
+        SetVehicleBudgetPresetCommand = new RelayCommand<object>(SetVehicleBudgetPreset);
+        AutoCalculateVehicleBudgetCommand = new RelayCommand(AutoCalculateVehicleBudget, () => IsFusionFixConfigAvailable && ActiveProfile != null && !IsBusy);
 
         BrowseSaveProfilesPathCommand = new RelayCommand(BrowseSaveProfilesPath);
         ActivateSaveProfileCommand = new RelayCommand<object>(ActivateSaveProfile);
@@ -414,6 +511,35 @@ public class MainViewModel : ViewModelBase
         RenameSaveProfileCommand = new RelayCommand<string>(RenameSaveProfile);
         DeleteSaveProfileCommand = new RelayCommand(DeleteSaveProfile);
         RefreshSaveProfilesCommand = new RelayCommand(RefreshSaveProfilesList);
+
+        // Initialize collection views and their filters (only if running inside Application context to avoid WPF threading issues in unit tests)
+        if (System.Windows.Application.Current != null)
+        {
+            MainModsCollection = new System.Windows.Data.ListCollectionView(LibraryMods);
+            PluginsCollection = new System.Windows.Data.ListCollectionView(LibraryMods);
+
+            MainModsCollection.Filter = (obj) =>
+            {
+                if (obj is ModViewModel mod)
+                {
+                    bool matchesTarget = mod.Target != DeployTarget.Plugins;
+                    bool matchesSearch = string.IsNullOrWhiteSpace(SearchQuery) || mod.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase);
+                    return matchesTarget && matchesSearch;
+                }
+                return false;
+            };
+
+            PluginsCollection.Filter = (obj) =>
+            {
+                if (obj is ModViewModel mod)
+                {
+                    bool matchesTarget = mod.Target == DeployTarget.Plugins;
+                    bool matchesSearch = string.IsNullOrWhiteSpace(SearchQuery) || mod.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase);
+                    return matchesTarget && matchesSearch;
+                }
+                return false;
+            };
+        }
 
         // Load data
         LoadLibrary();
@@ -878,8 +1004,8 @@ public class MainViewModel : ViewModelBase
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Filter = "Mod Archives (*.zip;*.rar;*.7z)|*.zip;*.rar;*.7z|All Files (*.*)|*.*",
-            Title = "Select Mod Archives to Import",
+            Filter = "Supported Files (*.zip;*.rar;*.7z;*.asi)|*.zip;*.rar;*.7z;*.asi|Mod Archives (*.zip;*.rar;*.7z)|*.zip;*.rar;*.7z|ASI Plugins (*.asi)|*.asi|All Files (*.*)|*.*",
+            Title = "Select Mod Files or Archives to Import",
             Multiselect = true
         };
 
@@ -954,56 +1080,121 @@ public class MainViewModel : ViewModelBase
             for (int i = 0; i < total; i++)
             {
                 string archivePath = pathsList[i];
-                StatusText = $"[{i + 1}/{total}] Extracting '{Path.GetFileName(archivePath)}'...";
+                string fileName = Path.GetFileName(archivePath);
+                string ext = Path.GetExtension(archivePath).ToLowerInvariant();
+                bool isAsi = ext == ".asi";
+
+                StatusText = isAsi 
+                    ? $"[{i + 1}/{total}] Importing ASI plugin '{fileName}'..."
+                    : $"[{i + 1}/{total}] Extracting '{fileName}'...";
 
                 try
                 {
-                    // Parse temporary destination in library
-                    string tempGuid = Guid.NewGuid().ToString("N");
-                    string extractionTarget = Path.Combine(_libraryDir, tempGuid);
+                    string displayName;
+                    string version;
+                    string description;
+                    string finalModPath;
+                    IReadOnlyList<ModFile> modFiles;
+                    string compatibility;
+                    System.Collections.Generic.List<string> tags;
 
-                    // Extract with zip-slip protection
-                    await _archiveHandler.ExtractAsync(archivePath, extractionTarget);
-
-                    // Promote mod root if it is nested inside subfolders
-                    StatusText = $"[{i + 1}/{total}] Optimizing directory structure for '{Path.GetFileName(archivePath)}'...";
-                    await Task.Run(() => _archiveHandler.PromoteModRoot(extractionTarget));
-
-                    StatusText = $"[{i + 1}/{total}] Analyzing compatibility and metadata for '{Path.GetFileName(archivePath)}'...";
-                    
-                    // Scan folder
-                    var metadata = _metadataService.ScanExtractedDirectory(extractionTarget, Path.GetFileName(archivePath));
-
-                    // Ingest via ParseArchiveFileName
-                    var parsed = _metadataService.ParseArchiveFileName(Path.GetFileName(archivePath));
-                    string displayName = parsed.DisplayName;
-                    
-                    // Respect parsed version from filename as fallback if readme did not yield one
-                    // (Currently scan extracted directory uses the old ParseFilename, but we default to parsed.Version if found)
-                    string version = parsed.Version ?? metadata.Version;
-                    var tags = parsed.Tags.ToList();
-
-                    // Move extraction folder to a clean mod name folder
-                    string cleanModName = string.Concat(displayName.Split(Path.GetInvalidFileNameChars())).Replace(" ", "");
-                    string finalModPath = Path.Combine(_libraryDir, cleanModName);
-                    if (Directory.Exists(finalModPath))
+                    if (isAsi)
                     {
-                        // Append suffix if mod name folder already exists
-                        finalModPath += "_" + Guid.NewGuid().ToString("N").Substring(0, 6);
-                    }
+                        var parsed = _metadataService.ParseArchiveFileName(fileName);
+                        displayName = parsed.DisplayName;
+                        version = "1.0.0";
+                        try
+                        {
+                            var versionInfo = System.Diagnostics.FileVersionInfo.GetVersionInfo(archivePath);
+                            if (!string.IsNullOrEmpty(versionInfo.FileVersion))
+                            {
+                                version = versionInfo.FileVersion.Trim();
+                            }
+                            else if (!string.IsNullOrEmpty(versionInfo.ProductVersion))
+                            {
+                                version = versionInfo.ProductVersion.Trim();
+                            }
+                        }
+                        catch { }
 
-                    Directory.Move(extractionTarget, finalModPath);
+                        if (parsed.Version != null)
+                        {
+                            version = parsed.Version;
+                        }
+
+                        description = $"Imported ASI plugin: {fileName}";
+                        compatibility = "CE-compatible";
+                        tags = parsed.Tags.ToList();
+                        if (!tags.Contains("ASI"))
+                        {
+                            tags.Add("ASI");
+                        }
+
+                        string cleanModName = string.Concat(displayName.Split(Path.GetInvalidFileNameChars())).Replace(" ", "");
+                        finalModPath = Path.Combine(_libraryDir, cleanModName);
+                        if (Directory.Exists(finalModPath))
+                        {
+                            finalModPath += "_" + Guid.NewGuid().ToString("N").Substring(0, 6);
+                        }
+
+                        Directory.CreateDirectory(finalModPath);
+                        string targetFilePath = Path.Combine(finalModPath, fileName);
+                        File.Copy(archivePath, targetFilePath, true);
+
+                        long size = new FileInfo(targetFilePath).Length;
+                        modFiles = new List<ModFile> { new ModFile(fileName, size, null) };
+                    }
+                    else
+                    {
+                        // Parse temporary destination in library
+                        string tempGuid = Guid.NewGuid().ToString("N");
+                        string extractionTarget = Path.Combine(_libraryDir, tempGuid);
+
+                        // Extract with zip-slip protection
+                        await _archiveHandler.ExtractAsync(archivePath, extractionTarget);
+
+                        // Promote mod root if it is nested inside subfolders
+                        StatusText = $"[{i + 1}/{total}] Optimizing directory structure for '{fileName}'...";
+                        await Task.Run(() => _archiveHandler.PromoteModRoot(extractionTarget));
+
+                        StatusText = $"[{i + 1}/{total}] Analyzing compatibility and metadata for '{fileName}'...";
+                        
+                        // Scan folder
+                        var metadata = _metadataService.ScanExtractedDirectory(extractionTarget, fileName);
+
+                        // Ingest via ParseArchiveFileName
+                        var parsed = _metadataService.ParseArchiveFileName(fileName);
+                        displayName = parsed.DisplayName;
+                        
+                        // Respect parsed version from filename as fallback if readme did not yield one
+                        version = parsed.Version ?? metadata.Version;
+                        tags = parsed.Tags.ToList();
+                        description = metadata.Description;
+                        compatibility = metadata.Compatibility;
+
+                        // Move extraction folder to a clean mod name folder
+                        string cleanModName = string.Concat(displayName.Split(Path.GetInvalidFileNameChars())).Replace(" ", "");
+                        finalModPath = Path.Combine(_libraryDir, cleanModName);
+                        if (Directory.Exists(finalModPath))
+                        {
+                            // Append suffix if mod name folder already exists
+                            finalModPath += "_" + Guid.NewGuid().ToString("N").Substring(0, 6);
+                        }
+
+                        Directory.Move(extractionTarget, finalModPath);
+                        modFiles = metadata.FileManifest.Select(f => new ModFile(f, new FileInfo(Path.Combine(finalModPath, f)).Length, null)).ToList();
+                    }
 
                     // Build StagedMod record
                     var stagedMod = new StagedMod(
                         Id: Guid.NewGuid().ToString("N"),
                         Name: displayName,
                         Version: version,
-                        Description: metadata.Description,
+                        Description: description,
                         LibraryPath: finalModPath,
-                        Files: metadata.FileManifest.Select(f => new ModFile(f, new FileInfo(Path.Combine(finalModPath, f)).Length, null)).ToList(),
+                        Files: modFiles,
                         IsEnabled: false,
-                        Compatibility: metadata.Compatibility,
+                        Compatibility: compatibility,
                         DisplayName: displayName,
                         Tags: tags
                     );
@@ -1069,6 +1260,46 @@ public class MainViewModel : ViewModelBase
         if (int.TryParse(param.ToString(), out int vramMb))
         {
             GpuVramMb = vramMb;
+        }
+    }
+
+    private void SetVehicleBudgetPreset(object? param)
+    {
+        if (param == null) return;
+        if (int.TryParse(param.ToString(), out int budget))
+        {
+            FusionFixSettings.VehicleBudget = budget;
+        }
+    }
+
+    private void AutoCalculateVehicleBudget()
+    {
+        if (ActiveProfile == null || string.IsNullOrWhiteSpace(ActiveProfile.GamePath))
+        {
+            MessageBox.Show("Please set a valid GTA IV Game Path first.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        string vehiclesPath = Path.Combine(ActiveProfile.GamePath, "pc", "models", "cdimages", "vehicles.img");
+        if (!File.Exists(vehiclesPath))
+        {
+            MessageBox.Show($"Could not locate vehicles.img at:\n{vehiclesPath}\n\nPlease check your game path configuration.", "File Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            long fileSizeBytes = new FileInfo(vehiclesPath).Length;
+            // Round up to nearest 10,000,000 bytes
+            long rounded = ((fileSizeBytes + 9999999) / 10000000) * 10000000;
+            
+            FusionFixSettings.VehicleBudget = (int)rounded;
+            StatusText = $"Vehicle budget auto-calculated from vehicles.img size: {fileSizeBytes:N0} bytes -> rounded to {rounded:N0} bytes.";
+            MessageBox.Show($"Found vehicles.img ({fileSizeBytes:N0} bytes).\n\nAutomatically calculated and set vehicle budget to {rounded:N0} bytes.", "Calculation Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error calculating vehicle budget: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -1420,10 +1651,23 @@ public class MainViewModel : ViewModelBase
             }
 
             // 3. Remove from library list and save library manifest
-            App.Current.Dispatcher.Invoke(() =>
+            if (System.Windows.Application.Current != null && System.Windows.Application.Current.Dispatcher != null)
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    LibraryMods.Remove(modVm);
+                    if (SelectedMod == modVm) SelectedMod = null;
+                    if (SelectedLibraryMod == modVm) SelectedLibraryMod = null;
+                    if (SelectedPluginMod == modVm) SelectedPluginMod = null;
+                });
+            }
+            else
             {
                 LibraryMods.Remove(modVm);
-            });
+                if (SelectedMod == modVm) SelectedMod = null;
+                if (SelectedLibraryMod == modVm) SelectedLibraryMod = null;
+                if (SelectedPluginMod == modVm) SelectedPluginMod = null;
+            }
             SaveLibrary();
 
             // 4. Delete the physical directory
@@ -1728,6 +1972,12 @@ public class MainViewModel : ViewModelBase
     private void LoadFusionFixDefaults()
     {
         LoadFusionFixDefaultsInternal(showDialogs: true);
+    }
+
+    private void RefreshFusionFixConfig()
+    {
+        LoadFusionFixConfig();
+        StatusText = "FusionFix configuration reloaded successfully.";
     }
 
     public void LoadFusionFixDefaultsInternal(bool showDialogs)
