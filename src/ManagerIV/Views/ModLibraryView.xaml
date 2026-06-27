@@ -13,7 +13,8 @@
              DragOver="UserControl_DragOver"
              DragEnter="UserControl_DragEnter"
              DragLeave="UserControl_DragLeave"
-             SizeChanged="UserControl_SizeChanged">
+             SizeChanged="UserControl_SizeChanged"
+             Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <local:SeverityToInfoBarSeverityConverter x:Key="SeverityToInfoBarSeverityConverter" />
@@ -36,47 +37,62 @@
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />  <!-- Priority / Enable Checkbox -->
-                        <ColumnDefinition Width="*" />     <!-- Mod Info (Name, Version) -->
-                        <ColumnDefinition Width="Auto" />  <!-- Visual Tags (Type, Compatibility) -->
+                        <ColumnDefinition Width="*" />     <!-- Mod Info -->
                     </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
                     <!-- Priority Indicator and Toggle Checkbox -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <StackPanel Grid.RowSpan="2" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Priority, StringFormat='\{0:D3\}'}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Width="25" VerticalAlignment="Center" TextAlignment="Center" />
                         <CheckBox IsChecked="{Binding IsEnabled, Mode=OneWay}" Command="{Binding DataContext.ToggleModEnabledCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Margin="6,0,6,0" VerticalAlignment="Center" />
                     </StackPanel>
 
                     <!-- Mod Name & Version -->
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                        <StackPanel Orientation="Horizontal" Margin="0,1,0,0">
-                            <TextBlock Text="{Binding Version, StringFormat='Version: \{0\}'}" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                            <TextBlock Text="{Binding ConflictStatus, StringFormat='  •  \{0\}'}" ToolTip="{Binding ConflictDetails}" FontSize="10" FontWeight="SemiBold" Visibility="{Binding HasConflict, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-                                        <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding ConflictStatus}" Value="❌ Structure Error">
-                                                <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </StackPanel>
-                    </StackPanel>
+                    <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" />
 
                     <!-- Tags -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <WrapPanel Grid.Column="1" Grid.Row="1" VerticalAlignment="Center" Margin="0,2,0,0">
+                        <TextBlock Text="{Binding Version, StringFormat='Version: \{0\}'}" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBlock Text="{Binding ConflictStatus}" ToolTip="{Binding ConflictDetails}" FontSize="10" FontWeight="SemiBold" Visibility="{Binding HasConflict, Converter={StaticResource BooleanToVisibilityConverter}}" VerticalAlignment="Center" Margin="0,0,6,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ConflictStatus}" Value="❌ Structure Error">
+                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                         <!-- Type Tag (Asset, ASI, Script) -->
-                        <Border x:Name="TypeTagBorder" CornerRadius="3" Padding="4,1" Margin="3,0" VerticalAlignment="Center">
+                        <Border x:Name="TypeTagBorder" CornerRadius="3" Padding="4,1" Margin="0,1,4,1" VerticalAlignment="Center">
                             <TextBlock x:Name="TypeTagText" FontSize="9" FontWeight="Bold" Foreground="White" />
                         </Border>
 
-                        <Border x:Name="CompatBorder" CornerRadius="3" Padding="4,1" Margin="3,0" VerticalAlignment="Center" Background="{DynamicResource ControlFillColorDefaultBrush}">
+                        <Border x:Name="CompatBorder" CornerRadius="3" Padding="4,1" Margin="0,1,4,1" VerticalAlignment="Center" Background="{DynamicResource ControlFillColorDefaultBrush}">
                             <TextBlock Text="{Binding Compatibility}" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                         </Border>
-                    </StackPanel>
+
+                        <!-- Custom Tags (e.g. FusionOverloader, mixed) -->
+                        <ItemsControl ItemsSource="{Binding Tags}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="3" Padding="4,1" Margin="0,1,4,1" VerticalAlignment="Center" Background="{DynamicResource SystemAccentColorSecondaryBrush}">
+                                        <TextBlock Text="{Binding}" FontSize="9" FontWeight="Bold" Foreground="White" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </WrapPanel>
                 </Grid>
             </Border>
             <DataTemplate.Triggers>
@@ -109,9 +125,6 @@
     </UserControl.Resources>
     
     <Grid x:Name="RootGrid">
-        <Grid.LayoutTransform>
-            <ScaleTransform x:Name="RootScale" ScaleX="1" ScaleY="1" />
-        </Grid.LayoutTransform>
         <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -120,17 +133,21 @@
         </Grid.RowDefinitions>
 
         <!-- Header and drag-and-drop info -->
-        <Grid Grid.Row="0" Margin="0,0,0,15">
+        <Grid x:Name="HeaderGrid" Grid.Row="0" Margin="0,0,0,15">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <StackPanel Grid.Column="0" Margin="0,0,12,0">
                 <TextBlock Text="Mod Library" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                 <TextBlock Text="Drag and drop mod files (.asi) or archives (.zip, .rar, .7z) here to import them." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
             </StackPanel>
             
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+            <StackPanel x:Name="HeaderActionsPanel" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                 <ui:Button Icon="{ui:SymbolIcon Delete24}" 
                            Content="Clear Library" 
                            Command="{Binding ClearLibraryCommand}"
@@ -158,7 +175,7 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     
-                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <WrapPanel Grid.Column="0">
                         <ui:SymbolIcon Symbol="Database24" Filled="True" Margin="0,0,8,0" VerticalAlignment="Center">
                             <ui:SymbolIcon.Style>
                                 <Style TargetType="ui:SymbolIcon">
@@ -191,7 +208,7 @@
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                    </StackPanel>
+                    </WrapPanel>
                     
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="{Binding ActiveImgArchiveCount}" FontSize="15" FontWeight="Black" />
@@ -233,8 +250,8 @@
                 <RowDefinition Height="0" />
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="7*" />
                 <ColumnDefinition Width="3*" />
-                <ColumnDefinition Width="2*" />
             </Grid.ColumnDefinitions>
 
             <Grid x:Name="ListsContainerGrid" Grid.Column="0" Margin="0,0,10,0">
@@ -304,103 +321,166 @@
                 </ui:Card>
             </Grid>
 
-            <!-- Inspector panel for selected Mod details -->
-            <ui:Card x:Name="InspectorCard" Grid.Column="1" Margin="10,0,0,0" Padding="12" VerticalAlignment="Stretch" VerticalContentAlignment="Top" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
-                <Grid>
-                    <!-- Placeholder when null -->
-                    <TextBlock Text="Select a mod to view and edit details." 
-                               HorizontalAlignment="Center" 
-                               VerticalAlignment="Center" 
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" 
-                               FontSize="13">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedMod}" Value="{x:Null}">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+            <Grid x:Name="RightPanelGrid" Grid.Column="1" Margin="10,0,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-                    <!-- Details Editor when NOT null -->
-                    <Grid DataContext="{Binding SelectedMod}">
-                        <Grid.Style>
-                            <Style TargetType="Grid">
-                                <Setter Property="Visibility" Value="Visible" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding DataContext.SelectedMod, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="{x:Null}">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Grid.Style>
+                <ui:Card Grid.Row="0" Margin="0,0,0,8" Padding="10" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
-
-                        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
-                            <StackPanel>
-                                <TextBlock Text="Edit Mod Details" FontSize="15" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-
-                                <TextBlock Text="Name" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,2" />
-                                <ui:TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
-
-                                <TextBlock Text="Version" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,2" />
-                                <ui:TextBox Text="{Binding Version, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
-
-                                <TextBlock Text="Compatibility" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,2" />
-                                <ui:TextBox Text="{Binding Compatibility, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
-
-                                <TextBlock Text="Description" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,2" />
-                                <ui:TextBox Text="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                                            AcceptsReturn="True" 
-                                            TextWrapping="Wrap" 
-                                            MinLines="3" 
-                                            Margin="0,0,0,8" />
-
-                                <TextBlock Text="File Layout (Manifest)" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,2" />
-                                <ListBox ItemsSource="{Binding Model.Files}" MaxHeight="120" Background="Transparent" BorderThickness="0" VirtualizingPanel.ScrollUnit="Pixel" Margin="0,0,0,8">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" Margin="0,1">
-                                                <ui:SymbolIcon Symbol="Document24" Margin="0,0,8,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                                <TextBlock Text="{Binding RelativePath}" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </StackPanel>
-                        </ScrollViewer>
-
-                        <!-- Action Buttons at the bottom -->
-                        <Grid Grid.Row="1" Margin="0,6,0,0">
+                        <Grid Grid.Row="0" Margin="0,0,0,6">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            
-                            <ui:Button Grid.Column="0"
-                                       Content="Delete Mod" 
-                                       Icon="{ui:SymbolIcon Delete24}" 
-                                       Command="{Binding DataContext.DeleteModCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                       CommandParameter="{Binding}"
-                                       Appearance="Danger" 
-                                       HorizontalAlignment="Left" />
-                                       
-                            <ui:Button Grid.Column="1" 
-                                       Content="Save Details" 
-                                       Icon="{ui:SymbolIcon Save24}" 
-                                       Command="{Binding DataContext.SaveModDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                       Appearance="Primary" 
-                                       HorizontalAlignment="Right" />
+                            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Database24" Margin="0,0,6,0" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" VerticalAlignment="Center" />
+                                <TextBlock Text="Merged update files" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1" Text="{Binding ActiveMergedUpdateFileCount}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <ListBox Grid.Row="1" ItemsSource="{Binding ActiveMergedUpdateFiles}" MaxHeight="150" Background="Transparent" BorderThickness="0" VirtualizingPanel.ScrollUnit="Pixel">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" CornerRadius="3" Padding="4,1" Margin="0,0,6,0" Background="{DynamicResource SystemFillColorSuccessBrush}">
+                                            <TextBlock Text="{Binding Root}" FontSize="9" FontWeight="Bold" Foreground="White" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding RelativePath}" FontSize="10" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding ModName}" FontSize="9" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </ui:Card>
+
+                <!-- Inspector panel for selected Mod details -->
+                <ui:Card x:Name="InspectorCard" Grid.Row="1" Padding="8" VerticalAlignment="Stretch" VerticalContentAlignment="Top" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <Grid>
+                        <!-- Placeholder when null -->
+                        <TextBlock Text="Select a mod to edit details." 
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center" 
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" 
+                                   FontSize="12">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedMod}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <!-- Details Editor when NOT null -->
+                        <Grid DataContext="{Binding SelectedMod}">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding DataContext.SelectedMod, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+                                <StackPanel>
+                                    <TextBlock Text="Mod Details" FontSize="13" FontWeight="Bold" Margin="0,0,0,6" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+
+                                    <TextBlock Text="Name" FontSize="9" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,1" />
+                                    <ui:TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,5" />
+
+                                    <TextBlock Text="Version" FontSize="9" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,1" />
+                                    <ui:TextBox Text="{Binding Version, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,5" />
+
+                                    <TextBlock Text="Compatibility" FontSize="9" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,1" />
+                                    <ui:TextBox Text="{Binding Compatibility, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,5" />
+
+                                    <TextBlock Text="Tags / Notes" FontSize="9" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,1" />
+                                    <ItemsControl ItemsSource="{Binding Tags}" Margin="0,0,0,5">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border CornerRadius="3" Padding="5,1" Margin="0,1,5,1" Background="{DynamicResource SystemAccentColorSecondaryBrush}">
+                                                    <TextBlock Text="{Binding}" FontSize="9" FontWeight="SemiBold" Foreground="White" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <TextBlock Text="Description" FontSize="9" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,1" />
+                                    <ui:TextBox Text="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                AcceptsReturn="True" 
+                                                TextWrapping="Wrap" 
+                                                MinLines="2" 
+                                                Margin="0,0,0,5" />
+
+                                    <TextBlock Text="File Layout" FontSize="9" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,1" />
+                                    <ListBox ItemsSource="{Binding Model.Files}" MaxHeight="80" Background="Transparent" BorderThickness="0" VirtualizingPanel.ScrollUnit="Pixel" Margin="0,0,0,5">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal" Margin="0,1">
+                                                    <ui:SymbolIcon Symbol="Document24" Margin="0,0,6,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" FontSize="12" />
+                                                    <TextBlock Text="{Binding RelativePath}" FontSize="9" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </StackPanel>
+                            </ScrollViewer>
+
+                            <!-- Action Buttons at the bottom -->
+                            <Grid Grid.Row="1" Margin="0,5,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                
+                                <ui:Button Grid.Column="0"
+                                           Content="Delete" 
+                                           Icon="{ui:SymbolIcon Delete24}" 
+                                           Command="{Binding DataContext.DeleteModCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                           CommandParameter="{Binding}"
+                                           Appearance="Danger" 
+                                           HorizontalAlignment="Left" />
+                                           
+                                <ui:Button Grid.Column="1" 
+                                           Content="Save" 
+                                           Icon="{ui:SymbolIcon Save24}" 
+                                           Command="{Binding DataContext.SaveModDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                           Appearance="Primary" 
+                                           HorizontalAlignment="Right" />
+                            </Grid>
                         </Grid>
                     </Grid>
-                </Grid>
-            </ui:Card>
+                </ui:Card>
+            </Grid>
         </Grid>
     </Grid>
 

@@ -23,6 +23,7 @@ public class MainViewModel : ViewModelBase
     private readonly BackupRollbackService _rollbackService;
     private readonly UpdateWatchdog _watchdog;
     private readonly BackendToolManager _backendToolManager;
+    private readonly IModStructureAnalyzer _modStructureAnalyzer;
 
     // Config Paths
     private readonly string _baseDir;
@@ -84,6 +85,10 @@ public class MainViewModel : ViewModelBase
         get => _libraryMods;
         set => SetProperty(ref _libraryMods, value);
     }
+
+    public ObservableCollection<ActiveMergedUpdateFileViewModel> ActiveMergedUpdateFiles { get; } = new();
+
+    public int ActiveMergedUpdateFileCount => ActiveMergedUpdateFiles.Count;
 
     public System.ComponentModel.ICollectionView? MainModsCollection { get; }
     public System.ComponentModel.ICollectionView? PluginsCollection { get; }
@@ -463,6 +468,7 @@ public class MainViewModel : ViewModelBase
         _conflictDetector = new ConflictDetector();
         _linker = linker ?? new NativeFileSystemLinker();
         _watchdog = new UpdateWatchdog();
+        _modStructureAnalyzer = new ModStructureAnalyzer();
 
         // Establish paths
         _baseDir = baseDir;
@@ -582,7 +588,7 @@ public class MainViewModel : ViewModelBase
                     foreach (var mod in modsList)
                     {
                         // Default to update target, enabled = false, priority = 99
-                        LibraryMods.Add(new ModViewModel(mod, false, 99, DeployTarget.Update));
+                        LibraryMods.Add(new ModViewModel(ApplyDerivedLibraryTags(mod), false, 99, DeployTarget.Update));
                     }
                 }
             }
@@ -764,6 +770,24 @@ public class MainViewModel : ViewModelBase
 
         // Detect conflicts
         var conflictState = _conflictDetector.DetectConflicts(enabledModels, currentLoadOrder);
+
+        ActiveMergedUpdateFiles.Clear();
+        foreach (var modVm in enabledVms.Where(vm => vm.Target == DeployTarget.Update))
+        {
+            if (!UpdateDeploymentClassifier.ShouldMergeStandardUpdateRoots(modVm.Model))
+            {
+                continue;
+            }
+
+            foreach (var file in UpdateDeploymentClassifier.GetDirectUpdateMergeFiles(modVm.Model))
+            {
+                ActiveMergedUpdateFiles.Add(new ActiveMergedUpdateFileViewModel(
+                    modVm.Name,
+                    file.RelativePath.Replace('\\', '/')
+                ));
+            }
+        }
+        OnPropertyChanged(nameof(ActiveMergedUpdateFileCount));
 
         // Map conflicts and structure validations back to ViewModels
         var validator = new UpdateFolderValidator();
@@ -1150,8 +1174,26 @@ public class MainViewModel : ViewModelBase
                         string tempGuid = Guid.NewGuid().ToString("N");
                         string extractionTarget = Path.Combine(_libraryDir, tempGuid);
 
-                        // Extract with zip-slip protection
-                        await _archiveHandler.ExtractAsync(archivePath, extractionTarget);
+                        // Analyze archive structure first
+                        var toolsContext = new InstalledToolsContext(
+                            BackendStatus.AsiLoaderInstalled,
+                            BackendStatus.FusionFixInstalled,
+                            BackendStatus.ScriptHookInstalled
+                        );
+                        var report = await _modStructureAnalyzer.AnalyzeAsync(archivePath, toolsContext);
+
+                        bool isLegacy = ActiveProfile.LastKnownVersion != null && !ActiveProfile.LastKnownVersion.IsCompleteEdition;
+                        var preference = isLegacy ? VersionCompatibility.LegacyOnly : VersionCompatibility.CompleteEditionOnly;
+
+                        // Extract with zip-slip protection (filter if it is a dual target mod)
+                        if (report.IsDualTarget)
+                        {
+                            await _archiveHandler.ExtractAsync(archivePath, extractionTarget, report, preference);
+                        }
+                        else
+                        {
+                            await _archiveHandler.ExtractAsync(archivePath, extractionTarget);
+                        }
 
                         // Promote mod root if it is nested inside subfolders
                         StatusText = $"[{i + 1}/{total}] Optimizing directory structure for '{fileName}'...";
@@ -1169,6 +1211,25 @@ public class MainViewModel : ViewModelBase
                         // Respect parsed version from filename as fallback if readme did not yield one
                         version = parsed.Version ?? metadata.Version;
                         tags = parsed.Tags.ToList();
+
+                        bool hasUpdateFolder = report.DetectedTargets.Any(t => t.Target == DeploymentTarget.UpdateFolder);
+                        if (hasUpdateFolder)
+                        {
+                            if (!tags.Contains("FusionOverloader", StringComparer.OrdinalIgnoreCase))
+                            {
+                                tags.Add("FusionOverloader");
+                            }
+
+                            bool hasMore = report.DetectedTargets.Any(t => t.Target != DeploymentTarget.UpdateFolder) || report.IsDualTarget;
+                            if (hasMore)
+                            {
+                                if (!tags.Contains("mixed", StringComparer.OrdinalIgnoreCase))
+                                {
+                                    tags.Add("mixed");
+                                }
+                            }
+                        }
+
                         description = metadata.Description;
                         compatibility = metadata.Compatibility;
 
@@ -1186,7 +1247,7 @@ public class MainViewModel : ViewModelBase
                     }
 
                     // Build StagedMod record
-                    var stagedMod = new StagedMod(
+                    var stagedMod = ApplyDerivedLibraryTags(new StagedMod(
                         Id: Guid.NewGuid().ToString("N"),
                         Name: displayName,
                         Version: version,
@@ -1197,7 +1258,7 @@ public class MainViewModel : ViewModelBase
                         Compatibility: compatibility,
                         DisplayName: displayName,
                         Tags: tags
-                    );
+                    ));
 
                     // Add to library
                     var vm = new ModViewModel(stagedMod, false, 99, stagedMod.Files.Any(f => f.RelativePath.EndsWith(".asi", StringComparison.OrdinalIgnoreCase)) ? DeployTarget.Plugins : DeployTarget.Update);
@@ -1261,6 +1322,19 @@ public class MainViewModel : ViewModelBase
         {
             GpuVramMb = vramMb;
         }
+    }
+
+    private static StagedMod ApplyDerivedLibraryTags(StagedMod mod)
+    {
+        var tags = (mod.Tags ?? Array.Empty<string>()).ToList();
+
+        if (UpdateDeploymentClassifier.IsMergeOnlyUpdateMod(mod) &&
+            !tags.Contains("invisible", StringComparer.OrdinalIgnoreCase))
+        {
+            tags.Add("invisible");
+        }
+
+        return mod with { Tags = tags };
     }
 
     private void SetVehicleBudgetPreset(object? param)
@@ -1445,23 +1519,6 @@ public class MainViewModel : ViewModelBase
             var currentLoadOrder = new LoadOrderModel(entries);
             var enabledModels = sortedEnabled.Select(v => v.Model).ToList();
             var conflictState = _conflictDetector.DetectConflicts(enabledModels, currentLoadOrder);
-
-            var looseConflicts = conflictState.Conflicts.Values
-                .Where(c => c.TargetPath.StartsWith("update/", StringComparison.OrdinalIgnoreCase) && 
-                            !c.TargetPath.EndsWith(".img", StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            if (looseConflicts.Any())
-            {
-                var conflictList = new List<string>();
-                foreach (var conflict in looseConflicts)
-                {
-                    var winnerName = LibraryMods.FirstOrDefault(m => m.Id == conflict.WinnerModId)?.Name ?? "Unknown";
-                    var loserNames = conflict.ConflictingModIds.Select(id => LibraryMods.FirstOrDefault(m => m.Id == id)?.Name ?? "Unknown");
-                    conflictList.Add($"  - '{conflict.TargetPath}' ({winnerName} conflicts with: {string.Join(", ", loserNames)})");
-                }
-                throw new InvalidOperationException($"Unresolved loose file conflicts (manual merge required):\n\n{string.Join(Environment.NewLine, conflictList)}");
-            }
 
             // 1. Undeploy currently active links
             StatusText = "Clearing physical links...";
@@ -2619,6 +2676,38 @@ public class MainViewModel : ViewModelBase
             var manifest = await LoadToolsManifestAsync();
             var toRemove = manifest.Where(f => string.Equals(f.SourceTool, toolName, StringComparison.OrdinalIgnoreCase)).ToList();
 
+            // Always clean up generated config and log files if uninstalling DXVK, FusionFix, or ASILoader
+            if (string.Equals(toolName, "DXVK", StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(toolName, "FusionFix", StringComparison.OrdinalIgnoreCase))
+            {
+                string cfgPath = Path.Combine(ActiveProfile.GamePath, "d3d9.cfg");
+                if (File.Exists(cfgPath))
+                {
+                    try { File.Delete(cfgPath); } catch { }
+                }
+                string logPath = Path.Combine(ActiveProfile.GamePath, "GTAIV_d3d9.log");
+                if (File.Exists(logPath))
+                {
+                    try { File.Delete(logPath); } catch { }
+                }
+            }
+            if (string.Equals(toolName, "FusionFix", StringComparison.OrdinalIgnoreCase))
+            {
+                string logPath = Path.Combine(ActiveProfile.GamePath, "FusionFix.log");
+                if (File.Exists(logPath))
+                {
+                    try { File.Delete(logPath); } catch { }
+                }
+            }
+            if (string.Equals(toolName, "ASILoader", StringComparison.OrdinalIgnoreCase))
+            {
+                string logPath = Path.Combine(ActiveProfile.GamePath, "dinput8.log");
+                if (File.Exists(logPath))
+                {
+                    try { File.Delete(logPath); } catch { }
+                }
+            }
+
             if (toRemove.Count > 0)
             {
                 // Delete files
@@ -2725,7 +2814,7 @@ public class MainViewModel : ViewModelBase
         {
             return new[]
             {
-                "dinput8.dll", "d3d9.dll", "vulkan.dll",
+                "dinput8.dll", "d3d9.dll", "vulkan.dll", "d3d9.cfg",
                 "plugins/GTAIV.EAFLC.FusionFix.asi", "plugins/GTAIV.EFLC.FusionFix.ini",
                 "plugins/GTAIV.FusionFix.asi", "plugins/FusionFix.asi", "plugins/FusionFix.ini"
             };
@@ -2736,7 +2825,7 @@ public class MainViewModel : ViewModelBase
         }
         else if (string.Equals(toolName, "DXVK", StringComparison.OrdinalIgnoreCase))
         {
-            return new[] { "d3d9.dll", "vulkan.dll", "dxvk.conf", "commandline.txt" };
+            return new[] { "d3d9.dll", "vulkan.dll", "dxvk.conf", "commandline.txt", "d3d9.cfg" };
         }
         return System.Array.Empty<string>();
     }
@@ -3090,4 +3179,9 @@ public class AppSettings
 {
     public bool IsDarkTheme { get; set; } = true;
     public string GtaSaveProfilesPath { get; set; } = "";
+}
+
+public record ActiveMergedUpdateFileViewModel(string ModName, string RelativePath)
+{
+    public string Root => RelativePath.Split('/', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
 }

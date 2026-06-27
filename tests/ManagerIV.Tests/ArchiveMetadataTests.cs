@@ -102,6 +102,48 @@ public class ArchiveMetadataTests : IDisposable
         }
     }
 
+    private void CreateUpdateVirtualPathZip(string filePath)
+    {
+        using var fs = new FileStream(filePath, FileMode.Create);
+        using var zip = new ZipArchive(fs, ZipArchiveMode.Create);
+
+        var standardEntry = zip.CreateEntry("ReleaseFiles/update/pc/data/default.dat");
+        using (var writer = new StreamWriter(standardEntry.Open()))
+        {
+            writer.Write("standard data");
+        }
+
+        var commonEntry = zip.CreateEntry("ReleaseFiles/update/common/data/handling.dat");
+        using (var writer = new StreamWriter(commonEntry.Open()))
+        {
+            writer.Write("handling data");
+        }
+
+        var customEntry = zip.CreateEntry("ReleaseFiles/update/LibertyAlive/config.ini");
+        using (var writer = new StreamWriter(customEntry.Open()))
+        {
+            writer.Write("custom config");
+        }
+
+        var imgFolderEntry = zip.CreateEntry("ReleaseFiles/update/LibertyAlive/LibertyAlive.img/custom.dat");
+        using (var writer = new StreamWriter(imgFolderEntry.Open()))
+        {
+            writer.Write("img folder data");
+        }
+    }
+
+    private void CreateImgFolderZip(string filePath)
+    {
+        using var fs = new FileStream(filePath, FileMode.Create);
+        using var zip = new ZipArchive(fs, ZipArchiveMode.Create);
+
+        var entry = zip.CreateEntry("LibertyAlive.img/custom.dat");
+        using (var writer = new StreamWriter(entry.Open()))
+        {
+            writer.Write("dummy dat data");
+        }
+    }
+
     [Fact]
     public async Task TestSafeExtractionAndMetadataParsing()
     {
@@ -206,6 +248,49 @@ public class ArchiveMetadataTests : IDisposable
 
         Assert.False(Directory.Exists(nestedFolder), "The original nested folders should be cleaned up.");
         Assert.True(File.Exists(promotedDat), "The files inside the nested 'update' folder should be promoted to the root.");
+    }
+
+    [Fact]
+    public async Task TestModRootPromotionPreservesUpdateVirtualPathHierarchy()
+    {
+        // Arrange
+        string nestedZipPath = Path.Combine(_testBaseDir, "update_virtual_path_mod.zip");
+        string extractionDir = Path.Combine(_testBaseDir, "UpdateVirtualPathExtracted");
+        CreateUpdateVirtualPathZip(nestedZipPath);
+
+        // Act
+        await _archiveHandler.ExtractAsync(nestedZipPath, extractionDir);
+        _archiveHandler.PromoteModRoot(extractionDir);
+
+        // Assert
+        string promotedDat = Path.Combine(extractionDir, "LibertyAlive", "LibertyAlive.img", "custom.dat");
+        string promotedPcFile = Path.Combine(extractionDir, "pc", "data", "default.dat");
+        string promotedCommonFile = Path.Combine(extractionDir, "common", "data", "handling.dat");
+        string promotedCustomFile = Path.Combine(extractionDir, "LibertyAlive", "config.ini");
+
+        Assert.True(File.Exists(promotedDat), "The custom virtual path below update/ should be preserved exactly.");
+        Assert.True(File.Exists(promotedPcFile), "Standard folders below update/ should be elevated with custom folders.");
+        Assert.True(File.Exists(promotedCommonFile), "Common folders below update/ should remain in the same staged mod root.");
+        Assert.True(File.Exists(promotedCustomFile), "Custom folders below update/ should remain unified with standard folders.");
+        Assert.False(Directory.Exists(Path.Combine(extractionDir, "update")), "The update wrapper itself should be stripped.");
+    }
+
+    [Fact]
+    public async Task TestModRootPromotionDoesNotFlattenImgDirectories()
+    {
+        // Arrange
+        string nestedZipPath = Path.Combine(_testBaseDir, "img_folder_mod.zip");
+        string extractionDir = Path.Combine(_testBaseDir, "ImgFolderExtracted");
+        CreateImgFolderZip(nestedZipPath);
+
+        // Act
+        await _archiveHandler.ExtractAsync(nestedZipPath, extractionDir);
+        _archiveHandler.PromoteModRoot(extractionDir);
+
+        // Assert
+        string preservedImgFolderFile = Path.Combine(extractionDir, "LibertyAlive.img", "custom.dat");
+
+        Assert.True(File.Exists(preservedImgFolderFile), ".img-suffixed directories should remain normal folders.");
     }
 
     public void Dispose()

@@ -73,55 +73,45 @@ public class CompleteEditionAdapter : IBackendAdapter
         
         if (target == DeployTarget.Update)
         {
-            bool hasImgFiles = mod.Files.Any(f => !IsLooseUpdateFile(f.RelativePath));
-            if (hasImgFiles)
-            {
-                // For mods containing compiled .img files, create a directory junction for the mod folder in update/
-                string folderName = _loadOrderService.GetDeployedFolderName(mod, priority);
-                string junctionPath = Path.Combine(_gameDir, "update", folderName);
+            string folderName = _loadOrderService.GetDeployedFolderName(mod, priority);
+            string junctionPath = Path.Combine(_gameDir, "update", folderName);
+            string? virtualArchiveRoot = UpdateDeploymentClassifier.GetSplitUpdateVirtualArchiveRoot(mod);
+            bool shouldMergeStandardRoots = UpdateDeploymentClassifier.ShouldMergeStandardUpdateRoots(mod);
+            var directMergeFiles = shouldMergeStandardRoots
+                ? UpdateDeploymentClassifier.GetDirectUpdateMergeFiles(mod).ToList()
+                : new List<ModFile>();
 
-                if (Path.GetFileName(junctionPath).Equals("GTAIV.EFLC.FusionFix", StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidOperationException($"Writing to reserved path '{junctionPath}' is prohibited.");
-                }
+            if (Path.GetFileName(junctionPath).Equals("GTAIV.EFLC.FusionFix", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"Writing to reserved path '{junctionPath}' is prohibited.");
+            }
+
+            foreach (var file in directMergeFiles)
+            {
+                string sourcePath = Path.Combine(mod.LibraryPath, file.RelativePath);
+                string targetPath = Path.Combine(_gameDir, "update", file.RelativePath);
 
                 if (_journal != null)
                 {
-                    _journal.Record(new JournalEntry(JournalOpType.CreateJunction, junctionPath, mod.LibraryPath, IsDirectory: true));
+                    _journal.Record(new JournalEntry(JournalOpType.CreateHardLink, targetPath, sourcePath));
                 }
-                
-                await Task.Run(() => _linker.CreateJunction(junctionPath, mod.LibraryPath));
+
+                await Task.Run(() => _linker.CreateHardLink(targetPath, sourcePath));
             }
 
-            // Deploy loose files directly inside update/ as individual hardlinks
-            foreach (var file in mod.Files)
+            if (shouldMergeStandardRoots && virtualArchiveRoot == null)
             {
-                if (IsLooseUpdateFile(file.RelativePath))
-                {
-                    string libraryFilePath = Path.Combine(mod.LibraryPath, file.RelativePath);
-                    string targetFilePath = Path.Combine(_gameDir, "update", file.RelativePath);
-
-                    string normalizedTarget = targetFilePath.Replace('\\', '/');
-                    if (normalizedTarget.Contains("/update/gtaiv.eflc.fusionfix", StringComparison.OrdinalIgnoreCase))
-                    {
-                        throw new InvalidOperationException($"Writing to reserved path '{targetFilePath}' is prohibited.");
-                    }
-
-                    // Ensure target subdirectories inside update/ exist
-                    string? targetDir = Path.GetDirectoryName(targetFilePath);
-                    if (targetDir != null && !Directory.Exists(targetDir))
-                    {
-                        Directory.CreateDirectory(targetDir);
-                    }
-
-                    if (_journal != null)
-                    {
-                        _journal.Record(new JournalEntry(JournalOpType.CreateHardLink, targetFilePath, libraryFilePath));
-                    }
-
-                    await Task.Run(() => _linker.CreateHardLink(targetFilePath, libraryFilePath));
-                }
+                return;
             }
+
+            string junctionTarget = virtualArchiveRoot ?? mod.LibraryPath;
+
+            if (_journal != null)
+            {
+                _journal.Record(new JournalEntry(JournalOpType.CreateJunction, junctionPath, junctionTarget, IsDirectory: true));
+            }
+            
+            await Task.Run(() => _linker.CreateJunction(junctionPath, junctionTarget));
         }
         else
         {
@@ -156,25 +146,8 @@ public class CompleteEditionAdapter : IBackendAdapter
 
         if (target == DeployTarget.Update)
         {
-            // 1. Delete individual linked loose files under update/
-            foreach (var file in mod.Files)
-            {
-                if (IsLooseUpdateFile(file.RelativePath))
-                {
-                    string targetFilePath = Path.Combine(_gameDir, "update", file.RelativePath);
-                    if (_linker.FileExists(targetFilePath))
-                    {
-                        if (_journal != null)
-                        {
-                            _journal.Record(new JournalEntry(JournalOpType.DeleteFile, targetFilePath, null));
-                        }
-                        await Task.Run(() => _linker.DeleteFile(targetFilePath));
-                    }
-                }
-            }
-
-            // 2. Locate directory junctions inside update/ matching the mod Name
             string updateDir = Path.Combine(_gameDir, "update");
+            bool shouldMergeStandardRoots = UpdateDeploymentClassifier.ShouldMergeStandardUpdateRoots(mod);
             if (_linker.DirectoryExists(updateDir))
             {
                 var directories = Directory.GetDirectories(updateDir);
@@ -191,6 +164,19 @@ public class CompleteEditionAdapter : IBackendAdapter
                         }
                         await Task.Run(() => _linker.DeleteDirectory(dir));
                     }
+                }
+            }
+
+            if (shouldMergeStandardRoots)
+            {
+                foreach (var file in UpdateDeploymentClassifier.GetDirectUpdateMergeFiles(mod))
+                {
+                    string targetPath = Path.Combine(_gameDir, "update", file.RelativePath);
+                    if (_journal != null)
+                    {
+                        _journal.Record(new JournalEntry(JournalOpType.DeleteFile, targetPath, null));
+                    }
+                    await Task.Run(() => _linker.DeleteFile(targetPath));
                 }
             }
         }
@@ -226,20 +212,6 @@ public class CompleteEditionAdapter : IBackendAdapter
                 }
             }
         }
-    }
-
-    private bool IsLooseUpdateFile(string relativePath)
-    {
-        string path = relativePath.Replace('\\', '/').ToLowerInvariant();
-        
-        // If the path starts with a subgame folder (iv/, tlad/, tbogt/), it is NOT a loose update file
-        // and must be deployed via the mod folder junction.
-        if (path.StartsWith("iv/") || path.StartsWith("tlad/") || path.StartsWith("tbogt/"))
-        {
-            return false;
-        }
-
-        return !path.EndsWith(".img");
     }
 
     public async Task<LoadOrderModel> ReadLoadOrderAsync()
@@ -290,7 +262,8 @@ public class CompleteEditionAdapter : IBackendAdapter
             Path.Combine(_gameDir, "dinput8.log"),
             Path.Combine(_gameDir, "FusionFix.log"),
             Path.Combine(_gameDir, "ScriptHook.log"),
-            Path.Combine(_gameDir, "ScriptHookDotNet.log")
+            Path.Combine(_gameDir, "ScriptHookDotNet.log"),
+            Path.Combine(_gameDir, "GTAIV_d3d9.log")
         };
     }
 

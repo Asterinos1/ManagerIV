@@ -12,7 +12,8 @@
              Drop="UserControl_Drop"
              DragOver="UserControl_DragOver"
              DragEnter="UserControl_DragEnter"
-             DragLeave="UserControl_DragLeave">
+             DragLeave="UserControl_DragLeave"
+             Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />

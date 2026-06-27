@@ -95,12 +95,48 @@ public class ModStructureAnalyzer : IModStructureAnalyzer
             string? rawReadmeText = readmeBuilder.Length > 0 ? readmeBuilder.ToString() : null;
 
             // 2c. Structural classification
+            bool hasUpdateSubtree = allPaths.Any(p => {
+                var norm = p.Replace('\\', '/');
+                return TryGetUpdatePrefixLength(norm, out _);
+            });
+
+            bool hasLegacySubtree = allPaths.Any(p => {
+                var norm = p.Replace('\\', '/');
+                if (TryGetUpdatePrefixLength(norm, out _)) return false;
+
+                return norm.StartsWith("pc/") || norm.StartsWith("common/") || norm.StartsWith("tlad/") || norm.StartsWith("tbogt/") ||
+                       norm.Contains("/pc/") || norm.Contains("/common/") || norm.Contains("/tlad/") || norm.Contains("/tbogt/");
+            });
+
+            bool isMixedStructureWithUpdate = hasUpdateSubtree && hasLegacySubtree;
+
             var groups = new Dictionary<(DeploymentTarget Target, string Prefix), List<string>>();
             var unresolvedFiles = new List<string>();
 
             foreach (var path in allPaths)
             {
-                var (target, prefix) = ClassifyPath(path);
+                DeploymentTarget target;
+                string prefix;
+
+                if (isMixedStructureWithUpdate)
+                {
+                    string normalizedPath = path.Replace('\\', '/');
+                    if (TryGetUpdatePrefixLength(normalizedPath, out int updatePrefixLength))
+                    {
+                        target = DeploymentTarget.UpdateFolder;
+                        prefix = path.Substring(0, updatePrefixLength);
+                    }
+                    else
+                    {
+                        target = DeploymentTarget.Unknown;
+                        prefix = "";
+                    }
+                }
+                else
+                {
+                    (target, prefix) = ClassifyPath(path);
+                }
+
                 if (target == DeploymentTarget.Unknown)
                 {
                     unresolvedFiles.Add(path);
@@ -126,19 +162,6 @@ public class ModStructureAnalyzer : IModStructureAnalyzer
             // Check for Dual Target status
             bool hasUpdateGroup = groups.Keys.Any(k => k.Target == DeploymentTarget.UpdateFolder);
             bool hasNonUpdateGroup = groups.Keys.Any(k => k.Target == DeploymentTarget.PluginsFolder || k.Target == DeploymentTarget.ScriptsFolder);
-
-            bool hasUpdateSubtree = allPaths.Any(p => {
-                var norm = p.Replace('\\', '/');
-                return norm.Contains("/update/") || norm.StartsWith("update/");
-            });
-
-            bool hasLegacySubtree = allPaths.Any(p => {
-                var norm = p.Replace('\\', '/');
-                if (norm.Contains("/update/") || norm.StartsWith("update/")) return false;
-
-                return norm.StartsWith("pc/") || norm.StartsWith("common/") || norm.StartsWith("tlad/") || norm.StartsWith("tbogt/") ||
-                       norm.Contains("/pc/") || norm.Contains("/common/") || norm.Contains("/tlad/") || norm.Contains("/tbogt/");
-            });
 
             bool isDualTarget = (hasUpdateGroup && hasNonUpdateGroup) || (hasUpdateSubtree && hasLegacySubtree);
 
@@ -223,14 +246,11 @@ public class ModStructureAnalyzer : IModStructureAnalyzer
     {
         string normalizedPath = path.Replace('\\', '/');
 
-        // Rule 1: update/ subtree
-        int updateIndex = normalizedPath.IndexOf("update/pc/", StringComparison.OrdinalIgnoreCase);
-        if (updateIndex == -1) updateIndex = normalizedPath.IndexOf("update/common/", StringComparison.OrdinalIgnoreCase);
-        if (updateIndex == -1) updateIndex = normalizedPath.IndexOf("update/gtaiv", StringComparison.OrdinalIgnoreCase);
-
-        if (updateIndex != -1)
+        // Rule 1: update/ subtree. Only the archive wrapper through update/ is
+        // stripped; custom Fusion Overloader virtual roots below update/ stay intact.
+        if (TryGetUpdatePrefixLength(normalizedPath, out int prefixLength))
         {
-            string prefix = path.Substring(0, updateIndex + "update/".Length);
+            string prefix = path.Substring(0, prefixLength);
             return (DeploymentTarget.UpdateFolder, prefix);
         }
 
@@ -282,6 +302,25 @@ public class ModStructureAnalyzer : IModStructureAnalyzer
         }
 
         return (DeploymentTarget.Unknown, "");
+    }
+
+    private static bool TryGetUpdatePrefixLength(string normalizedPath, out int prefixLength)
+    {
+        int updateIndex = normalizedPath.IndexOf("/update/", StringComparison.OrdinalIgnoreCase);
+        if (updateIndex != -1)
+        {
+            prefixLength = updateIndex + "/update/".Length;
+            return true;
+        }
+
+        if (normalizedPath.StartsWith("update/", StringComparison.OrdinalIgnoreCase))
+        {
+            prefixLength = "update/".Length;
+            return true;
+        }
+
+        prefixLength = -1;
+        return false;
     }
 
     private static bool ContainsAny(string text, params string[] keywords)

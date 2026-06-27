@@ -1,0 +1,45 @@
+<UserControl x:Class="ManagerIV.Views.LoggerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:local="clr-namespace:ManagerIV.Views"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800"
+             Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Logger" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+            <TextBlock Text="View application activity logs and external loader log files." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <!-- Logger Empty Content -->
+        <Border Grid.Row="1" 
+                Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}" 
+                CornerRadius="8" 
+                BorderThickness="1" 
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+            <Grid Margin="30">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <ui:SymbolIcon Symbol="Document24" FontSize="48" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,15" />
+                    <TextBlock Text="Logging Panel" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" HorizontalAlignment="Center" />
+                    <TextBlock Text="Logging features will be integrated here to display real-time activity and aggregate log outputs (including dinput8.log, FusionFix.log, ScriptHook.log, ScriptHookDotNet.log, and GTAIV_d3d9.log)." 
+                               FontSize="12" 
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" 
+                               HorizontalAlignment="Center" 
+                               TextAlignment="Center" 
+                               Margin="0,8,0,0" 
+                               MaxWidth="500" 
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

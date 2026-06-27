@@ -58,7 +58,6 @@ public class ArchiveHandler
 
         string? updatePath = null;
         bool hasLegacyRoots = false;
-        var legacyRootPaths = new List<string>();
 
         if (Directory.Exists(effectiveRoot))
         {
@@ -73,7 +72,6 @@ public class ArchiveHandler
                 else if (name == "pc" || name == "common" || name == "tlad" || name == "tbogt")
                 {
                     hasLegacyRoots = true;
-                    legacyRootPaths.Add(subDir);
                 }
             }
         }
@@ -108,13 +106,12 @@ public class ArchiveHandler
 
         try
         {
-            if (layout == ModLayout.FusionOverloaderReady || layout == ModLayout.Hybrid)
+            if (updatePath != null && Directory.Exists(updatePath))
             {
-                // Move contents of the update/ folder to temp
-                if (updatePath != null && Directory.Exists(updatePath))
-                {
-                    MoveDirectoryContents(updatePath, tempPath);
-                }
+                // Mimic dragging the packaged update/ folder into the staged mod root:
+                // strip update/ itself, then merge every child (pc/, common/, custom
+                // virtual roots, and .img directories) into one unified folder.
+                MoveDirectoryContents(updatePath, tempPath);
             }
             else if (layout == ModLayout.LegacyLoose || layout == ModLayout.Unknown)
             {
@@ -188,7 +185,13 @@ public class ArchiveHandler
 
         if (dirs.Length == 1 && significantFiles.Count == 0)
         {
-            return GetEffectiveRoot(dirs[0]);
+            string dirName = Path.GetFileName(dirs[0]).ToLowerInvariant();
+            if (dirName != "update" && dirName != "pc" && dirName != "common" &&
+                dirName != "tlad" && dirName != "tbogt" && dirName != "plugins" && 
+                dirName != "scripts" && !dirName.EndsWith(".img", StringComparison.OrdinalIgnoreCase))
+            {
+                return GetEffectiveRoot(dirs[0]);
+            }
         }
         return dir;
     }

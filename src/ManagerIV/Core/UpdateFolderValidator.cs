@@ -114,11 +114,6 @@ public class UpdateFolderValidator
             if (containingImg != null)
             {
                 hasArchiveDirs = true;
-                issues.Add(new ValidationIssue(
-                    file.RelativePath,
-                    "Error",
-                    $"Folder-based .img archive '{containingImg}' is not supported. You must compile it into a single '.img' file using OpenIV."
-                ));
             }
             if (containingRpf != null)
             {
@@ -136,7 +131,7 @@ public class UpdateFolderValidator
                 {
                     hasPlainImgs = true;
                 }
-                else if (StandardDirectories.Contains(rootDir))
+                else if (StandardDirectories.Contains(rootDir) || IsCustomVirtualRoot(parts))
                 {
                     hasStandardDirs = true;
                 }
@@ -274,8 +269,8 @@ public class UpdateFolderValidator
         {
             issues.Add(new ValidationIssue(
                 mod.Name,
-                "Error",
-                "No .img/.rpf folders, plain .img files, or standard folders (pc/, common/) found. FusionOverloader cannot load these files."
+                "Warning",
+                "No .img/.rpf folders, plain .img files, or standard folders (pc/, common/) found. FusionOverloader may not load these files."
             ));
         }
         else if (isCompatible && hasNonStandardRootFiles)
@@ -288,5 +283,10 @@ public class UpdateFolderValidator
         }
 
         return issues;
+    }
+
+    private static bool IsCustomVirtualRoot(string[] parts)
+    {
+        return parts.Length > 1 && !parts[0].Contains('.', StringComparison.Ordinal);
     }
 }

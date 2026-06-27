@@ -169,53 +169,36 @@ public partial class ModLibraryView : UserControl
 
     private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        if (LibraryContentGrid == null || ListsContainerGrid == null || InspectorCard == null)
+        if (LibraryContentGrid == null || ListsContainerGrid == null || RightPanelGrid == null)
             return;
 
-        // Apply scale transform if screen is small
-        double scale = 1.0;
-        if (e.NewSize.Width < 950)
-        {
-            scale = Math.Min(scale, Math.Max(0.85, e.NewSize.Width / 950.0));
-        }
-        if (e.NewSize.Height < 650)
-        {
-            scale = Math.Min(scale, Math.Max(0.85, e.NewSize.Height / 650.0));
-        }
-
-        if (RootScale != null)
-        {
-            RootScale.ScaleX = scale;
-            RootScale.ScaleY = scale;
-        }
-
-        // If the view width is narrow (< 800px), switch to stacked rows.
-        if (e.NewSize.Width < 800)
+        // If the view width is narrow, switch to stacked rows.
+        if (e.NewSize.Width < 980)
         {
             // Set 1-column layout
             LibraryContentGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
             LibraryContentGrid.ColumnDefinitions[1].Width = new GridLength(0, GridUnitType.Pixel);
             
-            LibraryContentGrid.RowDefinitions[0].Height = new GridLength(1, GridUnitType.Star);
-            LibraryContentGrid.RowDefinitions[1].Height = new GridLength(1, GridUnitType.Star);
+            LibraryContentGrid.RowDefinitions[0].Height = new GridLength(3, GridUnitType.Star);
+            LibraryContentGrid.RowDefinitions[1].Height = new GridLength(2, GridUnitType.Star);
 
             Grid.SetColumn(ListsContainerGrid, 0);
             Grid.SetRow(ListsContainerGrid, 0);
             Grid.SetRowSpan(ListsContainerGrid, 1);
 
-            Grid.SetColumn(InspectorCard, 0);
-            Grid.SetRow(InspectorCard, 1);
-            Grid.SetRowSpan(InspectorCard, 1);
+            Grid.SetColumn(RightPanelGrid, 0);
+            Grid.SetRow(RightPanelGrid, 1);
+            Grid.SetRowSpan(RightPanelGrid, 1);
 
             // Refine margins for 1-column stack
-            ListsContainerGrid.Margin = new Thickness(0, 0, 0, 15);
-            InspectorCard.Margin = new Thickness(0, 0, 0, 0);
+            ListsContainerGrid.Margin = new Thickness(0, 0, 0, 10);
+            RightPanelGrid.Margin = new Thickness(0);
         }
         else
         {
-            // Set 2-column layout (3* and 2* width)
-            LibraryContentGrid.ColumnDefinitions[0].Width = new GridLength(3, GridUnitType.Star);
-            LibraryContentGrid.ColumnDefinitions[1].Width = new GridLength(2, GridUnitType.Star);
+            // Set 2-column layout with a wider list area.
+            LibraryContentGrid.ColumnDefinitions[0].Width = new GridLength(7, GridUnitType.Star);
+            LibraryContentGrid.ColumnDefinitions[1].Width = new GridLength(3, GridUnitType.Star);
             
             LibraryContentGrid.RowDefinitions[0].Height = new GridLength(1, GridUnitType.Star);
             LibraryContentGrid.RowDefinitions[1].Height = new GridLength(0, GridUnitType.Pixel);
@@ -224,13 +207,31 @@ public partial class ModLibraryView : UserControl
             Grid.SetRow(ListsContainerGrid, 0);
             Grid.SetRowSpan(ListsContainerGrid, 2);
 
-            Grid.SetColumn(InspectorCard, 1);
-            Grid.SetRow(InspectorCard, 0);
-            Grid.SetRowSpan(InspectorCard, 2);
+            Grid.SetColumn(RightPanelGrid, 1);
+            Grid.SetRow(RightPanelGrid, 0);
+            Grid.SetRowSpan(RightPanelGrid, 2);
 
             // Refine margins for 2-column side-by-side
             ListsContainerGrid.Margin = new Thickness(0, 0, 10, 0);
-            InspectorCard.Margin = new Thickness(10, 0, 0, 0);
+            RightPanelGrid.Margin = new Thickness(10, 0, 0, 0);
+        }
+
+        if (HeaderActionsPanel != null)
+        {
+            if (e.NewSize.Width < 720)
+            {
+                Grid.SetColumn(HeaderActionsPanel, 0);
+                Grid.SetRow(HeaderActionsPanel, 1);
+                HeaderActionsPanel.Margin = new Thickness(0, 10, 0, 0);
+                HeaderActionsPanel.HorizontalAlignment = HorizontalAlignment.Left;
+            }
+            else
+            {
+                Grid.SetColumn(HeaderActionsPanel, 1);
+                Grid.SetRow(HeaderActionsPanel, 0);
+                HeaderActionsPanel.Margin = new Thickness(0);
+                HeaderActionsPanel.HorizontalAlignment = HorizontalAlignment.Right;
+            }
         }
     }
 

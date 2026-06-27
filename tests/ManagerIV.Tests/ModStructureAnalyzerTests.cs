@@ -85,6 +85,29 @@ public class ModStructureAnalyzerTests : IDisposable
     }
 
     [Fact]
+    public async Task TestUpdateFolderVirtualPathStructure()
+    {
+        string zipPath = CreateZipArchive("update_virtual_path_folder.zip", zip =>
+        {
+            var entry = zip.CreateEntry("Release/update/LibertyAlive/LibertyAlive.img/infernus.dff");
+            using var writer = new StreamWriter(entry.Open());
+            writer.Write("dummy model data");
+        });
+
+        var toolsContext = new InstalledToolsContext(false, false, false);
+        var report = await _analyzer.AnalyzeAsync(zipPath, toolsContext);
+
+        Assert.Single(report.DetectedTargets);
+        var group = report.DetectedTargets[0];
+        Assert.Equal(DeploymentTarget.UpdateFolder, group.Target);
+        Assert.Equal("Release/update/", group.SourcePathPrefix);
+        Assert.Contains("Release/update/LibertyAlive/LibertyAlive.img/infernus.dff", group.Entries);
+        Assert.Empty(report.UnresolvedFiles);
+        Assert.Equal(VersionCompatibility.CompleteEditionOnly, report.VersionCompatibility);
+        Assert.False(report.IsDualTarget);
+    }
+
+    [Fact]
     public async Task TestDualTargetDetection()
     {
         string zipPath = CreateZipArchive("dual_target.zip", zip =>
@@ -261,5 +284,46 @@ public class ModStructureAnalyzerTests : IDisposable
         Assert.False(File.Exists(Path.Combine(extDirLegacy, "pc/models/cdimages/vehicles.img")));
         Assert.True(File.Exists(Path.Combine(extDirLegacy, "BetterHandling.asi")));
         Assert.False(File.Exists(Path.Combine(extDirLegacy, "license.txt")));
+    }
+
+    [Fact]
+    public async Task TestUserZipDualTargetExtraction()
+    {
+        string zipPath = CreateZipArchive("user_dual_target.zip", zip =>
+        {
+            var e1 = zip.CreateEntry("file.txt");
+            using (var w = new StreamWriter(e1.Open())) { w.Write("text"); }
+
+            var e2 = zip.CreateEntry("file2.txt");
+            using (var w = new StreamWriter(e2.Open())) { w.Write("text2"); }
+
+            var e3 = zip.CreateEntry("file3.pdf");
+            using (var w = new StreamWriter(e3.Open())) { w.Write("pdf"); }
+
+            var e4 = zip.CreateEntry("For Regular GTAIV/Main Files/common/data/handling.dat");
+            using (var w = new StreamWriter(e4.Open())) { w.Write("legacy handling"); }
+
+            var e5 = zip.CreateEntry("For GTA IV w. FusionFix installed/update/common/data/handling.dat");
+            using (var w = new StreamWriter(e5.Open())) { w.Write("ce handling"); }
+        });
+
+        var toolsContext = new InstalledToolsContext(false, false, false);
+        var report = await _analyzer.AnalyzeAsync(zipPath, toolsContext);
+
+        Assert.True(report.IsDualTarget);
+
+        // Extract for Complete Edition
+        string extDirCe = Path.Combine(_testBaseDir, "UserExtractedCE");
+        await _archiveHandler.ExtractAsync(zipPath, extDirCe, report, VersionCompatibility.CompleteEditionOnly);
+
+        // Verify that only the update folder content is extracted and stripped of the prefix
+        Assert.True(File.Exists(Path.Combine(extDirCe, "common/data/handling.dat")));
+        Assert.Equal("ce handling", File.ReadAllText(Path.Combine(extDirCe, "common/data/handling.dat")));
+
+        // Verify other files/folders are not extracted
+        Assert.False(File.Exists(Path.Combine(extDirCe, "file.txt")));
+        Assert.False(File.Exists(Path.Combine(extDirCe, "file2.txt")));
+        Assert.False(File.Exists(Path.Combine(extDirCe, "file3.pdf")));
+        Assert.False(Directory.Exists(Path.Combine(extDirCe, "For Regular GTAIV")));
     }
 }

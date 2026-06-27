@@ -44,9 +44,10 @@ public class UpdateFolderValidatorTests
     }
 
     [Fact]
-    public void TestFolderBasedArchiveError()
+    public void TestFolderBasedArchiveValidation()
     {
-        // Arrange: Mod with folder-based archives (.img/ and .rpf/ as folders)
+        // Arrange: .img folders are virtual roots handled by Fusion Overloader,
+        // while .rpf folders still require compiled archives.
         var files = new List<ModFile>
         {
             new ModFile("pc/models/cdimages/vehicles.img/infernus.dff", 1024, null),
@@ -68,8 +69,61 @@ public class UpdateFolderValidatorTests
 
         // Assert
         Assert.NotEmpty(issues);
-        Assert.Contains(issues, i => i.Severity == "Error" && i.Message.Contains("Folder-based .img archive"));
+        Assert.DoesNotContain(issues, i => i.Severity == "Error" && i.Message.Contains("Folder-based .img archive"));
         Assert.Contains(issues, i => i.Severity == "Error" && i.Message.Contains("Folder-based .rpf archive"));
+    }
+
+    [Fact]
+    public void TestCustomVirtualPathWithImgFolderReturnsNoIssues()
+    {
+        // Arrange: UAL virtual path layout under update/<NNN>_<ModName>/
+        var files = new List<ModFile>
+        {
+            new ModFile("LibertyAlive/LibertyAlive.img/infernus.dff", 1024, null),
+            new ModFile("LibertyAlive/LibertyAlive.img/infernus.wtd", 2048, null)
+        };
+        var mod = new StagedMod(
+            Id: "test-ual-img-folder",
+            Name: "UAL Img Folder Mod",
+            Version: "1.0",
+            Description: "Fusion Overloader virtual path layout",
+            LibraryPath: "C:/DummyModPath",
+            Files: files,
+            IsEnabled: true,
+            Compatibility: "CE-compatible"
+        );
+
+        // Act
+        var issues = _validator.Validate(mod);
+
+        // Assert
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void TestCustomVirtualSubdirectoryReturnsNoIssues()
+    {
+        // Arrange: Non-native folders can be UAL virtual roots.
+        var files = new List<ModFile>
+        {
+            new ModFile("LibertyAlive/common/data/handling.dat", 1024, null)
+        };
+        var mod = new StagedMod(
+            Id: "test-ual-custom-folder",
+            Name: "UAL Custom Folder Mod",
+            Version: "1.0",
+            Description: "Fusion Overloader custom virtual root",
+            LibraryPath: "C:/DummyModPath",
+            Files: files,
+            IsEnabled: true,
+            Compatibility: "CE-compatible"
+        );
+
+        // Act
+        var issues = _validator.Validate(mod);
+
+        // Assert
+        Assert.Empty(issues);
     }
 
     [Fact]
@@ -98,7 +152,7 @@ public class UpdateFolderValidatorTests
         // Assert: We should have warnings about loose asset files and a final structure error
         Assert.NotEmpty(issues);
         Assert.Contains(issues, i => i.Severity == "Warning" && i.Message.Contains("Loose asset file"));
-        Assert.Contains(issues, i => i.Severity == "Error" && i.Message.Contains("No .img/.rpf folders"));
+        Assert.Contains(issues, i => i.Severity == "Warning" && i.Message.Contains("No .img/.rpf folders"));
     }
 
     [Fact]
