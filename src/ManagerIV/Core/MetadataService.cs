@@ -192,7 +192,6 @@ public class MetadataService
 
             if (KnownTags.Contains(cleanWord.ToLowerInvariant()))
             {
-                tags.Insert(0, cleanWord); // Preserve original casing
                 nameWords.RemoveAt(i);
             }
             else
@@ -221,6 +220,11 @@ public class MetadataService
         return new ModFileNameParseResult(displayName, version, tags.AsReadOnly());
     }
 
+    /// <summary>
+    /// Converts a string to Title Case, capitalizing the first letter of each word except for common articles, conjunctions, and prepositions.
+    /// </summary>
+    /// <param name="input">The input string to format.</param>
+    /// <returns>A Title Case formatted string.</returns>
     internal string TitleCase(string input)
     {
         if (string.IsNullOrWhiteSpace(input))

@@ -25,6 +25,7 @@ __pycache__/
 .agents/cache/
 .agents/logs/
 .agents/local_settings.json
+.CLAUDE.md
 
 # git/github directories
 .git/
@@ -54,4 +55,4 @@ TestResults/
 # OS Metadata
 desktop.ini
 [Tt]humbs.db
-.DS_Store
+.DS_Store

@@ -11,6 +11,11 @@ public class BackupRollbackService
     private readonly IFileSystemLinker _linker;
     private readonly string _backupDir;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BackupRollbackService"/> class.
+    /// </summary>
+    /// <param name="linker">The file system linker used to manage operations.</param>
+    /// <param name="backupDir">The directory path where backed up files are stored.</param>
     public BackupRollbackService(IFileSystemLinker linker, string backupDir)
     {
         _linker = linker ?? throw new ArgumentNullException(nameof(linker));

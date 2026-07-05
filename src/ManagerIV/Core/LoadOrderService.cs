@@ -16,12 +16,20 @@ public class LoadOrderService
     public LoadOrderModel InitializeLoadOrder(IEnumerable<StagedMod> mods)
     {
         var entries = new List<LoadOrderEntry>();
-        int priority = 1;
+        int modPriority = 1;
+        int pluginPriority = 1;
 
         foreach (var mod in mods)
         {
             var target = DetermineDeployTarget(mod);
-            entries.Add(new LoadOrderEntry(mod.Id, target, priority++));
+            if (target == DeployTarget.Plugins)
+            {
+                entries.Add(new LoadOrderEntry(mod.Id, target, pluginPriority++));
+            }
+            else
+            {
+                entries.Add(new LoadOrderEntry(mod.Id, target, modPriority++));
+            }
         }
 
         return new LoadOrderModel(entries);
@@ -42,14 +50,20 @@ public class LoadOrderService
             return currentModel;
         }
 
-        list.Remove(entryToMove);
-        
-        // Ensure bounds safety (1 to list.Count + 1)
-        int resolvedPriority = Math.Clamp(targetPriority, 1, list.Count + 1);
-        list.Insert(resolvedPriority - 1, entryToMove);
+        bool isPlugin = entryToMove.Target == DeployTarget.Plugins;
+        var sameTypeEntries = list.Where(e => (e.Target == DeployTarget.Plugins) == isPlugin).OrderBy(e => e.Priority).ToList();
+        var otherTypeEntries = list.Where(e => (e.Target == DeployTarget.Plugins) != isPlugin).ToList();
 
-        // Re-sequence all priorities to be contiguous starting from 1
-        var newEntries = list.Select((entry, index) => entry with { Priority = index + 1 }).ToList();
+        sameTypeEntries.Remove(entryToMove);
+        
+        // Ensure bounds safety (1 to sameTypeEntries.Count + 1)
+        int resolvedPriority = Math.Clamp(targetPriority, 1, sameTypeEntries.Count + 1);
+        sameTypeEntries.Insert(resolvedPriority - 1, entryToMove);
+
+        // Re-sequence all priorities for this type to be contiguous starting from 1
+        var resequencedSameType = sameTypeEntries.Select((entry, index) => entry with { Priority = index + 1 }).ToList();
+        var newEntries = resequencedSameType.Concat(otherTypeEntries).ToList();
+
         return new LoadOrderModel(newEntries);
     }
 

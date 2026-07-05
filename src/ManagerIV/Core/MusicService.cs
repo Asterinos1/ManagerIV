@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace ManagerIV.Core;
 
+/// <summary>
+/// Service responsible for managing user music tracks, updating track metadata tags, and deploying shortcuts/files to Independence FM folder.
+/// </summary>
 public class MusicService
 {
     private readonly IFileSystemLinker _linker;
@@ -16,6 +19,11 @@ public class MusicService
     private readonly string _userMusicPath;
     private MusicManifest _manifest;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MusicService"/> class.
+    /// </summary>
+    /// <param name="baseDir">The application's base data directory.</param>
+    /// <param name="linker">The file system linker to use for deploying shortcuts.</param>
     public MusicService(string baseDir, IFileSystemLinker linker)
     {
         _linker = linker;
@@ -41,8 +49,14 @@ public class MusicService
         _manifest = LoadManifest();
     }
 
+    /// <summary>
+    /// Gets the Rockstar Games User Music directory path where shortcuts/files are deployed.
+    /// </summary>
     public string UserMusicPath => _userMusicPath;
 
+    /// <summary>
+    /// Gets the current manifest containing all imported tracks.
+    /// </summary>
     public MusicManifest Manifest => _manifest;
 
     private MusicManifest LoadManifest()
@@ -64,6 +78,9 @@ public class MusicService
         return new MusicManifest(new List<MusicTrack>());
     }
 
+    /// <summary>
+    /// Serializes and saves the current music manifest to disk.
+    /// </summary>
     public void SaveManifest()
     {
         try
@@ -164,6 +181,10 @@ public class MusicService
         }
     }
 
+    /// <summary>
+    /// Deletes a track from the manifest and its associated audio file from the library directory.
+    /// </summary>
+    /// <param name="trackId">The unique ID of the track to delete.</param>
     public void DeleteTrack(string trackId)
     {
         var track = _manifest.Tracks.FirstOrDefault(t => t.Id == trackId);
@@ -182,6 +203,11 @@ public class MusicService
         SaveManifest();
     }
 
+    /// <summary>
+    /// Toggles the enablement status of a track for deployment.
+    /// </summary>
+    /// <param name="trackId">The unique ID of the track.</param>
+    /// <param name="isEnabled">True to enable the track, false to disable it.</param>
     public void ToggleTrackEnabled(string trackId, bool isEnabled)
     {
         var trackIndex = _manifest.Tracks.FindIndex(t => t.Id == trackId);
@@ -192,6 +218,11 @@ public class MusicService
         }
     }
 
+    /// <summary>
+    /// Reorders a track within the manifest list to a new position index.
+    /// </summary>
+    /// <param name="trackId">The unique ID of the track to move.</param>
+    /// <param name="newIndex">The new target position index.</param>
     public void ReorderTrack(string trackId, int newIndex)
     {
         var track = _manifest.Tracks.FirstOrDefault(t => t.Id == trackId);

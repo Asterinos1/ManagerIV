@@ -43,7 +43,8 @@ desktop.ini
 *.md
 !README.md
 .*
-!.graphifyignore
+.opencodeignore
+.graphifyignore
 
 
 ## Graphify

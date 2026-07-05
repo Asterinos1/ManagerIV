@@ -9,13 +9,32 @@ using SharpCompress.Archives;
 
 namespace ManagerIV.Core;
 
+/// <summary>
+/// Defines a service for analyzing the internal structure and files of a mod archive.
+/// </summary>
 public interface IModStructureAnalyzer
 {
+    /// <summary>
+    /// Analyzes a mod archive to determine target folders, compatibility, and configuration instructions.
+    /// </summary>
+    /// <param name="archivePath">The absolute path to the mod archive file.</param>
+    /// <param name="toolsContext">Information about installed tools (ASI loader, FusionFix, ScriptHook).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A report detailing mod target locations, compatibility, and constraints.</returns>
     Task<ModStructureReport> AnalyzeAsync(string archivePath, InstalledToolsContext toolsContext, CancellationToken ct = default);
 }
 
+/// <summary>
+/// Represents the installation status of various backend tool dependency managers/helpers.
+/// </summary>
+/// <param name="AsiLoaderInstalled">Whether an ASI Loader is currently installed.</param>
+/// <param name="FusionFixInstalled">Whether FusionFix is currently installed.</param>
+/// <param name="ScriptHookInstalled">Whether ScriptHook is currently installed.</param>
 public record InstalledToolsContext(bool AsiLoaderInstalled, bool FusionFixInstalled, bool ScriptHookInstalled);
 
+/// <summary>
+/// Standard implementation of <see cref="IModStructureAnalyzer"/> for evaluating mod packaging structure.
+/// </summary>
 public class ModStructureAnalyzer : IModStructureAnalyzer
 {
     private static readonly string[] ReadmeKeywords = new[]

@@ -75,8 +75,25 @@ public class MainViewModel : ViewModelBase
                 GameDir = value.GamePath;
                 RefreshActiveModsList();
                 OnPropertyChanged(nameof(GpuVramMb));
+                OnPropertyChanged(nameof(GameVersionDisplayString));
                 LoadFusionFixConfig();
             }
+        }
+    }
+
+    public string GameVersionDisplayString
+    {
+        get
+        {
+            if (ActiveProfile?.LastKnownVersion == null)
+            {
+                return "Detected: Unknown Version";
+            }
+            if (ActiveProfile.LastKnownVersion.IsCompleteEdition)
+            {
+                return "Detected: Complete Edition";
+            }
+            return $"Detected: Legacy {ActiveProfile.LastKnownVersion.Version}";
         }
     }
 
@@ -418,8 +435,52 @@ public class MainViewModel : ViewModelBase
     public bool IsFusionFixConfigAvailable
     {
         get => _isFusionFixConfigAvailable;
-        set => SetProperty(ref _isFusionFixConfigAvailable, value);
+        set
+        {
+            if (SetProperty(ref _isFusionFixConfigAvailable, value))
+            {
+                OnPropertyChanged(nameof(IsBackendConfigAvailable));
+            }
+        }
     }
+
+    private DxvkConfig _dxvkSettings = new();
+    private bool _isDxvkConfigAvailable;
+    private bool _isFusionFixTabActive = true;
+
+    public DxvkConfig DxvkSettings
+    {
+        get => _dxvkSettings;
+        set => SetProperty(ref _dxvkSettings, value);
+    }
+
+    public bool IsDxvkConfigAvailable
+    {
+        get => _isDxvkConfigAvailable;
+        set
+        {
+            if (SetProperty(ref _isDxvkConfigAvailable, value))
+            {
+                OnPropertyChanged(nameof(IsBackendConfigAvailable));
+            }
+        }
+    }
+
+    public bool IsBackendConfigAvailable => IsFusionFixConfigAvailable || IsDxvkConfigAvailable;
+
+    public bool IsFusionFixTabActive
+    {
+        get => _isFusionFixTabActive;
+        set
+        {
+            if (SetProperty(ref _isFusionFixTabActive, value))
+            {
+                OnPropertyChanged(nameof(IsDxvkTabActive));
+            }
+        }
+    }
+
+    public bool IsDxvkTabActive => !IsFusionFixTabActive;
 
     // Commands
     public ICommand ApplyDeploymentCommand { get; }
@@ -445,6 +506,7 @@ public class MainViewModel : ViewModelBase
     public ICommand SaveFusionFixConfigCommand { get; }
     public ICommand LoadFusionFixDefaultsCommand { get; }
     public ICommand RefreshFusionFixConfigCommand { get; }
+    public ICommand SwitchBackendTabCommand { get; }
     public ICommand SetVehicleBudgetPresetCommand { get; }
     public ICommand AutoCalculateVehicleBudgetCommand { get; }
     public ICommand BrowseSaveProfilesPathCommand { get; }
@@ -505,9 +567,14 @@ public class MainViewModel : ViewModelBase
         SetVramPresetCommand = new RelayCommand<object>(SetVramPreset);
         ClearLibraryCommand = new RelayCommand(async () => await ClearLibraryAsync(), () => !IsBusy && LibraryMods.Any());
         ResetGameDirectoryCommand = new RelayCommand(async () => await ResetGameDirectoryAsync(), () => !IsBusy && ActiveProfile != null && !string.IsNullOrEmpty(ActiveProfile.GamePath));
-        SaveFusionFixConfigCommand = new RelayCommand(SaveFusionFixConfig, () => IsFusionFixConfigAvailable && !IsBusy);
+        SaveFusionFixConfigCommand = new RelayCommand(SaveFusionFixConfig, () => IsBackendConfigAvailable && !IsBusy);
         LoadFusionFixDefaultsCommand = new RelayCommand(LoadFusionFixDefaults, () => IsFusionFixConfigAvailable && !IsBusy);
-        RefreshFusionFixConfigCommand = new RelayCommand(RefreshFusionFixConfig, () => IsFusionFixConfigAvailable && !IsBusy);
+        RefreshFusionFixConfigCommand = new RelayCommand(RefreshFusionFixConfig, () => IsBackendConfigAvailable && !IsBusy);
+        SwitchBackendTabCommand = new RelayCommand<string>(tab =>
+        {
+            if (tab == "FusionFix") IsFusionFixTabActive = true;
+            else if (tab == "DXVK") IsFusionFixTabActive = false;
+        });
         SetVehicleBudgetPresetCommand = new RelayCommand<object>(SetVehicleBudgetPreset);
         AutoCalculateVehicleBudgetCommand = new RelayCommand(AutoCalculateVehicleBudget, () => IsFusionFixConfigAvailable && ActiveProfile != null && !IsBusy);
 
@@ -561,7 +628,7 @@ public class MainViewModel : ViewModelBase
                 var settings = JsonSerializer.Deserialize<AppSettings>(json);
                 if (settings != null)
                 {
-                    _isDarkTheme = settings.IsDarkTheme;
+                    _isDarkTheme = true; // Always Dark Theme
                     _gtaSaveProfilesPath = settings.GtaSaveProfilesPath ?? "";
                 }
             }
@@ -685,11 +752,12 @@ public class MainViewModel : ViewModelBase
             }
             else
             {
-                int maxPriority = entries.Any() ? entries.Max(e => e.Priority) : 0;
+                bool isPlugin = modVm.Model.Files.Any(f => f.RelativePath.EndsWith(".asi", StringComparison.OrdinalIgnoreCase));
+                modVm.Target = isPlugin ? DeployTarget.Plugins : DeployTarget.Update;
+                
+                var sameTypeEntries = entries.Where(e => (e.Target == DeployTarget.Plugins) == isPlugin).ToList();
+                int maxPriority = sameTypeEntries.Any() ? sameTypeEntries.Max(e => e.Priority) : 0;
                 modVm.Priority = maxPriority + 1;
-                modVm.Target = modVm.Model.Files.Any(f => f.RelativePath.EndsWith(".asi", StringComparison.OrdinalIgnoreCase)) 
-                    ? DeployTarget.Plugins 
-                    : DeployTarget.Update;
                 
                 entries.Add(new LoadOrderEntry(modVm.Id, modVm.Target, modVm.Priority));
                 loadOrderChanged = true;
@@ -705,11 +773,10 @@ public class MainViewModel : ViewModelBase
             loadOrderChanged = true;
         }
 
-        // Re-sequence all entries in the load order to ensure they are 1..N contiguous
-        var resequencedEntries = entries
-            .OrderBy(e => e.Priority)
-            .Select((entry, index) => entry with { Priority = index + 1 })
-            .ToList();
+        // Re-sequence all entries in the load order to ensure they are 1..N contiguous per target type
+        var plugins = entries.Where(e => e.Target == DeployTarget.Plugins).OrderBy(e => e.Priority).Select((entry, index) => entry with { Priority = index + 1 }).ToList();
+        var mods = entries.Where(e => e.Target != DeployTarget.Plugins).OrderBy(e => e.Priority).Select((entry, index) => entry with { Priority = index + 1 }).ToList();
+        var resequencedEntries = plugins.Concat(mods).ToList();
 
         // Check if resequencing changed any priorities
         if (!loadOrderChanged && resequencedEntries.Count == entries.Count)
@@ -869,11 +936,7 @@ public class MainViewModel : ViewModelBase
                         if (part.EndsWith(".img", System.StringComparison.OrdinalIgnoreCase))
                         {
                             uniqueImgs.Add(currentPath);
-                            break; // Folder found; no need to parse deeper files in this branch
-                        }
-                        else if (i == parts.Length - 1 && part.EndsWith(".img", System.StringComparison.OrdinalIgnoreCase))
-                        {
-                            uniqueImgs.Add(currentPath);
+                            break; // .img component found (folder or leaf file); stop descending this branch
                         }
                     }
                 }
@@ -1564,17 +1627,17 @@ public class MainViewModel : ViewModelBase
         _profileManager.SaveProfile(file, profile);
         
         // Sync collection
-        int idx = Profiles.IndexOf(Profiles.First(p => p.Id == profile.Id));
-        if (idx >= 0)
+        var existing = Profiles.FirstOrDefault(p => p.Id == profile.Id);
+        if (existing != null)
         {
-            Profiles[idx] = profile;
+            Profiles[Profiles.IndexOf(existing)] = profile;
         }
         _activeProfile = profile;
         OnPropertyChanged(nameof(ActiveProfile));
         OnPropertyChanged(nameof(GpuVramMb));
     }
 
-    private void RemoveActiveProfile()
+    private async void RemoveActiveProfile()
     {
         if (ActiveProfile == null) return;
         if (Profiles.Count <= 1)
@@ -1600,10 +1663,7 @@ public class MainViewModel : ViewModelBase
                 var journal = new TransactionJournal();
                 var adapter = new CompleteEditionAdapter(profileToDelete.GamePath, _linker, journal);
                 var enabledVms = LibraryMods.Where(m => profileToDelete.EnabledModIds.Contains(m.Id)).ToList();
-                foreach (var vm in enabledVms)
-                {
-                    _ = adapter.UndeployAsync(vm.Model);
-                }
+                await Task.WhenAll(enabledVms.Select(vm => adapter.UndeployAsync(vm.Model)));
             }
             catch (Exception ex)
             {
@@ -1980,6 +2040,12 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    private string GetDxvkConfPath()
+    {
+        if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath)) return "";
+        return Path.Combine(ActiveProfile.GamePath, "dxvk.conf");
+    }
+
     private string GetFusionFixIniPath()
     {
         if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath)) return "";
@@ -2003,26 +2069,62 @@ public class MainViewModel : ViewModelBase
             FusionFixSettings = new FusionFixConfig();
             IsFusionFixConfigAvailable = false;
         }
+
+        string dxvkPath = GetDxvkConfPath();
+        if (File.Exists(dxvkPath))
+        {
+            DxvkSettings = DxvkConfig.Load(dxvkPath);
+            IsDxvkConfigAvailable = true;
+        }
+        else
+        {
+            DxvkSettings = new DxvkConfig();
+            IsDxvkConfigAvailable = false;
+        }
     }
 
     private void SaveFusionFixConfig()
     {
         string iniPath = GetFusionFixIniPath();
-        if (string.IsNullOrEmpty(iniPath) || !File.Exists(iniPath))
+        string dxvkPath = GetDxvkConfPath();
+
+        bool ffSaved = false;
+        bool dxvkSaved = false;
+
+        if (IsFusionFixConfigAvailable && !string.IsNullOrEmpty(iniPath) && File.Exists(iniPath))
         {
-            MessageBox.Show("FusionFix configuration file not found. Install FusionFix first.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            return;
+            try
+            {
+                FusionFixConfig.Save(iniPath, FusionFixSettings);
+                ffSaved = true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to save FusionFix configuration: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
-        try
+        if (IsDxvkConfigAvailable && !string.IsNullOrEmpty(dxvkPath) && File.Exists(dxvkPath))
         {
-            FusionFixConfig.Save(iniPath, FusionFixSettings);
-            StatusText = "FusionFix configuration saved successfully.";
-            MessageBox.Show("FusionFix configuration saved successfully to the plugins directory.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            try
+            {
+                DxvkConfig.Save(dxvkPath, DxvkSettings);
+                dxvkSaved = true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to save DXVK configuration: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
-        catch (Exception ex)
+
+        if (ffSaved || dxvkSaved)
         {
-            MessageBox.Show($"Failed to save FusionFix configuration: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusText = "Backend configuration saved successfully.";
+            MessageBox.Show("Backend configuration saved successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+            MessageBox.Show("No configuration files found to save. Install FusionFix or DXVK first.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -2204,6 +2306,7 @@ public class MainViewModel : ViewModelBase
 
     private void ApplyTheme(bool isDark)
     {
+        isDark = true;
         try
         {
             if (isDark)
@@ -2234,121 +2337,142 @@ public class MainViewModel : ViewModelBase
             if (isDark)
             {
                 // Dark Theme: Liberty City Nights
-                SetResourceBrush(resources, "ApplicationBackgroundBrush", "#FF0A0A0A");
-                SetResourceBrush(resources, "SolidBackgroundFillColorBaseBrush", "#FF0A0A0A");
+                // Neutral layering model: Base canvas < Sidebar < Surface (controls) < Elevated (cards).
+                SetResourceBrush(resources, "ApplicationBackgroundBrush", "#FF0D0D0D");
+                SetResourceBrush(resources, "SolidBackgroundFillColorBaseBrush", "#FF0D0D0D");
 
                 SetResourceBrush(resources, "MicaBackgroundBrush", "#FF121212");
-                SetResourceBrush(resources, "SolidBackgroundFillColorSecondaryBrush", "#FF1A1A1A");
+                SetResourceBrush(resources, "SolidBackgroundFillColorSecondaryBrush", "#FF141414"); // Sidebar canvas
                 SetResourceBrush(resources, "SolidBackgroundFillColorTertiaryBrush", "#FF1A1A1A");
-                SetResourceBrush(resources, "CardBackgroundFillColorDefaultBrush", "#FF1A1A1A");
-                SetResourceBrush(resources, "ControlFillColorDefaultBrush", "#FF1A1A1A");
+                SetResourceBrush(resources, "ControlFillColorDefaultBrush", "#FF1A1A1A");           // Surface: inputs/buttons
+                SetResourceBrush(resources, "CardBackgroundFillColorDefaultBrush", "#FF242424");     // Elevated surface: cards
 
-                SetResourceBrush(resources, "ControlStrokeColorDefaultBrush", "#333333");
-                SetResourceBrush(resources, "CardStrokeColorDefaultBrush", "#333333");
-                SetResourceBrush(resources, "ControlElevationBorderBrush", "#333333");
-                SetResourceBrush(resources, "TextFillColorDisabledBrush", "#333333");
+                SetResourceBrush(resources, "ControlStrokeColorDefaultBrush", "#FF2D2D30");
+                SetResourceBrush(resources, "ControlElevationBorderBrush", "#FF2D2D30");
+                SetResourceBrush(resources, "CardStrokeColorDefaultBrush", "#FF3A3A3C");
+                SetResourceBrush(resources, "TextFillColorDisabledBrush", "#FF2D2D30");
 
+                // Typography layering
                 SetResourceBrush(resources, "TextFillColorPrimaryBrush", "#FFFFFFFF");
+                SetResourceBrush(resources, "TextFillColorSecondaryBrush", "#FFA1A1AA");
+                SetResourceBrush(resources, "TextFillColorTertiaryBrush", "#FF71717A");
 
-                SetResourceBrush(resources, "TextFillColorSecondaryBrush", "#FF8A8A8A");
-                SetResourceBrush(resources, "TextFillColorTertiaryBrush", "#FF8A8A8A");
+                // Accents: Primary (#FFFA9600), Secondary/Hover (#FFFFB347)
+                SetResourceColor(resources, "SystemAccentColor", "#FFFA9600");
+                SetResourceBrush(resources, "SystemAccentBrush", "#FFFA9600");
+                SetResourceColor(resources, "SystemAccentColorPrimary", "#FFFA9600");
+                SetResourceBrush(resources, "SystemAccentColorPrimaryBrush", "#FFFA9600");
 
-                // Accents: Active Menu Amber (#FFFFA500), Hover (#FFFFBC42)
-                SetResourceColor(resources, "SystemAccentColor", "#FFFFA500");
-                SetResourceBrush(resources, "SystemAccentBrush", "#FFFFA500");
-                SetResourceColor(resources, "SystemAccentColorPrimary", "#FFFFA500");
-                SetResourceBrush(resources, "SystemAccentColorPrimaryBrush", "#FFFFA500");
-                
-                SetResourceColor(resources, "SystemAccentColorSecondary", "#FFFFBC42");
-                SetResourceBrush(resources, "SystemAccentColorSecondaryBrush", "#FFFFBC42");
-                SetResourceColor(resources, "SystemAccentColorTertiary", "#FFFFBC42");
-                SetResourceBrush(resources, "SystemAccentColorTertiaryBrush", "#FFFFBC42");
-                
-                SetResourceColor(resources, "SystemAccentColorLight1", "#FFFFBC42");
-                SetResourceBrush(resources, "SystemAccentColorLight1Brush", "#FFFFBC42");
-                SetResourceColor(resources, "SystemAccentColorLight2", "#FFFFD075");
-                SetResourceBrush(resources, "SystemAccentColorLight2Brush", "#FFFFD075");
-                SetResourceColor(resources, "SystemAccentColorLight3", "#FFFFE3A8");
-                SetResourceBrush(resources, "SystemAccentColorLight3Brush", "#FFFFE3A8");
-                SetResourceColor(resources, "SystemAccentColorDark1", "#FFE69500");
-                SetResourceBrush(resources, "SystemAccentColorDark1Brush", "#FFE69500");
-                SetResourceColor(resources, "SystemAccentColorDark2", "#FFCC8400");
-                SetResourceBrush(resources, "SystemAccentColorDark2Brush", "#FFCC8400");
-                SetResourceColor(resources, "SystemAccentColorDark3", "#FFA36A00");
-                SetResourceBrush(resources, "SystemAccentColorDark3Brush", "#FFA36A00");
+                SetResourceColor(resources, "SystemAccentColorSecondary", "#FFFFB347");
+                SetResourceBrush(resources, "SystemAccentColorSecondaryBrush", "#FFFFB347");
+                SetResourceColor(resources, "SystemAccentColorTertiary", "#FFFFB347");
+                SetResourceBrush(resources, "SystemAccentColorTertiaryBrush", "#FFFFB347");
 
-                // Success / Validated State
-                SetResourceColor(resources, "SystemGreenColor", "#FF388E3C");
-                SetResourceBrush(resources, "SystemGreenBrush", "#FF388E3C");
+                SetResourceColor(resources, "SystemAccentColorLight1", "#FFFFB347");
+                SetResourceBrush(resources, "SystemAccentColorLight1Brush", "#FFFFB347");
+                SetResourceColor(resources, "SystemAccentColorLight2", "#FFFFC773");
+                SetResourceBrush(resources, "SystemAccentColorLight2Brush", "#FFFFC773");
+                SetResourceColor(resources, "SystemAccentColorLight3", "#FFFFDBA6");
+                SetResourceBrush(resources, "SystemAccentColorLight3Brush", "#FFFFDBA6");
+                SetResourceColor(resources, "SystemAccentColorDark1", "#FFD47A00");
+                SetResourceBrush(resources, "SystemAccentColorDark1Brush", "#FFD47A00");
+                SetResourceColor(resources, "SystemAccentColorDark2", "#FFA85F00");
+                SetResourceBrush(resources, "SystemAccentColorDark2Brush", "#FFA85F00");
+                SetResourceColor(resources, "SystemAccentColorDark3", "#FF7A4500");
+                SetResourceBrush(resources, "SystemAccentColorDark3Brush", "#FF7A4500");
 
-                // Error / Overflow Limit
+                // Muted accent: active tag/selection backgrounds + subtle highlights
+                SetResourceBrush(resources, "MutedAccentBrush", "#FF3A2E24");
+                SetResourceBrush(resources, "WarningTagTextBrush", "#FFFFB347");
+
+                // Semantic status (override WPF-UI fill keys so XAML stays on default names)
+                SetResourceColor(resources, "SystemFillColorSuccess", "#FF2E7D32");
+                SetResourceBrush(resources, "SystemFillColorSuccessBrush", "#FF2E7D32");
+                SetResourceColor(resources, "SystemFillColorCaution", "#FFED6C02");
+                SetResourceBrush(resources, "SystemFillColorCautionBrush", "#FFED6C02");
+                SetResourceColor(resources, "SystemFillColorCritical", "#FFD32F2F");
+                SetResourceBrush(resources, "SystemFillColorCriticalBrush", "#FFD32F2F");
+
+                // Legacy aliases
+                SetResourceColor(resources, "SystemGreenColor", "#FF2E7D32");
+                SetResourceBrush(resources, "SystemGreenBrush", "#FF2E7D32");
                 SetResourceColor(resources, "SystemRedColor", "#FFD32F2F");
                 SetResourceBrush(resources, "SystemRedBrush", "#FFD32F2F");
-
-                // Backwards compatibility accent references
-                SetResourceBrush(resources, "WarmAccentBrush", "#3A2E28");
-                SetResourceBrush(resources, "SecondaryAccentBrush", "#FFFFBC42");
+                SetResourceBrush(resources, "WarmAccentBrush", "#FF3A2E24");
+                SetResourceBrush(resources, "SecondaryAccentBrush", "#FFFFB347");
             }
             else
             {
                 // Light Theme: Algonquin Daylight
-                SetResourceBrush(resources, "ApplicationBackgroundBrush", "#FFF4F4F4");
-                SetResourceBrush(resources, "SolidBackgroundFillColorBaseBrush", "#FFF4F4F4");
+                // Soft gray layers reduce glare; elevated cards sit a touch below the white surface.
+                SetResourceBrush(resources, "ApplicationBackgroundBrush", "#FFF5F5F7");
+                SetResourceBrush(resources, "SolidBackgroundFillColorBaseBrush", "#FFF5F5F7");
 
                 SetResourceBrush(resources, "MicaBackgroundBrush", "#FFEAEAEA");
-                SetResourceBrush(resources, "SolidBackgroundFillColorSecondaryBrush", "#FFFFFFFF");
-                SetResourceBrush(resources, "SolidBackgroundFillColorTertiaryBrush", "#FFFFFFFF");
-                SetResourceBrush(resources, "CardBackgroundFillColorDefaultBrush", "#FFFFFFFF");
-                SetResourceBrush(resources, "ControlFillColorDefaultBrush", "#FFFFFFFF");
+                SetResourceBrush(resources, "SolidBackgroundFillColorSecondaryBrush", "#FFFFFFFF"); // Sidebar canvas
+                SetResourceBrush(resources, "SolidBackgroundFillColorTertiaryBrush", "#FFFAFAFA");
+                SetResourceBrush(resources, "ControlFillColorDefaultBrush", "#FFFFFFFF");           // Surface: inputs/buttons
+                SetResourceBrush(resources, "CardBackgroundFillColorDefaultBrush", "#FFFAFAFA");     // Elevated surface: cards
 
-                SetResourceBrush(resources, "ControlStrokeColorDefaultBrush", "#B0B0B0");
-                SetResourceBrush(resources, "CardStrokeColorDefaultBrush", "#B0B0B0");
-                SetResourceBrush(resources, "ControlElevationBorderBrush", "#B0B0B0");
-                SetResourceBrush(resources, "TextFillColorDisabledBrush", "#B0B0B0");
+                SetResourceBrush(resources, "ControlStrokeColorDefaultBrush", "#FFE5E5EA");
+                SetResourceBrush(resources, "ControlElevationBorderBrush", "#FFE5E5EA");
+                SetResourceBrush(resources, "CardStrokeColorDefaultBrush", "#FFD1D1D6");
+                SetResourceBrush(resources, "TextFillColorDisabledBrush", "#FFC7C7CC");
 
-                SetResourceBrush(resources, "TextFillColorPrimaryBrush", "#FF111111");
+                // Typography layering
+                SetResourceBrush(resources, "TextFillColorPrimaryBrush", "#FF1C1C1E");
+                SetResourceBrush(resources, "TextFillColorSecondaryBrush", "#FF636366");
+                SetResourceBrush(resources, "TextFillColorTertiaryBrush", "#FF8E8E93");
 
-                SetResourceBrush(resources, "TextFillColorSecondaryBrush", "#FF666666");
-                SetResourceBrush(resources, "TextFillColorTertiaryBrush", "#FF666666");
+                // Accents: Primary (#FFD47A00), Secondary/Hover (#FFE68500)
+                SetResourceColor(resources, "SystemAccentColor", "#FFD47A00");
+                SetResourceBrush(resources, "SystemAccentBrush", "#FFD47A00");
+                SetResourceColor(resources, "SystemAccentColorPrimary", "#FFD47A00");
+                SetResourceBrush(resources, "SystemAccentColorPrimaryBrush", "#FFD47A00");
 
-                // Accents: Active Menu Amber Deeper (#FFE69100), Hover (#FFFFA500)
-                SetResourceColor(resources, "SystemAccentColor", "#FFE69100");
-                SetResourceBrush(resources, "SystemAccentBrush", "#FFE69100");
-                SetResourceColor(resources, "SystemAccentColorPrimary", "#FFE69100");
-                SetResourceBrush(resources, "SystemAccentColorPrimaryBrush", "#FFE69100");
+                SetResourceColor(resources, "SystemAccentColorSecondary", "#FFE68500");
+                SetResourceBrush(resources, "SystemAccentColorSecondaryBrush", "#FFE68500");
+                SetResourceColor(resources, "SystemAccentColorTertiary", "#FFE68500");
+                SetResourceBrush(resources, "SystemAccentColorTertiaryBrush", "#FFE68500");
 
-                SetResourceColor(resources, "SystemAccentColorSecondary", "#FFFFA500");
-                SetResourceBrush(resources, "SystemAccentColorSecondaryBrush", "#FFFFA500");
-                SetResourceColor(resources, "SystemAccentColorTertiary", "#FFFFA500");
-                SetResourceBrush(resources, "SystemAccentColorTertiaryBrush", "#FFFFA500");
+                SetResourceColor(resources, "SystemAccentColorLight1", "#FFE68500");
+                SetResourceBrush(resources, "SystemAccentColorLight1Brush", "#FFE68500");
+                SetResourceColor(resources, "SystemAccentColorLight2", "#FFF59A1F");
+                SetResourceBrush(resources, "SystemAccentColorLight2Brush", "#FFF59A1F");
+                SetResourceColor(resources, "SystemAccentColorLight3", "#FFFFB347");
+                SetResourceBrush(resources, "SystemAccentColorLight3Brush", "#FFFFB347");
+                SetResourceColor(resources, "SystemAccentColorDark1", "#FFB86A00");
+                SetResourceBrush(resources, "SystemAccentColorDark1Brush", "#FFB86A00");
+                SetResourceColor(resources, "SystemAccentColorDark2", "#FF945500");
+                SetResourceBrush(resources, "SystemAccentColorDark2Brush", "#FF945500");
+                SetResourceColor(resources, "SystemAccentColorDark3", "#FF6E3F00");
+                SetResourceBrush(resources, "SystemAccentColorDark3Brush", "#FF6E3F00");
 
-                SetResourceColor(resources, "SystemAccentColorLight1", "#FFFFA500");
-                SetResourceBrush(resources, "SystemAccentColorLight1Brush", "#FFFFA500");
-                SetResourceColor(resources, "SystemAccentColorLight2", "#FFFFBB33");
-                SetResourceBrush(resources, "SystemAccentColorLight2Brush", "#FFFFBB33");
-                SetResourceColor(resources, "SystemAccentColorLight3", "#FFFFCC66");
-                SetResourceBrush(resources, "SystemAccentColorLight3Brush", "#FFFFCC66");
-                SetResourceColor(resources, "SystemAccentColorDark1", "#FFCC8000");
-                SetResourceBrush(resources, "SystemAccentColorDark1Brush", "#FFCC8000");
-                SetResourceColor(resources, "SystemAccentColorDark2", "#FFA36600");
-                SetResourceBrush(resources, "SystemAccentColorDark2Brush", "#FFA36600");
-                SetResourceColor(resources, "SystemAccentColorDark3", "#FF7A4D00");
-                SetResourceBrush(resources, "SystemAccentColorDark3Brush", "#FF7A4D00");
+                // Muted accent: active tag/selection backgrounds + subtle highlights
+                SetResourceBrush(resources, "MutedAccentBrush", "#FFFDF3E6");
+                SetResourceBrush(resources, "WarningTagTextBrush", "#FFB25E00");
 
-                // Success / Validated State
+                // Semantic status (override WPF-UI fill keys so XAML stays on default names)
+                SetResourceColor(resources, "SystemFillColorSuccess", "#FF2E7D32");
+                SetResourceBrush(resources, "SystemFillColorSuccessBrush", "#FF2E7D32");
+                SetResourceColor(resources, "SystemFillColorCaution", "#FFE65100");
+                SetResourceBrush(resources, "SystemFillColorCautionBrush", "#FFE65100");
+                SetResourceColor(resources, "SystemFillColorCritical", "#FFC62828");
+                SetResourceBrush(resources, "SystemFillColorCriticalBrush", "#FFC62828");
+
+                // Legacy aliases
                 SetResourceColor(resources, "SystemGreenColor", "#FF2E7D32");
                 SetResourceBrush(resources, "SystemGreenBrush", "#FF2E7D32");
-
-                // Error / Overflow Limit
                 SetResourceColor(resources, "SystemRedColor", "#FFC62828");
                 SetResourceBrush(resources, "SystemRedBrush", "#FFC62828");
-
-                // Backwards compatibility accent references
-                SetResourceBrush(resources, "WarmAccentBrush", "#B87353");
-                SetResourceBrush(resources, "SecondaryAccentBrush", "#FFFFA500");
+                SetResourceBrush(resources, "WarmAccentBrush", "#FFFDF3E6");
+                SetResourceBrush(resources, "SecondaryAccentBrush", "#FFE68500");
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to apply custom palette (isDark={isDark}): {ex.Message}");
+        }
     }
 
     private void SetResourceBrush(ResourceDictionary resources, string key, string hexColor)
@@ -2382,7 +2506,10 @@ public class MainViewModel : ViewModelBase
                 resources.Add(key, new SolidColorBrush(color));
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to set resource brush '{key}' ({hexColor}): {ex.Message}");
+        }
     }
 
     private void SetResourceColor(ResourceDictionary resources, string key, string hexColor)
@@ -2392,7 +2519,10 @@ public class MainViewModel : ViewModelBase
             var color = (Color)ColorConverter.ConvertFromString(hexColor);
             resources[key] = color;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to set resource color '{key}' ({hexColor}): {ex.Message}");
+        }
     }
 
     private void SaveSettings()

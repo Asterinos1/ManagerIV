@@ -12,6 +12,9 @@ public class ProfileManager
 {
     private readonly JsonSerializerOptions _jsonOptions;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProfileManager"/> class.
+    /// </summary>
     public ProfileManager()
     {
         _jsonOptions = new JsonSerializerOptions

@@ -10,6 +10,16 @@
              d:DesignHeight="700" d:DesignWidth="850"
              Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
     <UserControl.Resources>
+        <Style TargetType="ui:Card" BasedOn="{StaticResource {x:Type ui:Card}}">
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+        <Style TargetType="ui:CardControl" BasedOn="{StaticResource {x:Type ui:CardControl}}">
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <core:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
     </UserControl.Resources>
@@ -22,25 +32,25 @@
 
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,15">
-            <TextBlock Text="FusionFix Configuration" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-            <TextBlock Text="Modify aiming zoom, shadows, limits, postFX, and compatibility settings directly saved inside the plugins folder." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+            <TextBlock Text="Backend Configuration" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+            <TextBlock Text="Configure FusionFix and DXVK settings saved in your Grand Theft Auto IV game directory." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
         </StackPanel>
 
         <!-- Main Content Area -->
         <Grid Grid.Row="1">
             
-            <!-- Placeholder Card (Visible when FusionFix is NOT installed/available) -->
+            <!-- Placeholder Card (Visible when Backend Config is NOT installed/available) -->
             <ui:Card Padding="25" 
                       VerticalAlignment="Center" 
                       HorizontalAlignment="Center" 
                       MaxWidth="500"
-                      Visibility="{Binding IsFusionFixConfigAvailable, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                      Visibility="{Binding IsBackendConfigAvailable, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
                       Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" 
                       BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
                 <StackPanel HorizontalAlignment="Center">
                     <ui:SymbolIcon Symbol="Wrench24" Filled="True" FontSize="48" Foreground="{DynamicResource SystemFillColorCautionBrush}" HorizontalAlignment="Center" Margin="0,0,0,15" />
-                    <TextBlock Text="FusionFix Config Clean Setup Needed" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,8" />
-                    <TextBlock Text="GTAIV.EFLC.FusionFix.ini was not found in your target game directory's plugins folder. You must install FusionFix first to configure these settings." 
+                    <TextBlock Text="Backend Setup Needed" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,8" />
+                    <TextBlock Text="Neither GTAIV.EFLC.FusionFix.ini nor dxvk.conf were found in your game directory. Please install FusionFix or DXVK first." 
                                TextWrapping="Wrap" 
                                TextAlignment="Center"
                                FontSize="13" 
@@ -49,23 +59,100 @@
                 </StackPanel>
             </ui:Card>
 
-            <!-- Configuration Form (Visible when FusionFix IS installed/available) -->
-            <Grid Visibility="{Binding IsFusionFixConfigAvailable, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <!-- Configuration Form (Visible when Backend Config IS installed/available) -->
+            <Grid Visibility="{Binding IsBackendConfigAvailable, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" /> <!-- Sub-tab buttons -->
+                    <RowDefinition Height="*" />    <!-- Content area -->
+                    <RowDefinition Height="Auto" /> <!-- Actions footer -->
                 </Grid.RowDefinitions>
 
-                <Grid Grid.Row="0">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
+                <!-- Sub-tab Buttons -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                    <ui:Button Content="FusionFix" 
+                               Width="120"
+                               Command="{Binding SwitchBackendTabCommand}"
+                               CommandParameter="FusionFix"
+                               Margin="0,0,8,0">
+                        <ui:Button.Style>
+                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                <Setter Property="Appearance" Value="Secondary" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFusionFixTabActive}" Value="True">
+                                        <Setter Property="Appearance" Value="Primary" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:Button.Style>
+                    </ui:Button>
+                    <ui:Button Content="DXVK" 
+                               Width="120"
+                               Command="{Binding SwitchBackendTabCommand}"
+                               CommandParameter="DXVK">
+                        <ui:Button.Style>
+                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                <Setter Property="Appearance" Value="Secondary" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDxvkTabActive}" Value="True">
+                                        <Setter Property="Appearance" Value="Primary" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:Button.Style>
+                    </ui:Button>
+                </StackPanel>
+
+                <!-- Content Area -->
+                <Grid Grid.Row="1">
+                    <!-- FusionFix Tab Panel -->
+                    <Grid Visibility="{Binding IsFusionFixTabActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Show warning if FusionFix settings are missing -->
+                        <Grid Grid.RowSpan="2">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFusionFixConfigAvailable}" Value="False">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+                            <ui:Card Padding="20" Margin="0,20,15,20" MaxWidth="500" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <StackPanel>
+                                    <ui:SymbolIcon Symbol="Info24" FontSize="36" Foreground="{DynamicResource SystemFillColorCautionBrush}" HorizontalAlignment="Center" Margin="0,0,0,10" />
+                                    <TextBlock Text="FusionFix Configuration Not Found" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5" />
+                                    <TextBlock Text="GTAIV.EFLC.FusionFix.ini was not found in your plugins directory. Please install FusionFix first." TextWrapping="Wrap" TextAlignment="Center" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                            </ui:Card>
+                        </Grid>
+
+                        <Grid Grid.Row="0" Grid.RowSpan="2">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFusionFixConfigAvailable}" Value="False">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
 
                     <ui:TextBox x:Name="SearchBox" 
                                 Grid.Row="0"
                                 PlaceholderText="Search settings by title or description..."
                                 TextChanged="SearchBox_TextChanged"
+                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 Icon="{ui:SymbolIcon Search24}"
                                 Margin="0,5,15,10"
                                 MaxWidth="800"
@@ -706,7 +793,7 @@
 
                                         <!-- Warning Message -->
                                         <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" 
-                                                   Text="{Binding VehicleBudgetWarning}" FontSize="11" Foreground="#FFCC00" TextWrapping="Wrap" Margin="0,8,0,0" 
+                                                   Text="{Binding VehicleBudgetWarning}" FontSize="11" Foreground="{DynamicResource SystemFillColorCautionBrush}" TextWrapping="Wrap" Margin="0,8,0,0"
                                                    Visibility="{Binding HasVehicleBudgetWarning, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}" />
                                     </Grid>
                                 </ui:Card>
@@ -857,11 +944,712 @@
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>
+                </Grid>
+
+                <!-- DXVK Settings Tab -->
+                <Grid Visibility="{Binding IsDxvkTabActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Show warning if DXVK settings are missing -->
+                    <Grid Grid.RowSpan="2">
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDxvkConfigAvailable}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        <ui:Card Padding="20" Margin="0,20,15,20" MaxWidth="500" HorizontalAlignment="Left" VerticalAlignment="Top">
+                            <StackPanel>
+                                <ui:SymbolIcon Symbol="Info24" FontSize="36" Foreground="{DynamicResource SystemFillColorCautionBrush}" HorizontalAlignment="Center" Margin="0,0,0,10" />
+                                <TextBlock Text="DXVK Configuration Not Found" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5" />
+                                <TextBlock Text="dxvk.conf was not found in your game directory. Please install DXVK or run the game once to generate it." TextWrapping="Wrap" TextAlignment="Center" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </ui:Card>
+                    </Grid>
+
+                    <ui:TextBox x:Name="DxvkSearchBox" 
+                                Grid.Row="0"
+                                PlaceholderText="Search settings by title or description..."
+                                TextChanged="DxvkSearchBox_TextChanged"
+                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                Icon="{ui:SymbolIcon Search24}"
+                                Margin="0,5,15,10"
+                                MaxWidth="800"
+                                HorizontalAlignment="Left"
+                                Width="400"
+                                Visibility="{Binding IsDxvkConfigAvailable, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,5,0,0">
+                        <ScrollViewer.Style>
+                            <Style TargetType="ScrollViewer">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDxvkConfigAvailable}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ScrollViewer.Style>
+                        
+                        <StackPanel x:Name="DxvkSettingsStackPanel" MaxWidth="800" HorizontalAlignment="Left" Margin="0,0,15,10">
+                            <!-- General & Presentation -->
+                            <TextBlock Text="General &amp; Presentation" FontSize="15" FontWeight="Bold" Margin="0,10,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                            
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Force Aspect Ratio" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Only exposes display modes with a given aspect ratio." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.ForceAspectRatio, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Default" Tag="" />
+                                    <ComboBoxItem Content="16:9" Tag="16:9" />
+                                    <ComboBoxItem Content="21:9" Tag="21:9" />
+                                    <ComboBoxItem Content="4:3" Tag="4:3" />
+                                    <ComboBoxItem Content="16:10" Tag="16:10" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Force Refresh Rate" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Forces a specific refresh rate (Hz). Set to 0 to disable." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:TextBox Text="{Binding DxvkSettings.D3d9ForceRefreshRate, Mode=TwoWay}" Width="150" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Vertical Sync (VSync)" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Synchronizes output frames to refresh rate to prevent screen tearing." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.PresentIntervalEnabled, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Tear Free" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Enables mailbox present mode to eliminate tearing without full VSync overhead." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.DxvkTearFree, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Auto" Tag="Auto" />
+                                    <ComboBoxItem Content="True" Tag="True" />
+                                    <ComboBoxItem Content="False" Tag="False" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Enumerate by Displays" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Enumerates D3D9 adapters by display (Windows behavior) rather than physical adapter." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9EnumerateByDisplays, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Mode Count Compatibility" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Aggressively restricts the reported display resolution modes to avoid crashes." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9ModeCountCompatibility, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Dummy Composition Swapchains" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Exposes mock support for dcomp swap chains." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.DxgiEnableDummyCompositionSwapchain, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Allow FSE" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Allows exclusive full-screen mode on Windows. Needed for VRR/HDR support." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.DxvkAllowFse, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Defer Surface Creation" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Defers creating Vulkan VkSurface until the first Present call." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9DeferSurfaceCreation, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <!-- Performance & Latency -->
+                            <TextBlock Text="Performance &amp; Latency" FontSize="15" FontWeight="Bold" Margin="0,15,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Max Frame Latency" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Enforces strict frame latency limits. Higher values improve throughput, lower reduces lag." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.D3d9MaxFrameLatency, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Driver Default (0)" Tag="0" />
+                                    <ComboBoxItem Content="1 Frame" Tag="1" />
+                                    <ComboBoxItem Content="2 Frames" Tag="2" />
+                                    <ComboBoxItem Content="3 Frames" Tag="3" />
+                                    <ComboBoxItem Content="4 Frames" Tag="4" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Frame Rate Limit" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Enforces maximum frame rate limit. Set to 0 to disable." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:TextBox Text="{Binding DxvkSettings.D3d9MaxFrameRate, Mode=TwoWay}" Width="150" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Latency Sleep (Reflex)" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Controls Vulkan latency reduction sleep and Reflex support." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.DxvkLatencySleep, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Auto" Tag="Auto" />
+                                    <ComboBoxItem Content="Enabled" Tag="True" />
+                                    <ComboBoxItem Content="Disabled" Tag="False" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Latency Sleep Tolerance" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Tolerance for latency sleep (microseconds). Higher values improve frame pacing." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:TextBox Text="{Binding DxvkSettings.DxvkLatencyTolerance, Mode=TwoWay}" Width="150" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Disable NV lowLatency2" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Disables lowLatency2 extension for Nvidia GPUs." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.DxvkDisableNvLowLatency2, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Auto" Tag="Auto" />
+                                    <ComboBoxItem Content="True" Tag="True" />
+                                    <ComboBoxItem Content="False" Tag="False" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Compiler Threads" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Pipeline compiler threads. Set to 0 to use all available cores." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:TextBox Text="{Binding DxvkSettings.DxvkNumCompilerThreads, Mode=TwoWay}" Width="150" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Graphics Pipeline Library" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Controls VK_EXT_graphics_pipeline_library features to reduce shader compile stutter." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.DxvkEnableGraphicsPipelineLibrary, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Auto" Tag="Auto" />
+                                    <ComboBoxItem Content="Enabled" Tag="True" />
+                                    <ComboBoxItem Content="Disabled" Tag="False" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Track Pipeline Lifetime" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Aggressively frees pipeline libraries to save address space memory." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.DxvkTrackPipelineLifetime, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Auto" Tag="Auto" />
+                                    <ComboBoxItem Content="True" Tag="True" />
+                                    <ComboBoxItem Content="False" Tag="False" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Memory Defragmentation" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Enables automatic VRAM memory defragmentation." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.DxvkEnableMemoryDefrag, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Auto" Tag="Auto" />
+                                    <ComboBoxItem Content="True" Tag="True" />
+                                    <ComboBoxItem Content="False" Tag="False" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Cached Default-Pool Buffers" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Allocates default-pool buffers in cached memory. May hurt performance but fixes buggy software." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9CachedWriteOnlyBuffers, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <!-- Graphics & Rendering -->
+                            <TextBlock Text="Graphics &amp; Rendering" FontSize="15" FontWeight="Bold" Margin="0,15,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Enable HDR" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Exposes HDR10 color space support to the application." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.DxgiEnableHDR, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Sampler Anisotropy" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Forces anisotropic texture filtering level. Set to -1 for default, or 0-16." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.D3d9SamplerAnisotropy, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Default (-1)" Tag="-1" />
+                                    <ComboBoxItem Content="Off (0)" Tag="0" />
+                                    <ComboBoxItem Content="2x" Tag="2" />
+                                    <ComboBoxItem Content="4x" Tag="4" />
+                                    <ComboBoxItem Content="8x" Tag="8" />
+                                    <ComboBoxItem Content="16x" Tag="16" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Sampler LOD Bias" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Adds detail offset to mipmaps. Positive decreases texture sharpness; negative increases it." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:TextBox Text="{Binding DxvkSettings.D3d9SamplerLodBias, Mode=TwoWay}" Width="150" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Clamp Negative LOD Bias" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Clamps negative LOD bias to 0 to prevent texture shimmering." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9ClampNegativeLodBias, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Force Sample Rate Shading" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Forces sample rate shading on MSAA targets. Improves visuals at severe GPU cost." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9ForceSampleRateShading, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Shader Model" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Overrides reported shader model capabilities level." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.D3d9ShaderModel, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Fixed Function (0)" Tag="0" />
+                                    <ComboBoxItem Content="Shader Model 1" Tag="1" />
+                                    <ComboBoxItem Content="Shader Model 2" Tag="2" />
+                                    <ComboBoxItem Content="Shader Model 3" Tag="3" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Float Emulation Quirks" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Enables floating point emulation workarounds. Auto is recommended." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.D3d9FloatEmulation, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Auto" Tag="Auto" />
+                                    <ComboBoxItem Content="Fast Approximations" Tag="True" />
+                                    <ComboBoxItem Content="Disabled" Tag="False" />
+                                    <ComboBoxItem Content="Strict Compliance" Tag="Strict" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Lower Precision Sin/Cos" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Enables custom sine/cosine approximations to save precision cycles." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.DxvkLowerSinCos, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Auto" Tag="Auto" />
+                                    <ComboBoxItem Content="Enable Emulation" Tag="True" />
+                                    <ComboBoxItem Content="Disable Emulation" Tag="False" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="VRAM Constant Buffers" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Enables streaming state and constants into VRAM." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.D3d9DeviceLocalConstantBuffers, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Auto" Tag="Auto" />
+                                    <ComboBoxItem Content="True" Tag="True" />
+                                    <ComboBoxItem Content="False" Tag="False" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Use FP16 Precision" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Uses FP16 for partial-precision shader instructions." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.D3d9UseFP16, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Auto" Tag="Auto" />
+                                    <ComboBoxItem Content="True" Tag="True" />
+                                    <ComboBoxItem Content="False" Tag="False" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Seamless Cubemaps" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Disables legacy d3d9 non-seamless cubemap borders to look nicer." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9SeamlessCubes, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <!-- VRAM & Memory -->
+                            <TextBlock Text="VRAM &amp; Memory" FontSize="15" FontWeight="Bold" Margin="0,15,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Available Memory Override" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Initial tracking value in Megabytes for GetAvailableTextureMem. Recommended: 4096." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:TextBox Text="{Binding DxvkSettings.D3d9MaxAvailableMemory, Mode=TwoWay}" Width="150" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Texture Memory Allocation" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Virtual memory budget in Megabytes for locked textures. Set to 0 to disable." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:TextBox Text="{Binding DxvkSettings.D3d9TextureMemory, Mode=TwoWay}" Width="150" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Memory Budget Override" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Forces VRAM budget limit in Megabytes. Set to 0 to disable." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:TextBox Text="{Binding DxvkSettings.DxvkMaxMemoryBudget, Mode=TwoWay}" Width="150" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Zero Mapped Memory" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Clears freed suballocated memory to zero. Safe fallback, but heavy CPU overhead." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.DxvkZeroMappedMemory, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Memory Tracking Testing" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Enables test parameters for internal memory allocator tracking." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9MemoryTrackTest, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Hide Integrated Graphics" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Hides iGPUs from adapter selection when dedicated GPU is present." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.DxvkHideIntegratedGraphics, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <!-- Hardware Spoofing & Custom Device ID -->
+                            <TextBlock Text="Hardware Spoofing &amp; Custom Device ID" FontSize="15" FontWeight="Bold" Margin="0,15,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Custom Vendor ID" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Overrides PCI vendor ID (hex). E.g. Nvidia: 10de, AMD: 1002, Intel: 8086." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:TextBox Text="{Binding DxvkSettings.D3d9CustomVendorId, Mode=TwoWay}" Width="150" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Custom Device ID" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Overrides PCI device ID (hex). E.g. 0000 to disable." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:TextBox Text="{Binding DxvkSettings.D3d9CustomDeviceId, Mode=TwoWay}" Width="150" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Custom Device Description" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Overrides reported GPU model string shown in game settings." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:TextBox Text="{Binding DxvkSettings.D3d9CustomDeviceDesc, Mode=TwoWay}" Width="150" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Hide Nvidia GPU" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Reports Nvidia GPU as AMD GPU to bypass bad proprietary vendor paths." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.D3d9HideNvidiaGpu, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Auto" Tag="Auto" />
+                                    <ComboBoxItem Content="True" Tag="True" />
+                                    <ComboBoxItem Content="False" Tag="False" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Hide AMD GPU" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Reports AMD GPU as Nvidia GPU to bypass AMD-specific bugs." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.D3d9HideAmdGpu, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Auto" Tag="Auto" />
+                                    <ComboBoxItem Content="True" Tag="True" />
+                                    <ComboBoxItem Content="False" Tag="False" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Hide Intel GPU" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Reports Intel GPU as AMD GPU to bypass early graphics restrictions." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.D3d9HideIntelGpu, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Auto" Tag="Auto" />
+                                    <ComboBoxItem Content="True" Tag="True" />
+                                    <ComboBoxItem Content="False" Tag="False" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <!-- Legacy & Compatibility Workarounds -->
+                            <TextBlock Text="Legacy &amp; Compatibility Workarounds" FontSize="15" FontWeight="Bold" Margin="0,15,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="UE4 Workarounds" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Enables Unreal Engine 4 HDR workarounds." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.DxgiEnableUe4Workarounds, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Support Cube Depth Formats" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Exposes obsolete cube texture depth formats. Keeps SimCity Societies from crashing." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9SupportCubeDepthFormats, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Support AMD/Intel DF formats" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Exposes DF depth textures extension on AMD/Intel drivers." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9SupportDFFormats, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Use D32 for D24" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Forces D32f depth buffer format instead of D24 to reproduce AMD issues." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9UseD32forD24, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Support X4R4G4B4 format" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Required to fix UI issues or crashes in older games like The Sims 2." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9SupportX4R4G4B4, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Disable A8 render targets" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Disables A8 texture render targets (bug workaround for Sims 2)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9DisableA8RT, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Force Sampler Type Spec Constants" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Fixes rendering in Halo: CE or Spellforce by forcing sampler spec constants." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9ForceSamplerTypeSpecConstants, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Device Lost on Focus Lost" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Triggers standard D3D9 DEVICELOST when game window loses focus." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9DeviceLossOnFocusLoss, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Count Losable Resources" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Rejects device resets if unmanaged resources are not properly freed." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9CountLosableResources, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Extra Front Buffer" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Adds extra front buffer for Silent Hill 2 Enhanced Edition compatibility." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.D3d9ExtraFrontbuffer, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <!-- Diagnostics -->
+                            <TextBlock Text="Diagnostics" FontSize="15" FontWeight="Bold" Margin="0,15,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="DXVK HUD Overlay" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Configures performance overlay HUD. E.g. 'fps' or 'full'." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding DxvkSettings.Hud, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Hidden" Tag="" />
+                                    <ComboBoxItem Content="FPS Counter Only" Tag="fps" />
+                                    <ComboBoxItem Content="FPS and Compiler" Tag="fps,compiler" />
+                                    <ComboBoxItem Content="Full Stats" Tag="full" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Enable Debug Utils" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Enables Vulkan user annotation debug utility markers." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.DxvkEnableDebugUtils, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+                </Grid>
 
                 <!-- Actions Footer bar -->
-                <ui:Card Grid.Row="1" Margin="0,10,0,0" Padding="12" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
+                <ui:Card Grid.Row="2" Margin="0,10,0,0" Padding="12" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
                     <Grid>
-                        <TextBlock Text="Tuning modifications are saved directly into the active profile's plugins directory." 
+                        <TextBlock Text="Tuning modifications are saved directly into your game files." 
                                    VerticalAlignment="Center" 
                                    FontSize="11" 
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -876,6 +1664,7 @@
                             <ui:Button Content="Defaults" 
                                        Icon="{ui:SymbolIcon ArrowReset24}"
                                        Command="{Binding LoadFusionFixDefaultsCommand}"
+                                       Visibility="{Binding IsFusionFixTabActive, Converter={StaticResource BooleanToVisibilityConverter}}"
                                        Margin="0,0,10,0"
                                        Width="140" 
                                        Height="36" />

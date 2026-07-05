@@ -30,6 +30,11 @@ public class BackendToolManager
     private readonly string _cacheDir;
     private readonly HttpClient _httpClient;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BackendToolManager"/> class.
+    /// </summary>
+    /// <param name="cacheDir">The local directory path where downloaded tools metadata should be cached.</param>
+    /// <param name="githubToken">An optional GitHub API token to bypass rate limit restrictions.</param>
     public BackendToolManager(string cacheDir, string? githubToken = null)
     {
         _cacheDir = cacheDir ?? throw new ArgumentNullException(nameof(cacheDir));
@@ -41,6 +46,11 @@ public class BackendToolManager
         _httpClient = new HttpClient();
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BackendToolManager"/> class with a custom HttpClient.
+    /// </summary>
+    /// <param name="cacheDir">The local directory path where downloaded tools metadata should be cached.</param>
+    /// <param name="httpClient">The HTTP client used to perform remote download requests.</param>
     public BackendToolManager(string cacheDir, HttpClient httpClient)
     {
         _cacheDir = cacheDir ?? throw new ArgumentNullException(nameof(cacheDir));

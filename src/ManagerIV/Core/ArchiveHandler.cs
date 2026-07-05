@@ -38,12 +38,34 @@ public class ArchiveHandler
         await Task.Run(() => Extract(archivePath, fullDestinationPath, report, preference));
     }
 
+    /// <summary>
+    /// Describes the layout format classification of a mod's directory structure.
+    /// </summary>
     public enum ModLayout
     {
+        /// <summary>
+        /// Ready for FusionOverloader deployment structure.
+        /// </summary>
         FusionOverloaderReady,
+
+        /// <summary>
+        /// Contains legacy loose files requiring structural rearrangement.
+        /// </summary>
         LegacyLoose,
+
+        /// <summary>
+        /// Represents a raw IMG archive mod structure.
+        /// </summary>
         RawImg,
+
+        /// <summary>
+        /// Mixed or hybrid mod layout.
+        /// </summary>
         Hybrid,
+
+        /// <summary>
+        /// Unknown layout type.
+        /// </summary>
         Unknown
     }
 
@@ -314,8 +336,14 @@ public class ArchiveHandler
             // Combine destination with target path and resolve absolute path
             string targetFilePath = Path.GetFullPath(Path.Combine(destinationDir, relativeTargetPath));
 
-            // Reject paths that resolve outside the destination directory
-            if (!targetFilePath.StartsWith(destinationDir, StringComparison.OrdinalIgnoreCase))
+            // Reject paths that resolve outside the destination directory.
+            // Normalize the destination and require a directory-separator boundary so that
+            // sibling directories sharing a name prefix (e.g. "mods-evil" vs "mods") cannot pass.
+            string fullDestination = Path.GetFullPath(destinationDir);
+            string destinationBoundary = fullDestination.EndsWith(Path.DirectorySeparatorChar)
+                ? fullDestination
+                : fullDestination + Path.DirectorySeparatorChar;
+            if (!targetFilePath.StartsWith(destinationBoundary, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
                     $"Potential Zip-Slip attack detected: Archive entry '{entryKey}' extracts outside target directory."

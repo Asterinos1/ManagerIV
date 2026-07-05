@@ -5,10 +5,17 @@ using System.Linq;
 
 namespace ManagerIV.Core;
 
+/// <summary>
+/// Service responsible for managing GTA IV save game profiles, handles detecting active profiles, creating backups/slots, and switching profiles.
+/// </summary>
 public class SaveProfileManager
 {
     private readonly string _defaultProfilesPath;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SaveProfileManager"/> class.
+    /// </summary>
+    /// <param name="customProfilesPath">An optional custom folder path where save profiles are stored.</param>
     public SaveProfileManager(string? customProfilesPath = null)
     {
         _defaultProfilesPath = string.IsNullOrWhiteSpace(customProfilesPath)
@@ -16,6 +23,9 @@ public class SaveProfileManager
             : customProfilesPath;
     }
 
+    /// <summary>
+    /// Gets the folder path where the save game profiles are located.
+    /// </summary>
     public string ProfilesPath => _defaultProfilesPath;
 
     /// <summary>

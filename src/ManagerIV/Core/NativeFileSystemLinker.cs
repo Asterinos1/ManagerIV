@@ -58,6 +58,10 @@ public class NativeFileSystemLinker : IFileSystemLinker
         IntPtr lpSecurityAttributes
     );
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NativeFileSystemLinker"/> class.
+    /// </summary>
+    /// <param name="useSymlinkFallback">True if directory junctions should fall back to symbolic links.</param>
     public NativeFileSystemLinker(bool useSymlinkFallback = false)
     {
         _useSymlinkFallback = useSymlinkFallback;

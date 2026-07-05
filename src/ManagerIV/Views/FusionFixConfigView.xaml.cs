@@ -19,12 +19,18 @@ public partial class FusionFixConfigView : UserControl
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         string query = SearchBox.Text?.Trim() ?? "";
-        FilterSettings(query);
+        FilterSettings(query, SettingsStackPanel);
     }
 
-    private void FilterSettings(string query)
+    private void DxvkSearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        if (SettingsStackPanel == null) return;
+        string query = DxvkSearchBox.Text?.Trim() ?? "";
+        FilterSettings(query, DxvkSettingsStackPanel);
+    }
+
+    private void FilterSettings(string query, Panel settingsPanel)
+    {
+        if (settingsPanel == null) return;
 
         bool isQueryEmpty = string.IsNullOrWhiteSpace(query);
 
@@ -32,7 +38,7 @@ public partial class FusionFixConfigView : UserControl
         TextBlock? currentSectionHeader = null;
         int visibleSectionItemsCount = 0;
 
-        foreach (var child in SettingsStackPanel.Children)
+        foreach (var child in settingsPanel.Children)
         {
             if (child is TextBlock textBlock && textBlock.FontSize >= 15)
             {

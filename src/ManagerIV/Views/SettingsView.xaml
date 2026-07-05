@@ -24,22 +24,7 @@
         <!-- Settings Content -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel MaxWidth="600" HorizontalAlignment="Left" Margin="0,0,15,0">
-                <!-- Theme Settings Card -->
-                <ui:Card Padding="15" Margin="0,0,0,15">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                            <TextBlock Text="Dark Mode Theme" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                            <TextBlock Text="Toggle between light and dark styling." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" />
-                        </StackPanel>
-                        <ui:ToggleSwitch Grid.Column="1" 
-                                         IsChecked="{Binding IsDarkTheme, Mode=TwoWay}" 
-                                         VerticalAlignment="Center" />
-                    </Grid>
-                </ui:Card>
+
 
                 <!-- GPU VRAM Settings Card -->
                 <ui:Card Padding="15" Margin="0,0,0,15">

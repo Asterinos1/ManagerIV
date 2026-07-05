@@ -12,6 +12,28 @@
              SizeChanged="UserControl_SizeChanged"
              Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
     <UserControl.Resources>
+        <Style TargetType="ui:Card" BasedOn="{StaticResource {x:Type ui:Card}}">
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Setter Property="Margin" Value="0,0,0,15" />
+        </Style>
+        <Style x:Key="CleanListBoxItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <core:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
     </UserControl.Resources>
@@ -48,7 +70,7 @@
                 <!-- Left Panel (Profiles list, Create profile, Theme settings) -->
                 <StackPanel x:Name="LeftPanel" Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Margin="0,0,10,15">
                     <!-- Create Profile Card -->
-                    <ui:Card Padding="15" Margin="0,0,0,15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <ui:Card Padding="15" Margin="0,0,0,15">
                         <StackPanel>
                             <TextBlock Text="Create New Profile" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,10" />
                             <ui:TextBox x:Name="ProfileNameInput" PlaceholderText="Profile Name (e.g. Graphics Mod Set)" Margin="0,0,0,10" />
@@ -61,26 +83,43 @@
                     </ui:Card>
 
                     <!-- Select Profile Card -->
-                    <ui:Card Padding="15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <ui:Card Padding="15">
                         <StackPanel>
                             <TextBlock Text="Available Profiles" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,10" />
                             <ListBox ItemsSource="{Binding Profiles}"
                                      SelectedItem="{Binding ActiveProfile, Mode=OneWay}"
                                      SelectionChanged="ListBox_SelectionChanged"
+                                     ItemContainerStyle="{StaticResource CleanListBoxItemStyle}"
                                      MaxHeight="300"
                                      VirtualizingPanel.ScrollUnit="Pixel"
                                      Background="Transparent"
                                      BorderThickness="0">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Padding="10,8" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" HorizontalAlignment="Stretch">
+                                        <Border Padding="10,8" 
+                                                BorderThickness="1" 
+                                                CornerRadius="6" 
+                                                Background="{DynamicResource ControlFillColorDefaultBrush}" 
+                                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
+                                                Margin="4,2,8,4" 
+                                                HorizontalAlignment="Stretch">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorSecondaryBrush}" />
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
-                                                <ui:SymbolIcon Grid.Column="1" Symbol="Checkmark24" Filled="True" Foreground="#FF107C41" Margin="10,0,0,0" VerticalAlignment="Center" 
+                                                <ui:SymbolIcon Grid.Column="1" Symbol="Checkmark24" Filled="True" Foreground="{DynamicResource SystemFillColorSuccessBrush}" Margin="10,0,0,0" VerticalAlignment="Center"
                                                                Visibility="{Binding Path=IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                             </Grid>
                                         </Border>
@@ -91,7 +130,7 @@
                     </ui:Card>
 
                     <!-- Save Profiles Card -->
-                    <ui:Card Padding="15" Margin="0,15,0,0" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <ui:Card Padding="15" Margin="0,15,0,0">
                         <StackPanel>
                             <Grid Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
@@ -109,7 +148,7 @@
                             
                             <!-- If no profiles are found, show error -->
                             <TextBlock Text="No GTA IV save profile directories detected. Check the path in Settings." 
-                                       Foreground="#FFD83B01" 
+                                       Foreground="{DynamicResource SystemFillColorCriticalBrush}"
                                        FontSize="12" 
                                        FontWeight="SemiBold" 
                                        TextWrapping="Wrap" 
@@ -120,6 +159,7 @@
                             <TextBlock Text="Save States" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
                             <ListBox ItemsSource="{Binding SaveProfiles}"
                                      SelectedItem="{Binding SelectedSaveProfile}"
+                                     ItemContainerStyle="{StaticResource CleanListBoxItemStyle}"
                                      MaxHeight="180"
                                      VirtualizingPanel.ScrollUnit="Pixel"
                                      Background="Transparent"
@@ -127,7 +167,23 @@
                                      Margin="0,0,0,12">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Padding="8,6" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" HorizontalAlignment="Stretch">
+                                        <Border Padding="8,6" 
+                                                BorderThickness="1" 
+                                                CornerRadius="6" 
+                                                Background="{DynamicResource ControlFillColorDefaultBrush}" 
+                                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
+                                                Margin="4,2,8,4" 
+                                                HorizontalAlignment="Stretch">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorSecondaryBrush}" />
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
@@ -203,7 +259,7 @@
                 </StackPanel>
 
                 <!-- Active Details Card -->
-                <ui:Card x:Name="ConfigCard" Grid.Column="1" Grid.Row="0" Padding="15" Margin="10,0,0,15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                <ui:Card x:Name="ConfigCard" Grid.Column="1" Grid.Row="0" Padding="15" Margin="10,0,0,15">
                     <StackPanel>
                         <TextBlock Text="Active Configuration" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,15" />
 
@@ -268,7 +324,7 @@
                 <!-- Status & Warning Panel -->
                 <StackPanel x:Name="StatusPanel" Grid.Column="1" Grid.Row="1" Margin="10,0,0,15">
                     <!-- Backend Loaders Status Card -->
-                    <ui:Card Padding="15" Margin="0,0,0,15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <ui:Card Padding="15" Margin="0,0,0,15">
                         <StackPanel>
                             <TextBlock Text="Loader &amp; Hook Status" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,15" />
 
@@ -281,7 +337,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Ultimate ASI Loader" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                     <TextBlock Text="dinput8.dll" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                    <TextBlock Text="{Binding BackendStatus.AsiLoaderVersionInfo}" FontSize="10" Foreground="#FF0078D4" Margin="0,2,0,0" />
+                                    <TextBlock Text="{Binding BackendStatus.AsiLoaderVersionInfo}" FontSize="10" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,2,0,0" />
                                 </StackPanel>
                                 <Border Grid.Column="1" CornerRadius="10" Padding="10,3" VerticalAlignment="Center"
                                         Background="{Binding BackendStatus.AsiLoaderBrush}" BorderThickness="1" BorderBrush="#20FFFFFF">
@@ -300,7 +356,7 @@
                                 <StackPanel>
                                     <TextBlock Text="FusionFix" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                     <TextBlock Text="plugins/GTAIV.FusionFix.asi" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                    <TextBlock Text="{Binding BackendStatus.FusionFixVersionInfo}" FontSize="10" Foreground="#FF0078D4" Margin="0,2,0,0" />
+                                    <TextBlock Text="{Binding BackendStatus.FusionFixVersionInfo}" FontSize="10" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,2,0,0" />
                                 </StackPanel>
                                 <Border Grid.Column="1" CornerRadius="10" Padding="10,3" VerticalAlignment="Center"
                                         Background="{Binding BackendStatus.FusionFixBrush}" BorderThickness="1" BorderBrush="#20FFFFFF">
@@ -319,7 +375,7 @@
                                 <StackPanel>
                                     <TextBlock Text="DXVK (Vulkan Translation)" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                     <TextBlock Text="d3d9.dll / vulkan.dll" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                    <TextBlock Text="{Binding BackendStatus.DxvkVersionInfo}" FontSize="10" Foreground="#FF0078D4" Margin="0,2,0,0" />
+                                    <TextBlock Text="{Binding BackendStatus.DxvkVersionInfo}" FontSize="10" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,2,0,0" />
                                 </StackPanel>
                                 <Border Grid.Column="1" CornerRadius="10" Padding="10,3" VerticalAlignment="Center"
                                         Background="{Binding BackendStatus.DxvkBrush}" BorderThickness="1" BorderBrush="#20FFFFFF">
@@ -428,12 +484,12 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             
-                            <ui:SymbolIcon Grid.Column="0" Symbol="Warning24" Filled="True" Foreground="#FFF3A813" FontSize="26" Margin="0,2,14,0" VerticalAlignment="Top" />
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Warning24" Filled="True" Foreground="{DynamicResource SystemFillColorCautionBrush}" FontSize="26" Margin="0,2,14,0" VerticalAlignment="Top" />
                             
                             <StackPanel Grid.Column="1">
                                 <TextBlock Text="GTAIV.exe Version Mismatch Detected" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4" />
                                 <TextBlock Text="{Binding WatchdogWarning}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" LineHeight="18" />
-                                <TextBlock Text="Important: Staged mods will continue to load, but compatibility issues can arise if steam recently updated your game." FontSize="11" Foreground="#FFF3A813" Margin="0,8,0,0" TextWrapping="Wrap" />
+                                <TextBlock Text="Important: Staged mods will continue to load, but compatibility issues can arise if steam recently updated your game." FontSize="11" Foreground="{DynamicResource SystemFillColorCautionBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
                             </StackPanel>
                         </Grid>
                     </Border>
