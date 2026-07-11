@@ -293,15 +293,19 @@ public class ModStructureAnalyzer : IModStructureAnalyzer
         string ext = Path.GetExtension(normalizedPath).ToLowerInvariant();
         if (ext == ".asi" || ext == ".dll")
         {
+            DeploymentTarget target = normalizedPath.EndsWith(".net.dll", StringComparison.OrdinalIgnoreCase) 
+                ? DeploymentTarget.ScriptsFolder 
+                : DeploymentTarget.PluginsFolder;
+                
             int slashCount = normalizedPath.Count(c => c == '/');
             if (slashCount == 0)
             {
-                return (DeploymentTarget.PluginsFolder, "");
+                return (target, "");
             }
             if (slashCount == 1)
             {
                 int firstSlash = normalizedPath.IndexOf('/');
-                return (DeploymentTarget.PluginsFolder, path.Substring(0, firstSlash + 1));
+                return (target, path.Substring(0, firstSlash + 1));
             }
         }
 

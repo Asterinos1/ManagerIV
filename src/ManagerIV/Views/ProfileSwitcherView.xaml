@@ -8,14 +8,19 @@
              xmlns:vm="clr-namespace:ManagerIV.ViewModels"
              xmlns:core="clr-namespace:ManagerIV.Core"
              mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="800"
+             d:DesignHeight="650" d:DesignWidth="850"
              SizeChanged="UserControl_SizeChanged"
              Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
     <UserControl.Resources>
         <Style TargetType="ui:Card" BasedOn="{StaticResource {x:Type ui:Card}}">
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
-            <Setter Property="Margin" Value="0,0,0,15" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+        <Style TargetType="ui:CardControl" BasedOn="{StaticResource {x:Type ui:CardControl}}">
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Setter Property="Margin" Value="0,0,0,10" />
         </Style>
         <Style x:Key="CleanListBoxItemStyle" TargetType="ListBoxItem">
             <Setter Property="Padding" Value="0" />
@@ -28,447 +33,328 @@
                     <ControlTemplate TargetType="ListBoxItem">
                         <Border Background="Transparent">
                             <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Segmented Tab RadioButton Style -->
+        <Style x:Key="SegmentTabButtonStyle" TargetType="RadioButton">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="Margin" Value="2,2" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Border" 
+                                Background="{TemplateBinding Background}" 
+                                CornerRadius="6" 
+                                Padding="{TemplateBinding Padding}" 
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource MutedAccentBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                <Setter Property="FontWeight" Value="Bold" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <core:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
     </UserControl.Resources>
 
-    <Grid Margin="20" x:Name="MainGrid">
-        <Grid.LayoutTransform>
-            <ScaleTransform x:Name="RootScale" ScaleX="1" ScaleY="1" />
-        </Grid.LayoutTransform>
+    <Grid Margin="20">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />  <!-- Page Header -->
+            <RowDefinition Height="Auto" />  <!-- Sub-tab selector -->
+            <RowDefinition Height="*" />     <!-- Content Area -->
         </Grid.RowDefinitions>
 
         <!-- Page Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+        <StackPanel Grid.Row="0" Margin="0,0,0,15">
             <TextBlock Text="Profiles &amp; Configuration" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-            <TextBlock Text="Manage named profiles, game directories, and inspect game update status." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
+            <TextBlock Text="Manage mod profiles, game directory paths, backend loaders, and GTA IV save states." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
         </StackPanel>
 
-        <!-- Main Scrollable Content Area -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <Grid x:Name="ContentGrid" Margin="0,0,0,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1*" />
-                    <ColumnDefinition Width="1*" />
-                    <ColumnDefinition Width="0" /> <!-- Third column for wide layouts, dynamically resized -->
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-
-                <!-- Left Panel (Profiles list, Create profile, Theme settings) -->
-                <StackPanel x:Name="LeftPanel" Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Margin="0,0,10,15">
-                    <!-- Create Profile Card -->
-                    <ui:Card Padding="15" Margin="0,0,0,15">
-                        <StackPanel>
-                            <TextBlock Text="Create New Profile" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,10" />
-                            <ui:TextBox x:Name="ProfileNameInput" PlaceholderText="Profile Name (e.g. Graphics Mod Set)" Margin="0,0,0,10" />
-                            <ui:Button Content="Create Profile" 
-                                       Icon="{ui:SymbolIcon Add24}" 
-                                       Command="{Binding CreateProfileCommand}" 
-                                       CommandParameter="{Binding Text, ElementName=ProfileNameInput}"
-                                       HorizontalAlignment="Right" />
-                        </StackPanel>
-                    </ui:Card>
-
-                    <!-- Select Profile Card -->
-                    <ui:Card Padding="15">
-                        <StackPanel>
-                            <TextBlock Text="Available Profiles" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,10" />
-                            <ListBox ItemsSource="{Binding Profiles}"
-                                     SelectedItem="{Binding ActiveProfile, Mode=OneWay}"
-                                     SelectionChanged="ListBox_SelectionChanged"
-                                     ItemContainerStyle="{StaticResource CleanListBoxItemStyle}"
-                                     MaxHeight="300"
-                                     VirtualizingPanel.ScrollUnit="Pixel"
-                                     Background="Transparent"
-                                     BorderThickness="0">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Padding="10,8" 
-                                                BorderThickness="1" 
-                                                CornerRadius="6" 
-                                                Background="{DynamicResource ControlFillColorDefaultBrush}" 
-                                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
-                                                Margin="4,2,8,4" 
-                                                HorizontalAlignment="Stretch">
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Style.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
-                                                            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorSecondaryBrush}" />
-                                                        </Trigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
-                                                <ui:SymbolIcon Grid.Column="1" Symbol="Checkmark24" Filled="True" Foreground="{DynamicResource SystemFillColorSuccessBrush}" Margin="10,0,0,0" VerticalAlignment="Center"
-                                                               Visibility="{Binding Path=IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </StackPanel>
-                    </ui:Card>
-
-                    <!-- Save Profiles Card -->
-                    <ui:Card Padding="15" Margin="0,15,0,0">
-                        <StackPanel>
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="GTA IV Save Game Profiles" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
-                                <ui:Button Grid.Column="1" 
-                                           Icon="{ui:SymbolIcon ArrowClockwise24}" 
-                                           Command="{Binding RefreshSaveProfilesCommand}" 
-                                           ToolTip="Refresh Save Profiles" 
-                                           VerticalAlignment="Center" />
-                            </Grid>
-                            <TextBlock Text="GTA IV stores your save files in user profiles. Switch save states or start a new story." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,12" TextWrapping="Wrap" />
-                            
-                            <!-- If no profiles are found, show error -->
-                            <TextBlock Text="No GTA IV save profile directories detected. Check the path in Settings." 
-                                       Foreground="{DynamicResource SystemFillColorCriticalBrush}"
-                                       FontSize="12" 
-                                       FontWeight="SemiBold" 
-                                       TextWrapping="Wrap" 
-                                       Margin="0,0,0,10"
-                                       Visibility="{Binding HasBaseProfiles, Converter={StaticResource InverseBooleanToVisibilityConverter}, FallbackValue=Collapsed}" />
-
-                            <!-- Save Profiles List -->
-                            <TextBlock Text="Save States" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4" />
-                            <ListBox ItemsSource="{Binding SaveProfiles}"
-                                     SelectedItem="{Binding SelectedSaveProfile}"
-                                     ItemContainerStyle="{StaticResource CleanListBoxItemStyle}"
-                                     MaxHeight="180"
-                                     VirtualizingPanel.ScrollUnit="Pixel"
-                                     Background="Transparent"
-                                     BorderThickness="0"
-                                     Margin="0,0,0,12">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Padding="8,6" 
-                                                BorderThickness="1" 
-                                                CornerRadius="6" 
-                                                Background="{DynamicResource ControlFillColorDefaultBrush}" 
-                                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
-                                                Margin="4,2,8,4" 
-                                                HorizontalAlignment="Stretch">
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Style.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
-                                                            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorSecondaryBrush}" />
-                                                        </Trigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-                                                
-                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                                    <TextBlock Text="{Binding FolderName}" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                                </StackPanel>
-
-                                                <Border Grid.Column="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Center" Margin="5,0,0,0"
-                                                        Background="#FF107C41"
-                                                        Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <TextBlock Text="Active" FontSize="10" FontWeight="Bold" Foreground="White" />
-                                                </Border>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-
-                            <!-- Selected Save profile controls -->
-                            <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="0,10,0,0"
-                                    Visibility="{Binding SelectedSaveProfile, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <StackPanel>
-                                     <!-- Activate Selected -->
-                                     <TextBlock Text="Activate Save State" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4" />
-                                     <TextBlock Text="Deactivates and archives the current active save (preserving the name it was created with) and restores the selected backup." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8" />
-                                     <ui:Button Content="Activate Save State" Icon="{ui:SymbolIcon Checkmark24}" Command="{Binding ActivateSaveProfileCommand}" Appearance="Primary" HorizontalAlignment="Left" Margin="0,0,0,10" />
-
-                                    <!-- Rename Save State -->
-                                    <TextBlock Text="Rename Save State" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,5,0,4" />
-                                    <Grid Margin="0,0,0,10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <ui:TextBox Grid.Column="0" x:Name="RenameSaveStateInput" PlaceholderText="New name..." Margin="0,0,8,0" />
-                                        <ui:Button Grid.Column="1" Content="Rename" Icon="{ui:SymbolIcon Edit24}" Command="{Binding RenameSaveProfileCommand}" CommandParameter="{Binding Text, ElementName=RenameSaveStateInput}" />
-                                    </Grid>
-
-                                    <!-- Delete Save State -->
-                                    <ui:Button Content="Delete Save State" 
-                                               Icon="{ui:SymbolIcon Delete24}" 
-                                               Command="{Binding DeleteSaveProfileCommand}" 
-                                               Appearance="Danger" 
-                                               HorizontalAlignment="Right" 
-                                               Visibility="{Binding SelectedSaveProfile.IsActive, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Create New Save State / Fresh Story -->
-                            <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,8,0,0">
-                                <StackPanel>
-                                    <TextBlock Text="Start New Story / Save State" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,6" />
-                                    
-                                    <TextBlock Text="Name of the new story save (e.g. LCPDFR Story):" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,2" />
-                                    <ui:TextBox Text="{Binding NewSaveProfileName, Mode=TwoWay}" PlaceholderText="New Save Name..." Margin="0,0,0,8" />
-
-                                    <TextBlock Text="Name to archive the currently active save state:" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,2" />
-                                    <ui:TextBox Text="{Binding RenameActiveSaveTo, Mode=TwoWay}" PlaceholderText="Archive active save as..." Margin="0,0,0,10" />
-
-                                    <ui:Button Content="Create Fresh Story Save" 
-                                               Icon="{ui:SymbolIcon Add24}" 
-                                               Command="{Binding CreateSaveProfileCommand}" 
-                                               Appearance="Secondary"
-                                               HorizontalAlignment="Right" />
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </ui:Card>
-                </StackPanel>
-
-                <!-- Active Details Card -->
-                <ui:Card x:Name="ConfigCard" Grid.Column="1" Grid.Row="0" Padding="15" Margin="10,0,0,15">
-                    <StackPanel>
-                        <TextBlock Text="Active Configuration" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,15" />
-
-                        <TextBlock Text="Profile Name" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <Grid Margin="0,2,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <ui:TextBox Grid.Column="0" x:Name="ProfileNameEditInput" Text="{Binding ActiveProfile.Name, Mode=OneWay}" VerticalAlignment="Center" Margin="0,0,10,0" />
-                            <ui:Button Grid.Column="1" Content="Rename" Icon="{ui:SymbolIcon Edit24}" Command="{Binding RenameProfileCommand}" CommandParameter="{Binding Text, ElementName=ProfileNameEditInput}" VerticalAlignment="Center" />
-                        </Grid>
-
-                        <TextBlock Text="Game Directory (GTAIV.exe Path)" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <Grid Margin="0,2,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{Binding ActiveProfile.GamePath}" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,10,0" />
-                            <ui:Button Grid.Column="1" Content="Browse..." Icon="{ui:SymbolIcon Folder24}" Command="{Binding SelectGameDirCommand}" VerticalAlignment="Center" />
-                        </Grid>
-
-                        <TextBlock Text="Mods Library Directory" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Text="{Binding ActiveProfile.LibraryPath}" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,2,0,12" TextWrapping="Wrap" />
-
-                        <TextBlock Text="Detected Game Version" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <StackPanel Orientation="Horizontal" Margin="0,2,0,12">
-                            <TextBlock Text="{Binding ActiveProfile.LastKnownVersion.Version, FallbackValue='Unknown'}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                            <TextBlock Text=" (Complete Edition)" FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="4,0,0,0" Visibility="{Binding ActiveProfile.LastKnownVersion.IsCompleteEdition, FallbackValue=Collapsed, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                            <TextBlock Text=" (Legacy)" FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="4,0,0,0" Visibility="{Binding ActiveProfile.LastKnownVersion.IsCompleteEdition, FallbackValue=Collapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
-                        </StackPanel>
-
-                        <TextBlock Text="Last Known Executable Hash" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Text="{Binding ActiveProfile.LastKnownVersion.ExecutableHash, FallbackValue='None recorded'}" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,2,0,12" TextWrapping="Wrap" />
-
-                        <TextBlock Text="Total Enabled Mods" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Text="{Binding ActiveProfile.EnabledModIds.Count}" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,2,0,12" />
-
-                        <Grid Margin="0,8,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <ui:Button Grid.Column="0" 
-                                       Content="Reset Game Directory" 
-                                       Icon="{ui:SymbolIcon ArrowUndo24}" 
-                                       Command="{Binding ResetGameDirectoryCommand}"
-                                       Appearance="Secondary"
-                                       HorizontalAlignment="Left" />
-                            <ui:Button Grid.Column="2" 
-                                       Content="Delete Profile" 
-                                       Icon="{ui:SymbolIcon Delete24}" 
-                                       Command="{Binding RemoveProfileCommand}"
-                                       Appearance="Danger"
-                                       HorizontalAlignment="Right" />
-                        </Grid>
+        <!-- Sub-Tab Segmented Control Header -->
+        <Border Grid.Row="1" 
+                Background="{DynamicResource ControlFillColorDefaultBrush}" 
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
+                BorderThickness="1" 
+                CornerRadius="8" 
+                Padding="3" 
+                HorizontalAlignment="Left" 
+                Margin="0,0,0,15">
+            <WrapPanel>
+                <RadioButton x:Name="TabModProfiles" IsChecked="True" GroupName="SubTabs" Style="{StaticResource SegmentTabButtonStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="Library24" Filled="True" Margin="0,0,8,0" />
+                        <TextBlock Text="Mod Profiles &amp; Paths" VerticalAlignment="Center" />
                     </StackPanel>
-                </ui:Card>
+                </RadioButton>
 
-                <!-- Status & Warning Panel -->
-                <StackPanel x:Name="StatusPanel" Grid.Column="1" Grid.Row="1" Margin="10,0,0,15">
-                    <!-- Backend Loaders Status Card -->
-                    <ui:Card Padding="15" Margin="0,0,0,15">
-                        <StackPanel>
-                            <TextBlock Text="Loader &amp; Hook Status" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,15" />
+                <RadioButton x:Name="TabBackendTools" GroupName="SubTabs" Style="{StaticResource SegmentTabButtonStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="Wrench24" Filled="True" Margin="0,0,8,0" />
+                        <TextBlock Text="Backend Loaders &amp; Tools" VerticalAlignment="Center" />
+                    </StackPanel>
+                </RadioButton>
 
-                            <!-- Ultimate ASI Loader -->
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="Ultimate ASI Loader" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    <TextBlock Text="dinput8.dll" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                    <TextBlock Text="{Binding BackendStatus.AsiLoaderVersionInfo}" FontSize="10" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,2,0,0" />
+                <RadioButton x:Name="TabSaveStates" GroupName="SubTabs" Style="{StaticResource SegmentTabButtonStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="Save24" Filled="True" Margin="0,0,8,0" />
+                        <TextBlock Text="Save Game States" VerticalAlignment="Center" />
+                    </StackPanel>
+                </RadioButton>
+            </WrapPanel>
+        </Border>
+
+        <!-- Main Content Area -->
+        <Grid Grid.Row="2">
+
+            <!-- ========================================================================= -->
+            <!-- TAB 1: MOD PROFILES & GAME PATHS                                         -->
+            <!-- ========================================================================= -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          Visibility="{Binding IsChecked, ElementName=TabModProfiles, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid x:Name="Tab1Grid" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="320" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Left Column: Available Profiles & Create New Profile -->
+                    <StackPanel x:Name="Tab1LeftPanel" Grid.Column="0" Grid.Row="0" Margin="0,0,15,0">
+                        
+                        <!-- Create Profile Card -->
+                        <ui:Card Padding="15">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <ui:SymbolIcon Symbol="Add24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,0,8,0" />
+                                    <TextBlock Text="Create New Profile" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
                                 </StackPanel>
-                                <Border Grid.Column="1" CornerRadius="10" Padding="10,3" VerticalAlignment="Center"
-                                        Background="{Binding BackendStatus.AsiLoaderBrush}" BorderThickness="1" BorderBrush="#20FFFFFF">
-                                    <TextBlock Text="{Binding BackendStatus.AsiLoaderText}" FontSize="9.5" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                            </Grid>
 
-                            <Separator Height="1" Background="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,5" />
+                                <ui:TextBox x:Name="ProfileNameInput" PlaceholderText="Profile Name (e.g. LCPDFR Set)" Margin="0,0,0,10" />
+                                
+                                <ui:Button Content="Create Profile" 
+                                           Icon="{ui:SymbolIcon Add24}" 
+                                           Command="{Binding CreateProfileCommand}" 
+                                           CommandParameter="{Binding Text, ElementName=ProfileNameInput}"
+                                           Appearance="Primary"
+                                           HorizontalAlignment="Right" />
+                            </StackPanel>
+                        </ui:Card>
 
-                            <!-- FusionFix -->
-                            <Grid Margin="0,8,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="FusionFix" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    <TextBlock Text="plugins/GTAIV.FusionFix.asi" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                    <TextBlock Text="{Binding BackendStatus.FusionFixVersionInfo}" FontSize="10" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,2,0,0" />
+                        <!-- Select Profile Card -->
+                        <ui:Card Padding="15">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <ui:SymbolIcon Symbol="Library24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,0,8,0" />
+                                    <TextBlock Text="Available Profiles" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
                                 </StackPanel>
-                                <Border Grid.Column="1" CornerRadius="10" Padding="10,3" VerticalAlignment="Center"
-                                        Background="{Binding BackendStatus.FusionFixBrush}" BorderThickness="1" BorderBrush="#20FFFFFF">
-                                    <TextBlock Text="{Binding BackendStatus.FusionFixText}" FontSize="9.5" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                            </Grid>
 
-                            <Separator Height="1" Background="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,5" />
+                                <ListBox ItemsSource="{Binding Profiles}"
+                                         SelectedItem="{Binding ActiveProfile, Mode=OneWay}"
+                                         SelectionChanged="ListBox_SelectionChanged"
+                                         ItemContainerStyle="{StaticResource CleanListBoxItemStyle}"
+                                         MaxHeight="360"
+                                         VirtualizingPanel.ScrollUnit="Pixel"
+                                         Background="Transparent"
+                                         BorderThickness="0">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Padding="12,10" 
+                                                    BorderThickness="1" 
+                                                    CornerRadius="6" 
+                                                    Background="{DynamicResource ControlFillColorDefaultBrush}" 
+                                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
+                                                    Margin="0,3,0,3" 
+                                                    HorizontalAlignment="Stretch">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                                                <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                            <TextBlock Text="{Binding EnabledModIds.Count}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                                            <TextBlock Text=" enabled mods" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="3,0,0,0" />
+                                                        </StackPanel>
+                                                    </StackPanel>
 
-                            <!-- DXVK -->
-                            <Grid Margin="0,8,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="DXVK (Vulkan Translation)" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    <TextBlock Text="d3d9.dll / vulkan.dll" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                    <TextBlock Text="{Binding BackendStatus.DxvkVersionInfo}" FontSize="10" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,2,0,0" />
-                                </StackPanel>
-                                <Border Grid.Column="1" CornerRadius="10" Padding="10,3" VerticalAlignment="Center"
-                                        Background="{Binding BackendStatus.DxvkBrush}" BorderThickness="1" BorderBrush="#20FFFFFF">
-                                    <TextBlock Text="{Binding BackendStatus.DxvkText}" FontSize="9.5" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                            </Grid>
+                                                    <Border Grid.Column="1" CornerRadius="10" Padding="8,2" VerticalAlignment="Center" Margin="8,0,0,0"
+                                                            Background="{DynamicResource MutedAccentBrush}"
+                                                            Visibility="{Binding Path=IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <ui:SymbolIcon Symbol="Checkmark24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" FontSize="12" Margin="0,0,4,0" VerticalAlignment="Center" />
+                                                            <TextBlock Text="Active" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </StackPanel>
+                        </ui:Card>
+                    </StackPanel>
 
-                            <Separator Height="1" Background="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,5" />
-
-                            <!-- ScriptHook -->
-                            <Grid Margin="0,8,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="ScriptHook" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    <TextBlock Text="ScriptHook.dll / ScriptHookDotNet" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                </StackPanel>
-                                <Border Grid.Column="1" CornerRadius="10" Padding="10,3" VerticalAlignment="Center"
-                                        Background="{Binding BackendStatus.ScriptHookBrush}" BorderThickness="1" BorderBrush="#20FFFFFF">
-                                    <TextBlock Text="{Binding BackendStatus.ScriptHookText}" FontSize="9.5" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                            </Grid>
-
-                            <Separator Height="1" Background="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,10" />
-
-                            <!-- Installation Controllers -->
-                            <TextBlock Text="FusionFix (Preferred Bundle)" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,5" />
+                    <!-- Right Column: Active Profile Configuration -->
+                    <StackPanel x:Name="Tab1RightPanel" Grid.Column="1" Grid.Row="0">
+                        <!-- Profile Header Banner Card -->
+                        <ui:Card Padding="15" Margin="0,0,0,12">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <ui:Button Grid.Column="0" Content="{Binding BackendStatus.FusionFixButtonText}" 
-                                           Icon="{ui:SymbolIcon ArrowDownload24}" 
-                                           Command="{Binding InstallFusionFixCommand}"
-                                           Appearance="Primary"
-                                           Margin="0,0,4,0"
-                                           HorizontalAlignment="Stretch" />
-                                <ui:Button Grid.Column="1" Content="Uninstall" 
-                                           Icon="{ui:SymbolIcon Delete24}" 
-                                           Command="{Binding UninstallFusionFixCommand}"
-                                           Appearance="Secondary"
-                                           Margin="4,0,0,0"
-                                           HorizontalAlignment="Stretch" />
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="ACTIVE PROFILE CONFIGURATION" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                    <TextBlock Text="{Binding ActiveProfile.Name}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <Border Grid.Column="1" CornerRadius="6" Padding="10,4" Background="{DynamicResource MutedAccentBrush}" VerticalAlignment="Center" Margin="10,0,0,0">
+                                    <TextBlock Text="Modding Target: CE / Junction" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                </Border>
                             </Grid>
+                        </ui:Card>
 
-                            <TextBlock Text="Ultimate ASI Loader (Standalone)" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,10,0,5" />
-                            <Grid>
+                        <!-- Profile Rename CardControl -->
+                        <ui:CardControl Icon="{ui:SymbolIcon Edit24}">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,15,0">
+                                    <TextBlock Text="Profile Display Name" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    <TextBlock Text="Rename this profile setup for easy identification." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <Grid MinWidth="180" HorizontalAlignment="Stretch">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <ui:Button Grid.Column="0" Content="{Binding BackendStatus.AsiLoaderButtonText}" 
-                                           Icon="{ui:SymbolIcon ArrowDownload24}" 
-                                           Command="{Binding InstallAsiLoaderCommand}"
-                                           Appearance="Primary"
-                                           Margin="0,0,4,0"
-                                           HorizontalAlignment="Stretch" />
-                                <ui:Button Grid.Column="1" Content="Uninstall" 
-                                           Icon="{ui:SymbolIcon Delete24}" 
-                                           Command="{Binding UninstallAsiLoaderCommand}"
-                                           Appearance="Secondary"
-                                           Margin="4,0,0,0"
-                                           HorizontalAlignment="Stretch" />
+                                <ui:TextBox Grid.Column="0" x:Name="ProfileNameEditInput" Text="{Binding ActiveProfile.Name, Mode=OneWay}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                <ui:Button Grid.Column="1" Content="Rename" Icon="{ui:SymbolIcon Checkmark24}" Command="{Binding RenameProfileCommand}" CommandParameter="{Binding Text, ElementName=ProfileNameEditInput}" VerticalAlignment="Center" />
                             </Grid>
+                        </ui:CardControl>
 
-                            <TextBlock Text="DXVK (Standalone)" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,10,0,5" />
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <ui:Button Grid.Column="0" Content="{Binding BackendStatus.DxvkButtonText}" 
-                                           Icon="{ui:SymbolIcon ArrowDownload24}" 
-                                           Command="{Binding InstallDxvkCommand}"
-                                           Appearance="Primary"
-                                           Margin="0,0,4,0"
-                                           HorizontalAlignment="Stretch" />
-                                <ui:Button Grid.Column="1" Content="Uninstall" 
-                                           Icon="{ui:SymbolIcon Delete24}" 
-                                           Command="{Binding UninstallDxvkCommand}"
-                                           Appearance="Secondary"
-                                           Margin="4,0,0,0"
-                                           HorizontalAlignment="Stretch" />
-                            </Grid>
-                        </StackPanel>
-                    </ui:Card>
+                        <!-- Game Directory CardControl -->
+                        <ui:CardControl Icon="{ui:SymbolIcon Folder24}">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,15,0">
+                                    <TextBlock Text="Game Directory (GTAIV.exe Location)" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    <TextBlock Text="{Binding ActiveProfile.GamePath, FallbackValue='No game directory selected'}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <WrapPanel VerticalAlignment="Center" HorizontalAlignment="Right">
+                                <ui:Button Content="Open" 
+                                           Icon="{ui:SymbolIcon FolderOpen24}" 
+                                           Command="{Binding OpenGameDirCommand}" 
+                                           Margin="0,0,6,0" 
+                                           ToolTip="Open Game Directory in Explorer" />
+                                <ui:Button Content="Browse..." 
+                                           Icon="{ui:SymbolIcon Folder24}" 
+                                           Command="{Binding SelectGameDirCommand}" 
+                                           Appearance="Primary" />
+                            </WrapPanel>
+                        </ui:CardControl>
 
-                    <!-- Watchdog Mismatch Alert Card -->
+                        <!-- Mods Library Directory CardControl -->
+                        <ui:CardControl Icon="{ui:SymbolIcon Library24}">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,15,0">
+                                    <TextBlock Text="Mods Library Storage Directory" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    <TextBlock Text="{Binding ActiveProfile.LibraryPath, FallbackValue='Default library path'}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <ui:Button Content="Open Library" 
+                                       Icon="{ui:SymbolIcon FolderOpen24}" 
+                                       Command="{Binding OpenLibraryDirCommand}" 
+                                       VerticalAlignment="Center" />
+                        </ui:CardControl>
+
+                        <!-- Game Version & Integrity CardControl -->
+                        <ui:CardControl Icon="{ui:SymbolIcon Document24}">
+                            <ui:CardControl.Header>
+                                <StackPanel Margin="0,0,15,0">
+                                    <TextBlock Text="Detected Game Version &amp; Hash" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                        <TextBlock Text="{Binding ActiveProfile.LastKnownVersion.Version, FallbackValue='Unknown'}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                        <TextBlock Text=" (Complete Edition)" FontSize="12" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="4,0,0,0" Visibility="{Binding ActiveProfile.LastKnownVersion.IsCompleteEdition, FallbackValue=Collapsed, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        <TextBlock Text=" (Legacy)" FontSize="12" Foreground="{DynamicResource SystemFillColorCautionBrush}" Margin="4,0,0,0" Visibility="{Binding ActiveProfile.LastKnownVersion.IsCompleteEdition, FallbackValue=Collapsed, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding ActiveProfile.LastKnownVersion.ExecutableHash, FallbackValue='No hash recorded', StringFormat='Hash: {0}'}" FontSize="10" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </ui:CardControl.Header>
+                            <Border CornerRadius="6" Padding="8,4" Background="{DynamicResource ControlFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" VerticalAlignment="Center">
+                                <TextBlock Text="Verified" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
+                            </Border>
+                        </ui:CardControl>
+
+                        <!-- Maintenance & Danger Zone Card -->
+                        <ui:Card Padding="15" Margin="0,10,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                            <StackPanel>
+                                <TextBlock Text="Profile Maintenance &amp; Actions" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,12" />
+                                <WrapPanel HorizontalAlignment="Stretch">
+                                    <ui:Button Content="Reset Game Directory" 
+                                               Icon="{ui:SymbolIcon ArrowUndo24}" 
+                                               Command="{Binding ResetGameDirectoryCommand}"
+                                               Appearance="Secondary"
+                                               Margin="0,0,10,6" 
+                                               ToolTip="Clear configured game path for this profile" />
+
+                                    <ui:Button Content="Delete Profile" 
+                                               Icon="{ui:SymbolIcon Delete24}" 
+                                               Command="{Binding RemoveProfileCommand}"
+                                               Appearance="Danger"
+                                               Margin="0,0,0,6"
+                                               ToolTip="Permanently delete this mod profile" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </ui:Card>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+
+            <!-- ========================================================================= -->
+            <!-- TAB 2: BACKEND LOADERS & HOOK STATUS                                      -->
+            <!-- ========================================================================= -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          Visibility="{Binding IsChecked, ElementName=TabBackendTools, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel Margin="0,0,0,10">
+                    
+                    <!-- Watchdog Mismatch Alert Card (if active) -->
                     <Border x:Name="WatchdogWarningCard" 
-                            CornerRadius="6" 
+                            CornerRadius="8" 
                             Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" 
                             BorderThickness="4,1,1,1"
                             BorderBrush="#FFF3A813"
@@ -484,17 +370,535 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             
-                            <ui:SymbolIcon Grid.Column="0" Symbol="Warning24" Filled="True" Foreground="{DynamicResource SystemFillColorCautionBrush}" FontSize="26" Margin="0,2,14,0" VerticalAlignment="Top" />
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Warning24" Filled="True" Foreground="{DynamicResource SystemFillColorCautionBrush}" FontSize="28" Margin="0,2,15,0" VerticalAlignment="Top" />
                             
                             <StackPanel Grid.Column="1">
-                                <TextBlock Text="GTAIV.exe Version Mismatch Detected" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4" />
+                                <TextBlock Text="GTAIV.exe Version Mismatch Detected" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4" />
                                 <TextBlock Text="{Binding WatchdogWarning}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" LineHeight="18" />
                                 <TextBlock Text="Important: Staged mods will continue to load, but compatibility issues can arise if steam recently updated your game." FontSize="11" Foreground="{DynamicResource SystemFillColorCautionBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
                             </StackPanel>
                         </Grid>
                     </Border>
+
+                    <!-- Info Banner -->
+                    <ui:Card Padding="15" Margin="0,0,0,15">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Wrench24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" FontSize="24" Margin="0,0,12,0" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Backend Loader Infrastructure" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                <TextBlock Text="Manage Essential GTA IV loaders. FusionFix is the recommended primary loader that bundles Ultimate ASI Loader and DXVK." FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Grid>
+                    </ui:Card>
+
+                    <!-- Tool 1: FusionFix Card -->
+                    <ui:Card Padding="16" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Options24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" FontSize="28" Margin="0,0,15,0" VerticalAlignment="Center" />
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,15,0">
+                                <WrapPanel>
+                                    <TextBlock Text="FusionFix" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                    <Border CornerRadius="4" Padding="6,2" Margin="10,2,0,2" Background="{DynamicResource MutedAccentBrush}">
+                                        <TextBlock Text="Preferred Bundle" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                    </Border>
+                                    <Border CornerRadius="10" Padding="10,2" Margin="8,2,0,2"
+                                            Background="{Binding BackendStatus.FusionFixBrush}" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding BackendStatus.FusionFixText}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                    </Border>
+                                </WrapPanel>
+                                <TextBlock Text="plugins/GTAIV.FusionFix.asi — Bundles Ultimate ASI Loader &amp; DXVK toggle" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding BackendStatus.FusionFixVersionInfo}" FontSize="11" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <WrapPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                <ui:Button Content="{Binding BackendStatus.FusionFixButtonText}" 
+                                           Icon="{ui:SymbolIcon ArrowDownload24}" 
+                                           Command="{Binding InstallFusionFixCommand}"
+                                           Appearance="Primary"
+                                           Margin="0,0,8,4" />
+                                <ui:Button Content="Uninstall" 
+                                           Icon="{ui:SymbolIcon Delete24}" 
+                                           Command="{Binding UninstallFusionFixCommand}"
+                                           Appearance="Secondary" 
+                                           Margin="0,0,0,4" />
+                            </WrapPanel>
+                        </Grid>
+                    </ui:Card>
+
+                    <!-- Tool 2: Ultimate ASI Loader Card -->
+                    <ui:Card Padding="16" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Code24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" FontSize="28" Margin="0,0,15,0" VerticalAlignment="Center" />
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,15,0">
+                                <WrapPanel>
+                                    <TextBlock Text="Ultimate ASI Loader" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                    <Border CornerRadius="10" Padding="10,2" Margin="10,2,0,2"
+                                            Background="{Binding BackendStatus.AsiLoaderBrush}" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding BackendStatus.AsiLoaderText}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                    </Border>
+                                </WrapPanel>
+                                <TextBlock Text="dinput8.dll — Standalone ASI plugin loader (skipped if FusionFix is present)" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding BackendStatus.AsiLoaderVersionInfo}" FontSize="11" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <WrapPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                <ui:Button Content="{Binding BackendStatus.AsiLoaderButtonText}" 
+                                           Icon="{ui:SymbolIcon ArrowDownload24}" 
+                                           Command="{Binding InstallAsiLoaderCommand}"
+                                           Appearance="Primary"
+                                           Margin="0,0,8,4" />
+                                <ui:Button Content="Uninstall" 
+                                           Icon="{ui:SymbolIcon Delete24}" 
+                                           Command="{Binding UninstallAsiLoaderCommand}"
+                                           Appearance="Secondary"
+                                           Margin="0,0,0,4" />
+                            </WrapPanel>
+                        </Grid>
+                    </ui:Card>
+
+                    <!-- Tool 3: DXVK Card -->
+                    <ui:Card Padding="16" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Desktop24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" FontSize="28" Margin="0,0,15,0" VerticalAlignment="Center" />
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,15,0">
+                                <WrapPanel>
+                                    <TextBlock Text="DXVK (Vulkan Translation Layer)" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                    <Border CornerRadius="10" Padding="10,2" Margin="10,2,0,2"
+                                            Background="{Binding BackendStatus.DxvkBrush}" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding BackendStatus.DxvkText}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                    </Border>
+                                </WrapPanel>
+                                <TextBlock Text="d3d9.dll / vulkan.dll — Translates Direct3D 9 to Vulkan for smooth performance" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding BackendStatus.DxvkVersionInfo}" FontSize="11" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <WrapPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                <ui:Button Content="{Binding BackendStatus.DxvkButtonText}" 
+                                           Icon="{ui:SymbolIcon ArrowDownload24}" 
+                                           Command="{Binding InstallDxvkCommand}"
+                                           Appearance="Primary"
+                                           Margin="0,0,8,4" />
+                                <ui:Button Content="Uninstall" 
+                                           Icon="{ui:SymbolIcon Delete24}" 
+                                           Command="{Binding UninstallDxvkCommand}"
+                                           Appearance="Secondary"
+                                           Margin="0,0,0,4" />
+                            </WrapPanel>
+                        </Grid>
+                    </ui:Card>
+
+                     <!-- Tool 4: ScriptHook Card -->
+                    <ui:Card Padding="16" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Document24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" FontSize="28" Margin="0,0,15,0" VerticalAlignment="Center" />
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,15,0">
+                                <WrapPanel>
+                                    <TextBlock Text="ScriptHook &amp; ScriptHookDotNet" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                    <Border CornerRadius="10" Padding="10,2" Margin="10,2,0,2"
+                                            Background="{Binding BackendStatus.ScriptHookBrush}" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding BackendStatus.ScriptHookText}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                    </Border>
+                                </WrapPanel>
+                                <TextBlock Text="ScriptHook.dll — Allows custom script plugins and LCPDFR scripts to execute." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <WrapPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                <ui:Button Content="{Binding BackendStatus.ScriptHookButtonText}" 
+                                           Icon="{ui:SymbolIcon ArrowDownload24}" 
+                                           Command="{Binding InstallScriptHookCommand}"
+                                           Appearance="Primary"
+                                           Margin="0,0,8,4" />
+                                <ui:Button Content="Uninstall" 
+                                           Icon="{ui:SymbolIcon Delete24}" 
+                                           Command="{Binding UninstallScriptHookCommand}"
+                                           Appearance="Secondary"
+                                           Margin="0,0,0,4" />
+                            </WrapPanel>
+                        </Grid>
+                    </ui:Card>
+
+                    <!-- Section: Minor Dependencies -->
+                    <TextBlock Text="Minor Dependencies" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,15,0,10" />
+
+                    <!-- Tool 5: MemBiter Card -->
+                    <ui:Card Padding="16" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Document24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" FontSize="28" Margin="0,0,15,0" VerticalAlignment="Center" />
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,15,0">
+                                <WrapPanel>
+                                    <TextBlock Text="MemBiter" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                    <Border CornerRadius="10" Padding="10,2" Margin="10,2,0,2"
+                                            Background="{Binding BackendStatus.MemBiterBrush}" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding BackendStatus.MemBiterText}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                    </Border>
+                                </WrapPanel>
+                                <TextBlock Text="MemBiter.dll — Allows scripts to seek and modify physics and other parameter variables of vehicles/entities in game memory in real time." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <WrapPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                <ui:Button Content="{Binding BackendStatus.MemBiterButtonText}" 
+                                           Icon="{ui:SymbolIcon ArrowDownload24}" 
+                                           Command="{Binding InstallMemBiterCommand}"
+                                           Appearance="Primary"
+                                           Margin="0,0,8,4" />
+                                <ui:Button Content="Uninstall" 
+                                           Icon="{ui:SymbolIcon Delete24}" 
+                                           Command="{Binding UninstallMemBiterCommand}"
+                                           Appearance="Secondary"
+                                           Margin="0,0,0,4" />
+                            </WrapPanel>
+                        </Grid>
+                    </ui:Card>
+
+                    <!-- Tool 6: BASS Audio Library Card -->
+                    <ui:Card Padding="16" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Document24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" FontSize="28" Margin="0,0,15,0" VerticalAlignment="Center" />
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,15,0">
+                                <WrapPanel>
+                                    <TextBlock Text="BASS Audio Library" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                    <Border CornerRadius="10" Padding="10,2" Margin="10,2,0,2"
+                                            Background="{Binding BackendStatus.BassAudioBrush}" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding BackendStatus.BassAudioText}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                    </Border>
+                                </WrapPanel>
+                                <TextBlock Text="bass.dll &amp; Bass.net.dll — Audio library and .NET wrapper required by various radio, music, and sound scripts (like DeathMusicIV)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <WrapPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                <ui:Button Content="{Binding BackendStatus.BassAudioButtonText}" 
+                                           Icon="{ui:SymbolIcon ArrowDownload24}" 
+                                           Command="{Binding InstallBassAudioCommand}"
+                                           Appearance="Primary"
+                                           Margin="0,0,8,4" />
+                                <ui:Button Content="Uninstall" 
+                                           Icon="{ui:SymbolIcon Delete24}" 
+                                           Command="{Binding UninstallBassAudioCommand}"
+                                           Appearance="Secondary"
+                                           Margin="0,0,0,4" />
+                            </WrapPanel>
+                        </Grid>
+                    </ui:Card>
+
                 </StackPanel>
-            </Grid>
-        </ScrollViewer>
+            </ScrollViewer>
+
+            <!-- ========================================================================= -->
+            <!-- TAB 3: SAVE GAME STATE MANAGER                                           -->
+            <!-- ========================================================================= -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          Visibility="{Binding IsChecked, ElementName=TabSaveStates, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid Margin="0,0,0,10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Header Banner -->
+                    <ui:Card Grid.Row="0" Padding="15" Margin="0,0,0,15">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Save24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" FontSize="26" Margin="0,0,15,0" VerticalAlignment="Center" />
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="GTA IV Save Game Profile Manager" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                <TextBlock Text="Backup, restore, and swap Rockstar Games save file states to switch story lines safely." FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <ui:Button Grid.Column="2" 
+                                       Content="Refresh" 
+                                       Icon="{ui:SymbolIcon ArrowClockwise24}" 
+                                       Command="{Binding RefreshSaveProfilesCommand}" 
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </ui:Card>
+
+                    <!-- Error if no save profile directory found -->
+                    <Border Grid.Row="0" CornerRadius="6" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource SystemFillColorCriticalBrush}" BorderThickness="1" Padding="15" Margin="0,0,0,15"
+                            Visibility="{Binding HasBaseProfiles, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="DismissCircle24" Filled="True" Foreground="{DynamicResource SystemFillColorCriticalBrush}" Margin="0,0,10,0" VerticalAlignment="Center" />
+                            <TextBlock Text="No GTA IV save profile directories detected. Please check the Save Profiles Location path under Settings." Foreground="{DynamicResource SystemFillColorCriticalBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Content Grid: Saved States (Left) & Create Fresh State / Snapshot (Right) -->
+                    <Grid x:Name="Tab3Grid" Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="1*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Left Panel: Saved Story States List -->
+                        <ui:Card x:Name="Tab3LeftPanel" Grid.Column="0" Grid.Row="0" Padding="16" Margin="0,0,8,0">
+                            <StackPanel>
+                                <TextBlock Text="Saved Story States" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,12" />
+
+                                <ListBox ItemsSource="{Binding SaveProfiles}"
+                                         SelectedItem="{Binding SelectedSaveProfile}"
+                                         SelectionChanged="SaveListBox_SelectionChanged"
+                                         ItemContainerStyle="{StaticResource CleanListBoxItemStyle}"
+                                         MaxHeight="320"
+                                         VirtualizingPanel.ScrollUnit="Pixel"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         Margin="0,0,0,15">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Padding="12,10" 
+                                                    BorderThickness="1" 
+                                                    CornerRadius="6" 
+                                                    Background="{DynamicResource ControlFillColorDefaultBrush}" 
+                                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
+                                                    Margin="0,3,0,3" 
+                                                    HorizontalAlignment="Stretch">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                                                <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                                                        
+                                                        <!-- Rich Metadata Details Row -->
+                                                        <WrapPanel Margin="0,3,0,0">
+                                                            <!-- File Count Badge -->
+                                                            <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
+                                                                <ui:SymbolIcon Symbol="Document24" FontSize="11" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,0,4,0" VerticalAlignment="Center" />
+                                                                <TextBlock Text="{Binding SaveFileCount}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                                <TextBlock Text=" saves" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="2,0,0,0" VerticalAlignment="Center" />
+                                                            </StackPanel>
+
+                                                            <!-- Folder Size Badge -->
+                                                            <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
+                                                                <ui:SymbolIcon Symbol="Save24" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,4,0" VerticalAlignment="Center" />
+                                                                <TextBlock Text="{Binding SizeDisplay}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                            </StackPanel>
+
+                                                            <!-- Last Modified Badge -->
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="🕒 " FontSize="10" VerticalAlignment="Center" />
+                                                                <TextBlock Text="{Binding LastModifiedDisplay}" FontSize="10" Foreground="{DynamicResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                        </WrapPanel>
+                                                    </StackPanel>
+
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                                                        <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" 
+                                                                   Command="{Binding DataContext.OpenSaveProfileFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                   CommandParameter="{Binding}"
+                                                                   ToolTip="Open Save Folder in Explorer"
+                                                                   Margin="0,0,6,0"
+                                                                   Padding="6,4" />
+
+                                                        <Border CornerRadius="10" Padding="8,3" VerticalAlignment="Center"
+                                                                Background="#FF107C41"
+                                                                Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                            <TextBlock Text="Active Slot" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                                        </Border>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <!-- Selected Save Profile Controls -->
+                                <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0"
+                                        Visibility="{Binding SelectedSaveProfile, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <StackPanel>
+                                        <TextBlock Text="Selected Save State Actions" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4" />
+                                        <TextBlock Text="Archives the current active save state and restores the selected backup." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                                        
+                                        <WrapPanel Margin="0,0,0,12">
+                                            <ui:Button Content="Activate State" 
+                                                       Icon="{ui:SymbolIcon Checkmark24}" 
+                                                       Command="{Binding ActivateSaveProfileCommand}" 
+                                                       Appearance="Primary" 
+                                                       Margin="0,0,8,6" />
+
+                                            <ui:Button Content="Open Folder" 
+                                                       Icon="{ui:SymbolIcon FolderOpen24}" 
+                                                       Command="{Binding OpenSaveProfileFolderCommand}" 
+                                                       CommandParameter="{Binding SelectedSaveProfile}"
+                                                       Appearance="Secondary"
+                                                       Margin="0,0,8,6" />
+
+                                            <ui:Button Content="Delete State" 
+                                                       Icon="{ui:SymbolIcon Delete24}" 
+                                                       Command="{Binding DeleteSaveProfileCommand}" 
+                                                       Appearance="Danger" 
+                                                       Margin="0,0,0,6"
+                                                       Visibility="{Binding SelectedSaveProfile.IsActive, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                                        </WrapPanel>
+
+                                        <TextBlock Text="Rename Save State" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,4" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ui:TextBox Grid.Column="0" x:Name="RenameSaveStateInput" PlaceholderText="New save state name..." Margin="0,0,8,0" />
+                                            <ui:Button Grid.Column="1" Content="Rename" Icon="{ui:SymbolIcon Edit24}" Command="{Binding RenameSaveProfileCommand}" CommandParameter="{Binding Text, ElementName=RenameSaveStateInput}" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ui:Card>
+
+                        <!-- Right Panel: Instant Snapshot Card & Create Fresh Story Card -->
+                        <StackPanel x:Name="Tab3RightPanel" Grid.Column="1" Grid.Row="0" Margin="8,0,0,0">
+                            
+                            <!-- Card 1: Instant Safety Snapshot -->
+                            <ui:Card Padding="16" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <ui:SymbolIcon Symbol="Save24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,0,8,0" />
+                                        <TextBlock Text="Take Safety Snapshot" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                    </StackPanel>
+
+                                    <TextBlock Text="Instantly duplicate your current active save state before installing or testing new mods." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12" />
+
+                                    <TextBlock Text="Snapshot Name (Optional):" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4" />
+                                    <ui:TextBox Text="{Binding QuickSnapshotName, Mode=TwoWay}" PlaceholderText="e.g. Pre-Graphics Mod Backup" Margin="0,0,0,12" />
+
+                                    <ui:Button Content="Take Instant Snapshot" 
+                                               Icon="{ui:SymbolIcon Save24}" 
+                                               Command="{Binding QuickSnapshotSaveProfileCommand}" 
+                                               Appearance="Primary"
+                                               HorizontalAlignment="Right" />
+                                </StackPanel>
+                            </ui:Card>
+
+                            <!-- Card 2: Start Fresh Story / Playthrough -->
+                            <ui:Card Padding="16">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <ui:SymbolIcon Symbol="Add24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,0,8,0" />
+                                        <TextBlock Text="Start New Playthrough / Story" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                    </StackPanel>
+
+                                    <TextBlock Text="Create a fresh empty save slot while archiving your active story save in a backup." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12" />
+
+                                    <TextBlock Text="New Story Save Name:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4" />
+                                    <ui:TextBox Text="{Binding NewSaveProfileName, Mode=TwoWay}" PlaceholderText="e.g. LCPDFR Career Playthrough" Margin="0,0,0,10" />
+
+                                    <TextBlock Text="Archive Active Save As:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4" />
+                                    <ui:TextBox Text="{Binding RenameActiveSaveTo, Mode=TwoWay}" PlaceholderText="e.g. Niko 100% Story Backup" Margin="0,0,0,12" />
+
+                                    <ui:Button Content="Create Fresh Story Save" 
+                                               Icon="{ui:SymbolIcon Add24}" 
+                                               Command="{Binding CreateSaveProfileCommand}" 
+                                               Appearance="Secondary"
+                                               HorizontalAlignment="Right" />
+                                </StackPanel>
+                            </ui:Card>
+
+                            <!-- Card 3: Import External Save File -->
+                            <ui:Card Padding="16" Margin="0,12,0,0">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <ui:SymbolIcon Symbol="ArrowImport24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,0,8,0" />
+                                        <TextBlock Text="Import Save File (.dat / SGTA*)" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                    </StackPanel>
+
+                                    <TextBlock Text="Import an individual save file (e.g., SGTA401) from your computer directly into your active save state." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,12" />
+
+                                    <TextBlock Text="Target Save Slot:" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4" />
+                                    <ComboBox x:Name="SaveSlotComboBox" SelectedIndex="0" Width="200" HorizontalAlignment="Left" Margin="0,0,0,12">
+                                        <ComboBoxItem Content="Slot 1 (SGTA401)" Tag="SGTA401" />
+                                        <ComboBoxItem Content="Slot 2 (SGTA402)" Tag="SGTA402" />
+                                        <ComboBoxItem Content="Slot 3 (SGTA403)" Tag="SGTA403" />
+                                        <ComboBoxItem Content="Slot 4 (SGTA404)" Tag="SGTA404" />
+                                        <ComboBoxItem Content="Slot 5 (SGTA405)" Tag="SGTA405" />
+                                        <ComboBoxItem Content="Slot 6 (SGTA406)" Tag="SGTA406" />
+                                        <ComboBoxItem Content="Slot 7 (SGTA407)" Tag="SGTA407" />
+                                        <ComboBoxItem Content="Slot 8 (SGTA408)" Tag="SGTA408" />
+                                        <ComboBoxItem Content="Slot 9 (SGTA409)" Tag="SGTA409" />
+                                        <ComboBoxItem Content="Slot 10 (SGTA410)" Tag="SGTA410" />
+                                        <ComboBoxItem Content="Slot 11 (SGTA411)" Tag="SGTA411" />
+                                        <ComboBoxItem Content="Slot 12 (SGTA412)" Tag="SGTA412" />
+                                    </ComboBox>
+
+                                    <ui:Button Content="Select &amp; Import Save File..." 
+                                               Icon="{ui:SymbolIcon Document24}" 
+                                               Command="{Binding ImportSaveFileCommand}"
+                                               CommandParameter="{Binding SelectedItem.Tag, ElementName=SaveSlotComboBox}"
+                                               Appearance="Primary"
+                                               HorizontalAlignment="Right" />
+                                </StackPanel>
+                            </ui:Card>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </ScrollViewer>
+
+        </Grid>
     </Grid>
 </UserControl>

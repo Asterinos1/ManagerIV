@@ -6,6 +6,7 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:local="clr-namespace:ManagerIV.Views"
              xmlns:vm="clr-namespace:ManagerIV.ViewModels"
+             xmlns:core="clr-namespace:ManagerIV.Core"
              mc:Ignorable="d" 
              d:DesignHeight="650" d:DesignWidth="1000"
              AllowDrop="True"
@@ -16,6 +17,91 @@
              Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
 
     <UserControl.Resources>
+        <core:MusicTrackToIndexConverter x:Key="MusicTrackToIndexConverter" />
+        <Style x:Key="CleanListBoxItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <DataTemplate x:Key="MusicTrackTemplate" DataType="{x:Type core:MusicTrack}">
+            <Border BorderThickness="1" 
+                    CornerRadius="6"
+                    Padding="6,6" 
+                    Margin="4,2,8,4" 
+                    HorizontalAlignment="Stretch">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+                        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorSecondaryBrush}" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="40" />  <!-- Status checkbox -->
+                        <ColumnDefinition Width="80" />  <!-- Drag Handle & Order -->
+                        <ColumnDefinition Width="2*" />   <!-- Title -->
+                        <ColumnDefinition Width="1.5*" /> <!-- Artist -->
+                        <ColumnDefinition Width="60" />  <!-- Time -->
+                        <ColumnDefinition Width="40" />  <!-- Trash icon -->
+                    </Grid.ColumnDefinitions>
+
+                    <CheckBox Grid.Column="0" 
+                              IsChecked="{Binding IsEnabled, Mode=OneWay}" 
+                              Command="{Binding RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Path=DataContext.Music.ToggleTrackEnabledCommand}"
+                              CommandParameter="{Binding}"
+                              HorizontalAlignment="Center" 
+                              VerticalAlignment="Center" />
+
+                    <!-- Drag Handle & Order number (1-based index) -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <ui:SymbolIcon Symbol="ReOrderDotsVertical24" Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="18" Margin="0,0,4,0" Cursor="SizeAll" />
+                        <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Width="25" VerticalAlignment="Center" TextAlignment="Center">
+                            <TextBlock.Text>
+                                <MultiBinding Converter="{StaticResource MusicTrackToIndexConverter}">
+                                    <Binding />
+                                    <Binding Path="DataContext.Music.AllTracks" RelativeSource="{RelativeSource AncestorType={x:Type UserControl}}" />
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="2" Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" Margin="5,0,5,0" VerticalAlignment="Center" />
+                    
+                    <TextBlock Grid.Column="3" Text="{Binding Artist}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" Margin="5,0,5,0" VerticalAlignment="Center" />
+                    
+                    <TextBlock Grid.Column="4" Text="{Binding Duration, StringFormat=\{0:mm\\:ss\}}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="5,0,0,0" VerticalAlignment="Center" />
+                    
+                    <ui:Button Grid.Column="5" 
+                               Icon="{ui:SymbolIcon Delete24}"
+                               Command="{Binding RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Path=DataContext.Music.DeleteTrackCommand}"
+                               CommandParameter="{Binding}"
+                               Appearance="Transparent"
+                               Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                               Padding="4" 
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+        </DataTemplate>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <Storyboard x:Key="MarchingAnts">
             <DoubleAnimation Storyboard.TargetName="DashedBorder" 
@@ -107,15 +193,15 @@
                     </Grid>
 
                     <!-- Custom Header Row (Replaces GridView Headers) -->
-                    <Border Grid.Row="1" Background="{DynamicResource ControlFillColorTertiaryBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4,4,0,0" Padding="10,8,25,8" Margin="0,0,0,-1">
+                    <Border Grid.Row="1" Background="{DynamicResource ControlFillColorTertiaryBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6,6,0,0" Padding="8,8,12,8" Margin="0,0,0,-1">
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="50" />
-                                <ColumnDefinition Width="60" />
-                                <ColumnDefinition Width="2*" />
-                                <ColumnDefinition Width="1.5*" />
-                                <ColumnDefinition Width="60" />
-                                <ColumnDefinition Width="40" />
+                                <ColumnDefinition Width="40" />  <!-- Status -->
+                                <ColumnDefinition Width="80" />  <!-- Order -->
+                                <ColumnDefinition Width="2*" />   <!-- Title -->
+                                <ColumnDefinition Width="1.5*" /> <!-- Artist -->
+                                <ColumnDefinition Width="60" />  <!-- Time -->
+                                <ColumnDefinition Width="40" />  <!-- Actions -->
                             </Grid.ColumnDefinitions>
                             
                             <TextBlock Grid.Column="0" Text="Status" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -127,76 +213,21 @@
                         </Grid>
                     </Border>
 
-                    <ui:Card Grid.Row="2" Padding="0" BorderThickness="1" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
-                        <ListBox ItemsSource="{Binding Music.AllTracks}" 
+                    <Border Grid.Row="2" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="0,0,6,6" Padding="4">
+                        <ListBox x:Name="MusicListBox" ItemsSource="{Binding Music.AllTracks}" 
                                  SelectedItem="{Binding Music.SelectedTrack, Mode=TwoWay}"
                                  BorderThickness="0"
                                  Background="Transparent"
                                  VirtualizingPanel.ScrollUnit="Pixel"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <!-- A bottom border mimics list dividers -->
-                                    <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Padding="0,6" Margin="0" HorizontalAlignment="Stretch">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="50" />
-                                                <ColumnDefinition Width="60" />
-                                                <ColumnDefinition Width="2*" />
-                                                <ColumnDefinition Width="1.5*" />
-                                                <ColumnDefinition Width="60" />
-                                                <ColumnDefinition Width="40" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <CheckBox Grid.Column="0" 
-                                                      IsChecked="{Binding IsEnabled, Mode=OneWay}" 
-                                                      Command="{Binding RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Path=DataContext.Music.ToggleTrackEnabledCommand}"
-                                                      CommandParameter="{Binding}"
-                                                      HorizontalAlignment="Center" 
-                                                      VerticalAlignment="Center" />
-
-                                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                <ui:Button Icon="{ui:SymbolIcon ChevronUp24}" 
-                                                           Command="{Binding RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Path=DataContext.Music.MoveTrackUpCommand}"
-                                                           CommandParameter="{Binding}"
-                                                           Padding="2" 
-                                                           Margin="0,0,2,0" 
-                                                           Appearance="Transparent" />
-                                                <ui:Button Icon="{ui:SymbolIcon ChevronDown24}" 
-                                                           Command="{Binding RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Path=DataContext.Music.MoveTrackDownCommand}"
-                                                           CommandParameter="{Binding}"
-                                                           Padding="2" 
-                                                           Appearance="Transparent" />
-                                            </StackPanel>
-
-                                            <TextBlock Grid.Column="2" Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" Margin="5,0,5,0" VerticalAlignment="Center" />
-                                            
-                                            <TextBlock Grid.Column="3" Text="{Binding Artist}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" Margin="5,0,5,0" VerticalAlignment="Center" />
-                                            
-                                            <TextBlock Grid.Column="4" Text="{Binding Duration, StringFormat=\{0:mm\\:ss\}}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="5,0,0,0" VerticalAlignment="Center" />
-                                            
-                                            <ui:Button Grid.Column="5" 
-                                                       Icon="{ui:SymbolIcon Delete24}"
-                                                       Command="{Binding RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Path=DataContext.Music.DeleteTrackCommand}"
-                                                       CommandParameter="{Binding}"
-                                                       Appearance="Transparent"
-                                                       Foreground="{DynamicResource SystemFillColorCriticalBrush}"
-                                                       Padding="4" 
-                                                       HorizontalAlignment="Center"
-                                                       VerticalAlignment="Center" />
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                            <ListBox.ItemContainerStyle>
-                                <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                    <Setter Property="Padding" Value="0" />
-                                    <Setter Property="Margin" Value="0" />
-                                </Style>
-                            </ListBox.ItemContainerStyle>
-                        </ListBox>
-                    </ui:Card>
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 ItemTemplate="{StaticResource MusicTrackTemplate}"
+                                 ItemContainerStyle="{StaticResource CleanListBoxItemStyle}"
+                                 PreviewMouseLeftButtonDown="ListBox_PreviewMouseLeftButtonDown"
+                                 MouseMove="ListBox_MouseMove"
+                                 DragOver="ListBox_DragOver"
+                                 Drop="ListBox_Drop"
+                                 AllowDrop="True" />
+                    </Border>
                 </Grid>
 
                 <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent" />

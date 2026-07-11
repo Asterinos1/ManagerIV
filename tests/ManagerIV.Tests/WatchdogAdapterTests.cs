@@ -146,6 +146,47 @@ public class WatchdogAdapterTests : IDisposable
         Assert.False(File.Exists(deployedAssetFile), "Directly merged asset file should be deleted.");
     }
 
+    [Fact]
+    public async Task TestCompleteEditionAdapterDeployAndUndeployNestedScripts()
+    {
+        // Arrange
+        var scriptMod = new StagedMod(
+            Id: "script_mod",
+            Name: "Script Mod",
+            Version: "1.0",
+            Description: "A test script mod with nested subfolders",
+            LibraryPath: Path.Combine(_tempDir, "Library", "script_mod"),
+            Files: new[] { 
+                new ModFile("scripts/NestedSubfolder/myscript.dll", 1024, "hash1"),
+                new ModFile("scripts/NestedSubfolder/Assets/config.ini", 512, "hash2")
+            },
+            IsEnabled: true,
+            Compatibility: "CE-compatible"
+        );
+
+        Directory.CreateDirectory(Path.Combine(scriptMod.LibraryPath, "scripts", "NestedSubfolder", "Assets"));
+        await File.WriteAllTextAsync(Path.Combine(scriptMod.LibraryPath, "scripts", "NestedSubfolder", "myscript.dll"), "dll code");
+        await File.WriteAllTextAsync(Path.Combine(scriptMod.LibraryPath, "scripts", "NestedSubfolder", "Assets", "config.ini"), "config data");
+
+        // Act: Deploy
+        await _adapter.DeployAsync(scriptMod, priority: 1);
+
+        // Assert: Verify nested directory structure is preserved in target scripts folder
+        string targetDll = Path.Combine(_tempDir, "scripts", "NestedSubfolder", "myscript.dll");
+        string targetIni = Path.Combine(_tempDir, "scripts", "NestedSubfolder", "Assets", "config.ini");
+
+        Assert.True(File.Exists(targetDll), "Nested script dll should exist in target.");
+        Assert.True(File.Exists(targetIni), "Nested script config should exist in target.");
+
+        // Act: Undeploy
+        await _adapter.UndeployAsync(scriptMod);
+
+        // Assert: Verify clean up of files and empty parent subdirectories
+        Assert.False(File.Exists(targetDll), "Undeployed nested script dll should be deleted.");
+        Assert.False(File.Exists(targetIni), "Undeployed nested script config should be deleted.");
+        Assert.False(Directory.Exists(Path.Combine(_tempDir, "scripts", "NestedSubfolder")), "Empty parent subfolders should be removed.");
+    }
+
     [Theory]
     [InlineData("1.0.4.0", false)]
     [InlineData("1.0.7.0", false)]

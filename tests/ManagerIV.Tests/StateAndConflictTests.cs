@@ -698,6 +698,93 @@ AimingZoomFix = 2
         Assert.Equal("Win32-latest (bundle with FusionFix)", loaded.ToolVersions["ASILoader"]);
     }
 
+    [Fact]
+    public void TestIndependentLoadOrderForDifferentTargets()
+    {
+        // Arrange
+        var modUpdate = new StagedMod(
+            Id: "mod_update",
+            Name: "Update Mod",
+            Version: "1.0",
+            Description: "Mod targeting update",
+            LibraryPath: @"C:\Mods\mod_update",
+            Files: new[] { new ModFile("data/handling.dat", 1024, "hashA") },
+            IsEnabled: true,
+            Compatibility: "CE-compatible"
+        );
+
+        var modScript = new StagedMod(
+            Id: "mod_script",
+            Name: "Script Mod",
+            Version: "1.0",
+            Description: "Mod targeting scripts",
+            LibraryPath: @"C:\Mods\mod_script",
+            Files: new[] { new ModFile("scripts/SuperScript.dll", 1024, "hashB") },
+            IsEnabled: true,
+            Compatibility: "CE-compatible"
+        );
+
+        var modPlugin = new StagedMod(
+            Id: "mod_plugin",
+            Name: "Plugin Mod",
+            Version: "1.0",
+            Description: "Mod targeting plugins",
+            LibraryPath: @"C:\Mods\mod_plugin",
+            Files: new[] { new ModFile("SuperPlugin.asi", 1024, "hashC") },
+            IsEnabled: true,
+            Compatibility: "CE-compatible"
+        );
+
+        var mods = new[] { modUpdate, modScript, modPlugin };
+
+        // Act
+        var loadOrder = _loadOrderService.InitializeLoadOrder(mods);
+
+        // Assert
+        Assert.Equal(3, loadOrder.Entries.Count);
+        
+        var updateEntry = loadOrder.Entries.First(e => e.ModId == "mod_update");
+        var scriptEntry = loadOrder.Entries.First(e => e.ModId == "mod_script");
+        var pluginEntry = loadOrder.Entries.First(e => e.ModId == "mod_plugin");
+
+        Assert.Equal(DeployTarget.Update, updateEntry.Target);
+        Assert.Equal(1, updateEntry.Priority);
+
+        Assert.Equal(DeployTarget.Scripts, scriptEntry.Target);
+        Assert.Equal(1, scriptEntry.Priority);
+
+        Assert.Equal(DeployTarget.Plugins, pluginEntry.Target);
+        Assert.Equal(1, pluginEntry.Priority);
+
+        // Reorder update mod (should not affect script or plugin priority)
+        var modUpdate2 = new StagedMod(
+            Id: "mod_update2",
+            Name: "Update Mod 2",
+            Version: "1.0",
+            Description: "Another mod targeting update",
+            LibraryPath: @"C:\Mods\mod_update2",
+            Files: new[] { new ModFile("data/vehicles.dat", 1024, "hashD") },
+            IsEnabled: true,
+            Compatibility: "CE-compatible"
+        );
+
+        var loadOrderWithTwoUpdates = _loadOrderService.InitializeLoadOrder(new[] { modUpdate, modUpdate2, modScript, modPlugin });
+        
+        // Assert initial priorities of two updates
+        Assert.Equal(1, loadOrderWithTwoUpdates.Entries.First(e => e.ModId == "mod_update").Priority);
+        Assert.Equal(2, loadOrderWithTwoUpdates.Entries.First(e => e.ModId == "mod_update2").Priority);
+
+        // Reorder mod_update to target priority 2
+        var reordered = _loadOrderService.ReorderMod(loadOrderWithTwoUpdates, "mod_update", 2);
+
+        Assert.Equal(2, reordered.Entries.First(e => e.ModId == "mod_update").Priority);
+        Assert.Equal(1, reordered.Entries.First(e => e.ModId == "mod_update2").Priority);
+        
+        // Ensure scripts and plugins priorities are unaffected and stay at 1
+        Assert.Equal(1, reordered.Entries.First(e => e.ModId == "mod_script").Priority);
+        Assert.Equal(1, reordered.Entries.First(e => e.ModId == "mod_plugin").Priority);
+    }
+
     public void Dispose()
     {
         try

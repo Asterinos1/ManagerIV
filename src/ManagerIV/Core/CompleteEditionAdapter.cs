@@ -139,12 +139,33 @@ public class CompleteEditionAdapter : IBackendAdapter
             {
                 string libraryFilePath = Path.Combine(mod.LibraryPath, file.RelativePath);
                 
-                // Keep the priority prefix for .asi files to control ASI load order
-                string fileName = target == DeployTarget.Plugins 
-                    ? _loadOrderService.GetDeployedFileName(file, priority)
-                    : Path.GetFileName(file.RelativePath);
+                string targetFilePath;
+                if (target == DeployTarget.Scripts)
+                {
+                    string normalizedRelPath = file.RelativePath.Replace('\\', '/');
+                    int scriptsIndex = normalizedRelPath.IndexOf("scripts/", StringComparison.OrdinalIgnoreCase);
+                    string relativePathUnderScripts = scriptsIndex >= 0
+                        ? normalizedRelPath.Substring(scriptsIndex + "scripts/".Length)
+                        : normalizedRelPath;
 
-                string targetFilePath = Path.Combine(targetDir, fileName);
+                    targetFilePath = Path.Combine(targetDir, relativePathUnderScripts);
+                }
+                else
+                {
+                    // Keep the priority prefix for .asi files to control ASI load order
+                    string fileName = target == DeployTarget.Plugins 
+                        ? _loadOrderService.GetDeployedFileName(file, priority)
+                        : Path.GetFileName(file.RelativePath);
+
+                    targetFilePath = Path.Combine(targetDir, fileName);
+                }
+
+                // Ensure target directory exists for nested script files
+                string? parentDir = Path.GetDirectoryName(targetFilePath);
+                if (parentDir != null && !Directory.Exists(parentDir))
+                {
+                    Directory.CreateDirectory(parentDir);
+                }
 
                 if (_journal != null)
                 {
@@ -206,23 +227,61 @@ public class CompleteEditionAdapter : IBackendAdapter
             {
                 foreach (var file in mod.Files)
                 {
-                    string baseName = Path.GetFileName(file.RelativePath);
-                    // Look for matches in the target folder (which could be prefixed for plugins)
-                    var targetFiles = Directory.GetFiles(targetDir);
-                    foreach (var targetFile in targetFiles)
+                    if (target == DeployTarget.Scripts)
                     {
-                        string nameOnDisk = Path.GetFileName(targetFile);
-                        bool isMatch = target == DeployTarget.Plugins
-                            ? nameOnDisk.EndsWith(baseName, StringComparison.OrdinalIgnoreCase) // matches e.g. "01_test.asi"
-                            : nameOnDisk.Equals(baseName, StringComparison.OrdinalIgnoreCase);
+                        string normalizedRelPath = file.RelativePath.Replace('\\', '/');
+                        int scriptsIndex = normalizedRelPath.IndexOf("scripts/", StringComparison.OrdinalIgnoreCase);
+                        string relativePathUnderScripts = scriptsIndex >= 0
+                            ? normalizedRelPath.Substring(scriptsIndex + "scripts/".Length)
+                            : normalizedRelPath;
 
-                        if (isMatch)
+                        string targetFilePath = Path.Combine(targetDir, relativePathUnderScripts);
+                        if (File.Exists(targetFilePath))
                         {
                             if (_journal != null)
                             {
-                                _journal.Record(new JournalEntry(JournalOpType.DeleteFile, targetFile, null));
+                                _journal.Record(new JournalEntry(JournalOpType.DeleteFile, targetFilePath, null));
                             }
-                            await Task.Run(() => _linker.DeleteFile(targetFile));
+                            await Task.Run(() => _linker.DeleteFile(targetFilePath));
+
+                            // Clean up empty parent directories up to targetDir
+                            string? parent = Path.GetDirectoryName(targetFilePath);
+                            while (parent != null && parent.Length > targetDir.Length && Directory.Exists(parent))
+                            {
+                                if (!Directory.EnumerateFileSystemEntries(parent).Any())
+                                {
+                                    if (_journal != null)
+                                    {
+                                        _journal.Record(new JournalEntry(JournalOpType.DeleteDirectory, parent, null, IsDirectory: true));
+                                    }
+                                    Directory.Delete(parent);
+                                }
+                                else
+                                {
+                                    break;
+                                }
+                                parent = Path.GetDirectoryName(parent);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        string baseName = Path.GetFileName(file.RelativePath);
+                        // Look for matches in the target folder (which could be prefixed for plugins)
+                        var targetFiles = Directory.GetFiles(targetDir);
+                        foreach (var targetFile in targetFiles)
+                        {
+                            string nameOnDisk = Path.GetFileName(targetFile);
+                            bool isMatch = nameOnDisk.EndsWith(baseName, StringComparison.OrdinalIgnoreCase); // matches e.g. "01_test.asi"
+
+                            if (isMatch)
+                            {
+                                if (_journal != null)
+                                {
+                                    _journal.Record(new JournalEntry(JournalOpType.DeleteFile, targetFile, null));
+                                }
+                                await Task.Run(() => _linker.DeleteFile(targetFile));
+                            }
                         }
                     }
                 }
@@ -313,7 +372,17 @@ public class CompleteEditionAdapter : IBackendAdapter
     private DeployTarget ResolveTargetForMod(StagedMod mod)
     {
         if (mod.Files.Count == 0) return DeployTarget.Update;
-        return ResolveTarget(mod.Files[0]);
+        
+        if (mod.Files.Any(f => f.RelativePath.EndsWith(".asi", StringComparison.OrdinalIgnoreCase)))
+        {
+            return DeployTarget.Plugins;
+        }
+        if (mod.Files.Any(f => f.RelativePath.Replace('\\', '/').Contains("scripts/", StringComparison.OrdinalIgnoreCase) || 
+                              f.RelativePath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))
+        {
+            return DeployTarget.Scripts;
+        }
+        return DeployTarget.Update;
     }
 
     private string ComputeSha256(string filePath)

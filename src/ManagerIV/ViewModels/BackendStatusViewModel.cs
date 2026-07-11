@@ -8,6 +8,8 @@ public class BackendStatusViewModel : ViewModelBase
     private bool _fusionFixInstalled;
     private bool _dxvkInstalled;
     private bool _scriptHookInstalled;
+    private bool _memBiterInstalled;
+    private bool _bassAudioInstalled;
 
     private string _asiLoaderVersion = "Unknown";
     private string _fusionFixVersion = "Unknown";
@@ -25,7 +27,9 @@ public class BackendStatusViewModel : ViewModelBase
         bool asiLoader, string asiLoaderVersion,
         bool fusionFix, string fusionFixVersion,
         bool dxvk, string dxvkVersion,
-        bool scriptHook)
+        bool scriptHook,
+        bool memBiter = false,
+        bool bassAudio = false)
     {
         _asiLoaderInstalled = asiLoader;
         _asiLoaderVersion = asiLoaderVersion;
@@ -34,6 +38,8 @@ public class BackendStatusViewModel : ViewModelBase
         _dxvkInstalled = dxvk;
         _dxvkVersion = dxvkVersion;
         _scriptHookInstalled = scriptHook;
+        _memBiterInstalled = memBiter;
+        _bassAudioInstalled = bassAudio;
     }
 
     public bool AsiLoaderInstalled => _asiLoaderInstalled;
@@ -103,7 +109,18 @@ public class BackendStatusViewModel : ViewModelBase
     public string ScriptHookText => _scriptHookInstalled ? "Installed" : "Missing";
     public string ScriptHookBrush => _scriptHookInstalled ? "#FF107C41" : "#FF8A0A0A";
 
+    public bool MemBiterInstalled => _memBiterInstalled;
+    public string MemBiterText => _memBiterInstalled ? "Installed" : "Missing";
+    public string MemBiterBrush => _memBiterInstalled ? "#FF107C41" : "#FF8A0A0A";
+
+    public bool BassAudioInstalled => _bassAudioInstalled;
+    public string BassAudioText => _bassAudioInstalled ? "Installed" : "Missing";
+    public string BassAudioBrush => _bassAudioInstalled ? "#FF107C41" : "#FF8A0A0A";
+
     public string FusionFixButtonText => _fusionFixInstalled ? "Update" : "Install";
     public string AsiLoaderButtonText => _asiLoaderInstalled ? "Update" : "Install";
     public string DxvkButtonText => _dxvkInstalled ? "Update" : "Install";
+    public string ScriptHookButtonText => _scriptHookInstalled ? "Update" : "Install";
+    public string MemBiterButtonText => _memBiterInstalled ? "Update" : "Install";
+    public string BassAudioButtonText => _bassAudioInstalled ? "Update" : "Install";
 }

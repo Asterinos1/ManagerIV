@@ -17,100 +17,69 @@ public partial class ProfileSwitcherView : UserControl
 
     private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        if (ContentGrid == null || LeftPanel == null || ConfigCard == null || StatusPanel == null)
-            return;
+        // Responsive reflow for narrow windows (< 760px) to prevent element overlapping or squeeze
+        bool isNarrow = e.NewSize.Width < 760;
 
-        // Apply scale transform if screen is small
-        double scale = 1.0;
-        if (e.NewSize.Width < 950)
+        // Reflow Tab 1 (Mod Profiles & Paths)
+        if (Tab1Grid != null && Tab1LeftPanel != null && Tab1RightPanel != null)
         {
-            scale = Math.Min(scale, Math.Max(0.85, e.NewSize.Width / 950.0));
+            if (isNarrow)
+            {
+                Tab1Grid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+                Tab1Grid.ColumnDefinitions[1].Width = new GridLength(0, GridUnitType.Pixel);
+
+                Grid.SetColumn(Tab1LeftPanel, 0);
+                Grid.SetRow(Tab1LeftPanel, 0);
+                Tab1LeftPanel.Margin = new Thickness(0, 0, 0, 15);
+
+                Grid.SetColumn(Tab1RightPanel, 0);
+                Grid.SetRow(Tab1RightPanel, 1);
+                Tab1RightPanel.Margin = new Thickness(0, 0, 0, 0);
+            }
+            else
+            {
+                Tab1Grid.ColumnDefinitions[0].Width = new GridLength(320, GridUnitType.Pixel);
+                Tab1Grid.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
+
+                Grid.SetColumn(Tab1LeftPanel, 0);
+                Grid.SetRow(Tab1LeftPanel, 0);
+                Tab1LeftPanel.Margin = new Thickness(0, 0, 15, 0);
+
+                Grid.SetColumn(Tab1RightPanel, 1);
+                Grid.SetRow(Tab1RightPanel, 0);
+                Tab1RightPanel.Margin = new Thickness(0, 0, 0, 0);
+            }
         }
-        if (e.NewSize.Height < 650)
+
+        // Reflow Tab 3 (Save Game States)
+        if (Tab3Grid != null && Tab3LeftPanel != null && Tab3RightPanel != null)
         {
-            scale = Math.Min(scale, Math.Max(0.85, e.NewSize.Height / 650.0));
-        }
+            if (isNarrow)
+            {
+                Tab3Grid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+                Tab3Grid.ColumnDefinitions[1].Width = new GridLength(0, GridUnitType.Pixel);
 
-        if (RootScale != null)
-        {
-            RootScale.ScaleX = scale;
-            RootScale.ScaleY = scale;
-        }
+                Grid.SetColumn(Tab3LeftPanel, 0);
+                Grid.SetRow(Tab3LeftPanel, 0);
+                Tab3LeftPanel.Margin = new Thickness(0, 0, 0, 15);
 
-        // 1. Wide layout (>= 1150px): 3 columns, each card gets its own column
-        if (e.NewSize.Width >= 1150)
-        {
-            ContentGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
-            ContentGrid.ColumnDefinitions[1].Width = new GridLength(1.1, GridUnitType.Star);
-            ContentGrid.ColumnDefinitions[2].Width = new GridLength(1.1, GridUnitType.Star);
+                Grid.SetColumn(Tab3RightPanel, 0);
+                Grid.SetRow(Tab3RightPanel, 1);
+                Tab3RightPanel.Margin = new Thickness(0, 0, 0, 0);
+            }
+            else
+            {
+                Tab3Grid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+                Tab3Grid.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
 
-            // LeftPanel in Column 0, span 1
-            Grid.SetColumn(LeftPanel, 0);
-            Grid.SetRow(LeftPanel, 0);
-            Grid.SetRowSpan(LeftPanel, 1);
+                Grid.SetColumn(Tab3LeftPanel, 0);
+                Grid.SetRow(Tab3LeftPanel, 0);
+                Tab3LeftPanel.Margin = new Thickness(0, 0, 8, 0);
 
-            // ConfigCard in Column 1, Row 0
-            Grid.SetColumn(ConfigCard, 1);
-            Grid.SetRow(ConfigCard, 0);
-
-            // StatusPanel in Column 2, Row 0
-            Grid.SetColumn(StatusPanel, 2);
-            Grid.SetRow(StatusPanel, 0);
-
-            // Margins for 3-column flow
-            LeftPanel.Margin = new Thickness(0, 0, 10, 15);
-            ConfigCard.Margin = new Thickness(10, 0, 10, 15);
-            StatusPanel.Margin = new Thickness(10, 0, 0, 15);
-        }
-        // 2. Medium layout (720px to 1149px): 2 columns, StatusPanel stacked below ConfigCard
-        else if (e.NewSize.Width >= 720)
-        {
-            ContentGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
-            ContentGrid.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
-            ContentGrid.ColumnDefinitions[2].Width = new GridLength(0, GridUnitType.Pixel);
-
-            // LeftPanel in Column 0, spanning 2 rows
-            Grid.SetColumn(LeftPanel, 0);
-            Grid.SetRow(LeftPanel, 0);
-            Grid.SetRowSpan(LeftPanel, 2);
-
-            // ConfigCard in Column 1, Row 0
-            Grid.SetColumn(ConfigCard, 1);
-            Grid.SetRow(ConfigCard, 0);
-
-            // StatusPanel in Column 1, Row 1
-            Grid.SetColumn(StatusPanel, 1);
-            Grid.SetRow(StatusPanel, 1);
-
-            // Margins for 2-column flow
-            LeftPanel.Margin = new Thickness(0, 0, 10, 15);
-            ConfigCard.Margin = new Thickness(10, 0, 0, 15);
-            StatusPanel.Margin = new Thickness(10, 0, 0, 15);
-        }
-        // 3. Narrow layout (< 720px): 1 column, all panels stacked vertically
-        else
-        {
-            ContentGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
-            ContentGrid.ColumnDefinitions[1].Width = new GridLength(0, GridUnitType.Pixel);
-            ContentGrid.ColumnDefinitions[2].Width = new GridLength(0, GridUnitType.Pixel);
-
-            // LeftPanel in Column 0, Row 0, span 1
-            Grid.SetColumn(LeftPanel, 0);
-            Grid.SetRow(LeftPanel, 0);
-            Grid.SetRowSpan(LeftPanel, 1);
-
-            // ConfigCard in Column 0, Row 1
-            Grid.SetColumn(ConfigCard, 0);
-            Grid.SetRow(ConfigCard, 1);
-
-            // StatusPanel in Column 0, Row 2
-            Grid.SetColumn(StatusPanel, 0);
-            Grid.SetRow(StatusPanel, 2);
-
-            // Margins for 1-column stack
-            LeftPanel.Margin = new Thickness(0, 0, 0, 15);
-            ConfigCard.Margin = new Thickness(0, 0, 0, 15);
-            StatusPanel.Margin = new Thickness(0, 0, 0, 15);
+                Grid.SetColumn(Tab3RightPanel, 1);
+                Grid.SetRow(Tab3RightPanel, 0);
+                Tab3RightPanel.Margin = new Thickness(8, 0, 0, 0);
+            }
         }
     }
 
@@ -123,6 +92,20 @@ public partial class ProfileSwitcherView : UserControl
                 if (vm.SwitchProfileCommand.CanExecute(profile))
                 {
                     vm.SwitchProfileCommand.Execute(profile);
+                }
+            }
+        }
+    }
+
+    private void SaveListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (e.AddedItems.Count > 0 && e.AddedItems[0] is SaveProfile saveProfile)
+        {
+            if (DataContext is MainViewModel vm && !saveProfile.IsActive)
+            {
+                if (vm.ActivateSaveProfileCommand.CanExecute(saveProfile))
+                {
+                    vm.ActivateSaveProfileCommand.Execute(saveProfile);
                 }
             }
         }

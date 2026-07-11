@@ -103,8 +103,16 @@ public class ConflictDetector
         {
             DeployTarget.Update => "update/" + normalized,
             DeployTarget.Plugins => "plugins/" + Path.GetFileName(normalized),
-            DeployTarget.Scripts => "scripts/" + Path.GetFileName(normalized),
+            DeployTarget.Scripts => "scripts/" + GetPathUnderScripts(normalized),
             _ => normalized
         };
+    }
+
+    private string GetPathUnderScripts(string normalizedPath)
+    {
+        int scriptsIndex = normalizedPath.IndexOf("scripts/", StringComparison.OrdinalIgnoreCase);
+        return scriptsIndex >= 0
+            ? normalizedPath.Substring(scriptsIndex + "scripts/".Length)
+            : normalizedPath;
     }
 }

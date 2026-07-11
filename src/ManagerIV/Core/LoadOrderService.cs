@@ -18,6 +18,7 @@ public class LoadOrderService
         var entries = new List<LoadOrderEntry>();
         int modPriority = 1;
         int pluginPriority = 1;
+        int scriptPriority = 1;
 
         foreach (var mod in mods)
         {
@@ -25,6 +26,10 @@ public class LoadOrderService
             if (target == DeployTarget.Plugins)
             {
                 entries.Add(new LoadOrderEntry(mod.Id, target, pluginPriority++));
+            }
+            else if (target == DeployTarget.Scripts)
+            {
+                entries.Add(new LoadOrderEntry(mod.Id, target, scriptPriority++));
             }
             else
             {
@@ -50,9 +55,9 @@ public class LoadOrderService
             return currentModel;
         }
 
-        bool isPlugin = entryToMove.Target == DeployTarget.Plugins;
-        var sameTypeEntries = list.Where(e => (e.Target == DeployTarget.Plugins) == isPlugin).OrderBy(e => e.Priority).ToList();
-        var otherTypeEntries = list.Where(e => (e.Target == DeployTarget.Plugins) != isPlugin).ToList();
+        var targetType = entryToMove.Target;
+        var sameTypeEntries = list.Where(e => e.Target == targetType).OrderBy(e => e.Priority).ToList();
+        var otherTypeEntries = list.Where(e => e.Target != targetType).ToList();
 
         sameTypeEntries.Remove(entryToMove);
         
@@ -92,13 +97,13 @@ public class LoadOrderService
         return fileName;
     }
 
-    private DeployTarget DetermineDeployTarget(StagedMod mod)
+    public DeployTarget DetermineDeployTarget(StagedMod mod)
     {
         if (mod.Files.Any(f => f.RelativePath.EndsWith(".asi", StringComparison.OrdinalIgnoreCase)))
         {
             return DeployTarget.Plugins;
         }
-        if (mod.Files.Any(f => f.RelativePath.Contains("scripts", StringComparison.OrdinalIgnoreCase) || f.RelativePath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))
+        if (mod.Files.Any(f => f.RelativePath.Replace('\\', '/').Contains("scripts/", StringComparison.OrdinalIgnoreCase) || f.RelativePath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))
         {
             return DeployTarget.Scripts;
         }

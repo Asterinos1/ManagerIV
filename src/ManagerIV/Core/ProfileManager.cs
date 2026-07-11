@@ -57,6 +57,43 @@ public class ProfileManager
         string json = File.ReadAllText(filePath);
         var profile = JsonSerializer.Deserialize<Profile>(json, _jsonOptions);
         
-        return profile ?? throw new InvalidOperationException("Failed to deserialize profile JSON.");
+        if (profile == null) throw new InvalidOperationException("Failed to deserialize profile JSON.");
+
+        // Normalize and migrate older profile formats to prevent NullReferenceExceptions
+        bool needsSave = false;
+        if (profile.EnabledModIds == null)
+        {
+            profile = profile with { EnabledModIds = Array.Empty<string>() };
+            needsSave = true;
+        }
+        if (profile.LoadOrder == null || profile.LoadOrder.Entries == null)
+        {
+            profile = profile with { LoadOrder = new LoadOrderModel(Array.Empty<LoadOrderEntry>()) };
+            needsSave = true;
+        }
+        if (profile.ConflictState == null || profile.ConflictState.Conflicts == null || profile.ConflictState.Warnings == null)
+        {
+            profile = profile with { ConflictState = new ConflictState(new System.Collections.Generic.Dictionary<string, ConflictInfo>(), Array.Empty<string>()) };
+            needsSave = true;
+        }
+        if (profile.InstalledToolVersions == null)
+        {
+            profile = profile with { InstalledToolVersions = new System.Collections.Generic.Dictionary<string, string>() };
+            needsSave = true;
+        }
+
+        if (needsSave)
+        {
+            try
+            {
+                SaveProfile(filePath, profile);
+            }
+            catch
+            {
+                // Ignore failure to write-back updated schema during load
+            }
+        }
+
+        return profile;
     }
 }

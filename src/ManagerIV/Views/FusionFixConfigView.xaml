@@ -22,6 +22,35 @@
         </Style>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <core:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
+        <core:LessThanConverter x:Key="LessThanConverter" />
+
+        <Style x:Key="SecondaryFooterButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+            <Setter Property="Width" Value="140" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Margin" Value="0,0,10,0" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Path=ActualWidth, RelativeSource={RelativeSource AncestorType={x:Type Window}}, Converter={StaticResource LessThanConverter}, ConverterParameter=900}" Value="True">
+                    <Setter Property="Width" Value="105" />
+                    <Setter Property="Height" Value="30" />
+                    <Setter Property="FontSize" Value="11" />
+                    <Setter Property="Padding" Value="4,2" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="PrimaryFooterButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+            <Setter Property="Width" Value="180" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Appearance" Value="Primary" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Path=ActualWidth, RelativeSource={RelativeSource AncestorType={x:Type Window}}, Converter={StaticResource LessThanConverter}, ConverterParameter=900}" Value="True">
+                    <Setter Property="Width" Value="145" />
+                    <Setter Property="Height" Value="30" />
+                    <Setter Property="FontSize" Value="11" />
+                    <Setter Property="Padding" Value="4,2" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
     
     <Grid Margin="20">
@@ -181,7 +210,7 @@
                                             <TextBlock Text="Specifies desaturated aiming zoom settings across game episodes." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </ui:CardControl.Header>
-                                    <ComboBox SelectedValue="{Binding FusionFixSettings.AimingZoomFix, Mode=TwoWay}" SelectedValuePath="Tag" Width="200" VerticalAlignment="Center">
+                                    <ComboBox SelectedValue="{Binding FusionFixSettings.AimingZoomFix, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
                                         <ComboBoxItem Content="Disabled" Tag="0" />
                                         <ComboBoxItem Content="Xbox Parity (TBoGT only)" Tag="1" />
                                         <ComboBoxItem Content="Global (IV, TLaD, and TBoGT)" Tag="2" />
@@ -298,7 +327,7 @@
                                             <TextBlock Text="Adds missing shadows back to vegetation, grates, and fences." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
                                     </ui:CardControl.Header>
-                                    <ComboBox SelectedValue="{Binding FusionFixSettings.ExtraDynamicShadows, Mode=TwoWay}" SelectedValuePath="Tag" Width="200" VerticalAlignment="Center">
+                                    <ComboBox SelectedValue="{Binding FusionFixSettings.ExtraDynamicShadows, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
                                         <ComboBoxItem Content="Disabled (Vanilla shadows)" Tag="0" />
                                         <ComboBoxItem Content="Vegetation Only" Tag="1" />
                                         <ComboBoxItem Content="Full Environment" Tag="2" />
@@ -322,7 +351,7 @@
                                             <TextBlock Text="Forces shadow blur quality profile parameters." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
                                     </ui:CardControl.Header>
-                                    <ComboBox SelectedValue="{Binding FusionFixSettings.ForceShadowFilter, Mode=TwoWay}" SelectedValuePath="Tag" Width="200" VerticalAlignment="Center">
+                                    <ComboBox SelectedValue="{Binding FusionFixSettings.ForceShadowFilter, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
                                         <ComboBoxItem Content="Tied to definition (0)" Tag="0" />
                                         <ComboBoxItem Content="Force Low Quality (1)" Tag="1" />
                                         <ComboBoxItem Content="Force High Quality (2)" Tag="2" />
@@ -692,7 +721,7 @@
                                             <TextBlock Text="Realtime (Thread-Lock) or Sleep-Yield (Accurate, saves CPU resources)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
                                     </ui:CardControl.Header>
-                                    <ComboBox SelectedValue="{Binding FusionFixSettings.FrameLimitType, Mode=TwoWay}" SelectedValuePath="Tag" Width="200" VerticalAlignment="Center">
+                                    <ComboBox SelectedValue="{Binding FusionFixSettings.FrameLimitType, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
                                         <ComboBoxItem Content="Thread-Lock Realtime (1)" Tag="1" />
                                         <ComboBoxItem Content="Sleep-Yield Accurate (2)" Tag="2" />
                                     </ComboBox>
@@ -922,7 +951,7 @@
                                             <TextBlock Text="Applies multi-sample anti-aliasing to mirrors, water, and car maps." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
                                     </ui:CardControl.Header>
-                                    <ComboBox SelectedValue="{Binding FusionFixSettings.ReflectionMSAAQuality, Mode=TwoWay}" SelectedValuePath="Tag" Width="200" VerticalAlignment="Center">
+                                    <ComboBox SelectedValue="{Binding FusionFixSettings.ReflectionMSAAQuality, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
                                         <ComboBoxItem Content="Disabled (0)" Tag="0" />
                                         <ComboBoxItem Content="2x MSAA (2)" Tag="2" />
                                         <ComboBoxItem Content="4x MSAA (4)" Tag="4" />
@@ -938,7 +967,7 @@
                                             <TextBlock Text="Redirects save games and user settings directory to a custom path (Leave blank for default)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </ui:CardControl.Header>
-                                    <ui:TextBox Text="{Binding FusionFixSettings.CustomUserProfilePath, Mode=TwoWay}" Width="250" VerticalAlignment="Center" PlaceholderText="e.g. C:\MySaves" />
+                                    <ui:TextBox Text="{Binding FusionFixSettings.CustomUserProfilePath, Mode=TwoWay}" Width="150" VerticalAlignment="Center" PlaceholderText="e.g. C:\MySaves" />
                                 </ui:CardControl>
 
                         </StackPanel>
@@ -1649,31 +1678,32 @@
                 <!-- Actions Footer bar -->
                 <ui:Card Grid.Row="2" Margin="0,10,0,0" Padding="12" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
                     <Grid>
-                        <TextBlock Text="Tuning modifications are saved directly into your game files." 
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" 
+                                   Text="Tuning modifications are saved directly into your game files." 
                                    VerticalAlignment="Center" 
                                    FontSize="11" 
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,10,0"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
                             <ui:Button Content="Refresh" 
                                        Icon="{ui:SymbolIcon ArrowClockwise24}"
                                        Command="{Binding RefreshFusionFixConfigCommand}"
-                                       Margin="0,0,10,0"
-                                       Width="140" 
-                                       Height="36" />
+                                       Style="{StaticResource SecondaryFooterButtonStyle}" />
                             <ui:Button Content="Defaults" 
                                        Icon="{ui:SymbolIcon ArrowReset24}"
                                        Command="{Binding LoadFusionFixDefaultsCommand}"
-                                       Visibility="{Binding IsFusionFixTabActive, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                       Margin="0,0,10,0"
-                                       Width="140" 
-                                       Height="36" />
+                                       Visibility="{Binding IsBackendConfigAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                       Style="{StaticResource SecondaryFooterButtonStyle}" />
                             <ui:Button Content="Save Configuration" 
                                        Icon="{ui:SymbolIcon Save24}"
                                        Command="{Binding SaveFusionFixConfigCommand}"
-                                       Appearance="Primary"
-                                       Width="180" 
-                                       Height="36" />
+                                       Style="{StaticResource PrimaryFooterButtonStyle}" />
                         </StackPanel>
                     </Grid>
                 </ui:Card>

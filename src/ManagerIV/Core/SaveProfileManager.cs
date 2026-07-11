@@ -103,12 +103,97 @@ public class SaveProfileManager
                     }
                 }
 
-                saveProfiles.Add(new SaveProfile(folderName, displayName, isActive, dir));
+                int fileCount = 0;
+                DateTime? lastModified = null;
+                long totalSizeBytes = 0;
+
+                try
+                {
+                    var dirInfo = new DirectoryInfo(dir);
+                    var files = dirInfo.GetFiles("*", SearchOption.AllDirectories);
+                    fileCount = files.Count(f => f.Name.StartsWith("SGTA", StringComparison.OrdinalIgnoreCase));
+                    if (fileCount == 0) fileCount = files.Length;
+
+                    if (files.Length > 0)
+                    {
+                        lastModified = files.Max(f => f.LastWriteTime);
+                        totalSizeBytes = files.Sum(f => f.Length);
+                    }
+                    else
+                    {
+                        lastModified = dirInfo.LastWriteTime;
+                    }
+                }
+                catch { }
+
+                saveProfiles.Add(new SaveProfile(folderName, displayName, isActive, dir, fileCount, lastModified, totalSizeBytes));
             }
         }
         catch { }
 
         return saveProfiles.OrderByDescending(p => p.IsActive).ThenBy(p => p.DisplayName).ToList();
+    }
+
+    /// <summary>
+    /// Creates an instant backup clone/snapshot of the active save profile directory without deactivating it.
+    /// </summary>
+    public SaveProfile CloneActiveSaveProfile(string baseProfileId, string snapshotDisplayName)
+    {
+        if (string.IsNullOrWhiteSpace(baseProfileId) || !Directory.Exists(_defaultProfilesPath))
+            throw new ArgumentException("Base profile ID must be valid and profile directory must exist.");
+
+        string activePath = Path.Combine(_defaultProfilesPath, baseProfileId);
+        if (!Directory.Exists(activePath))
+            throw new DirectoryNotFoundException($"Active save directory '{activePath}' not found.");
+
+        string cleanName = string.IsNullOrWhiteSpace(snapshotDisplayName)
+            ? $"Backup_{DateTime.Now:yyyyMMdd_HHmmss}"
+            : snapshotDisplayName.Replace(" ", "_").Trim();
+
+        foreach (char c in Path.GetInvalidFileNameChars())
+        {
+            cleanName = cleanName.Replace(c, '_');
+        }
+
+        string targetPath = Path.Combine(_defaultProfilesPath, $"{baseProfileId}_{cleanName}");
+        if (Directory.Exists(targetPath))
+        {
+            targetPath += "_" + Guid.NewGuid().ToString("N").Substring(0, 6);
+        }
+
+        CopyDirectory(activePath, targetPath);
+
+        string metadataName = !string.IsNullOrWhiteSpace(snapshotDisplayName)
+            ? snapshotDisplayName
+            : $"Snapshot {DateTime.Now:g}";
+
+        try
+        {
+            File.WriteAllText(Path.Combine(targetPath, "manageriv_save_name.txt"), metadataName);
+        }
+        catch { }
+
+        return new SaveProfile(
+            Path.GetFileName(targetPath),
+            metadataName,
+            false,
+            targetPath
+        );
+    }
+
+    private static void CopyDirectory(string sourceDir, string destinationDir)
+    {
+        Directory.CreateDirectory(destinationDir);
+        foreach (string file in Directory.GetFiles(sourceDir))
+        {
+            string destFile = Path.Combine(destinationDir, Path.GetFileName(file));
+            File.Copy(file, destFile, true);
+        }
+        foreach (string subDir in Directory.GetDirectories(sourceDir))
+        {
+            string destSubDir = Path.Combine(destinationDir, Path.GetFileName(subDir));
+            CopyDirectory(subDir, destSubDir);
+        }
     }
 
     /// <summary>

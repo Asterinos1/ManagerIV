@@ -232,7 +232,17 @@ public partial class ModLibraryView : UserControl
         }
         _targetAdornedItem = null;
     }
-
+    private void ClosePopup_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement button)
+        {
+            var popup = FindAncestor<System.Windows.Controls.Primitives.Popup>(button);
+            if (popup != null)
+            {
+                popup.IsOpen = false;
+            }
+        }
+    }
     private void HandleFileDrop(DragEventArgs e)
     {
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
@@ -260,37 +270,49 @@ public partial class ModLibraryView : UserControl
         if (LibraryContentGrid == null || ListsContainerGrid == null)
             return;
 
-        // Stack ListsContainerGrid vertically if narrow
-        if (e.NewSize.Width < 800)
+        // Stack ListsContainerGrid vertically if narrow (width < 1000)
+        if (e.NewSize.Width < 1000)
         {
             ListsContainerGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
             if (ListsContainerGrid.ColumnDefinitions.Count > 1)
                 ListsContainerGrid.ColumnDefinitions[1].Width = new GridLength(0);
+            if (ListsContainerGrid.ColumnDefinitions.Count > 2)
+                ListsContainerGrid.ColumnDefinitions[2].Width = new GridLength(0);
 
-            if (ListsContainerGrid.RowDefinitions.Count < 2)
+            if (ListsContainerGrid.RowDefinitions.Count < 3)
             {
                 ListsContainerGrid.RowDefinitions.Clear();
-                ListsContainerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(6, GridUnitType.Star) });
                 ListsContainerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(4, GridUnitType.Star) });
+                ListsContainerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(3, GridUnitType.Star) });
+                ListsContainerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(3, GridUnitType.Star) });
             }
 
+            Grid.SetColumn(ScriptsListCard, 0);
+            Grid.SetRow(ScriptsListCard, 1);
+            ScriptsListCard.Margin = new Thickness(0, 10, 0, 4);
+
             Grid.SetColumn(PluginsListCard, 0);
-            Grid.SetRow(PluginsListCard, 1);
+            Grid.SetRow(PluginsListCard, 2);
             PluginsListCard.Margin = new Thickness(0, 10, 0, 4);
         }
         else
         {
-            if (ListsContainerGrid.ColumnDefinitions.Count > 1)
+            if (ListsContainerGrid.ColumnDefinitions.Count > 2)
             {
-                ListsContainerGrid.ColumnDefinitions[0].Width = new GridLength(7, GridUnitType.Star);
+                ListsContainerGrid.ColumnDefinitions[0].Width = new GridLength(4, GridUnitType.Star);
                 ListsContainerGrid.ColumnDefinitions[1].Width = new GridLength(3, GridUnitType.Star);
+                ListsContainerGrid.ColumnDefinitions[2].Width = new GridLength(3, GridUnitType.Star);
             }
 
             ListsContainerGrid.RowDefinitions.Clear();
 
-            Grid.SetColumn(PluginsListCard, 1);
+            Grid.SetColumn(ScriptsListCard, 1);
+            Grid.SetRow(ScriptsListCard, 0);
+            ScriptsListCard.Margin = new Thickness(10, 0, 6, 4);
+
+            Grid.SetColumn(PluginsListCard, 2);
             Grid.SetRow(PluginsListCard, 0);
-            PluginsListCard.Margin = new Thickness(10, 0, 0, 4);
+            PluginsListCard.Margin = new Thickness(6, 0, 0, 4);
         }
 
         if (HeaderActionsPanel != null)

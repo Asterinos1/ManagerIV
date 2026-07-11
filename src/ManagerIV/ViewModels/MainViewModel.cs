@@ -46,6 +46,7 @@ public class MainViewModel : ViewModelBase
     private MusicViewModel _music;
     private ModViewModel? _selectedLibraryMod;
     private ModViewModel? _selectedPluginMod;
+    private ModViewModel? _selectedScriptMod;
     private ModViewModel? _selectedMod;
 
     // Save Profiles fields
@@ -109,6 +110,7 @@ public class MainViewModel : ViewModelBase
 
     public System.ComponentModel.ICollectionView? MainModsCollection { get; }
     public System.ComponentModel.ICollectionView? PluginsCollection { get; }
+    public System.ComponentModel.ICollectionView? ScriptsCollection { get; }
 
     public ModViewModel? SelectedLibraryMod
     {
@@ -120,9 +122,10 @@ public class MainViewModel : ViewModelBase
                 if (value != null)
                 {
                     SelectedPluginMod = null;
+                    SelectedScriptMod = null;
                     SelectedMod = value;
                 }
-                else if (SelectedPluginMod == null)
+                else if (SelectedPluginMod == null && SelectedScriptMod == null)
                 {
                     SelectedMod = null;
                 }
@@ -140,9 +143,31 @@ public class MainViewModel : ViewModelBase
                 if (value != null)
                 {
                     SelectedLibraryMod = null;
+                    SelectedScriptMod = null;
                     SelectedMod = value;
                 }
-                else if (SelectedLibraryMod == null)
+                else if (SelectedLibraryMod == null && SelectedScriptMod == null)
+                {
+                    SelectedMod = null;
+                }
+            }
+        }
+    }
+
+    public ModViewModel? SelectedScriptMod
+    {
+        get => _selectedScriptMod;
+        set
+        {
+            if (SetProperty(ref _selectedScriptMod, value))
+            {
+                if (value != null)
+                {
+                    SelectedLibraryMod = null;
+                    SelectedPluginMod = null;
+                    SelectedMod = value;
+                }
+                else if (SelectedLibraryMod == null && SelectedPluginMod == null)
                 {
                     SelectedMod = null;
                 }
@@ -293,6 +318,13 @@ public class MainViewModel : ViewModelBase
         set => SetProperty(ref _newSaveProfileName, value);
     }
 
+    private string _quickSnapshotName = "";
+    public string QuickSnapshotName
+    {
+        get => _quickSnapshotName;
+        set => SetProperty(ref _quickSnapshotName, value);
+    }
+
     public string RenameActiveSaveTo
     {
         get => _renameActiveSaveTo;
@@ -334,6 +366,7 @@ public class MainViewModel : ViewModelBase
 
         MainModsCollection?.Refresh();
         PluginsCollection?.Refresh();
+        ScriptsCollection?.Refresh();
     }
 
     private int _activeImgArchiveCount;
@@ -499,6 +532,12 @@ public class MainViewModel : ViewModelBase
     public ICommand UninstallAsiLoaderCommand { get; }
     public ICommand InstallDxvkCommand { get; }
     public ICommand UninstallDxvkCommand { get; }
+    public ICommand InstallScriptHookCommand { get; }
+    public ICommand UninstallScriptHookCommand { get; }
+    public ICommand InstallMemBiterCommand { get; }
+    public ICommand UninstallMemBiterCommand { get; }
+    public ICommand InstallBassAudioCommand { get; }
+    public ICommand UninstallBassAudioCommand { get; }
     public ICommand DeleteModCommand { get; }
     public ICommand SetVramPresetCommand { get; }
     public ICommand ClearLibraryCommand { get; }
@@ -515,6 +554,11 @@ public class MainViewModel : ViewModelBase
     public ICommand RenameSaveProfileCommand { get; }
     public ICommand DeleteSaveProfileCommand { get; }
     public ICommand RefreshSaveProfilesCommand { get; }
+    public ICommand OpenGameDirCommand { get; }
+    public ICommand OpenLibraryDirCommand { get; }
+    public ICommand QuickSnapshotSaveProfileCommand { get; }
+    public ICommand OpenSaveProfileFolderCommand { get; }
+    public ICommand ImportSaveFileCommand { get; }
 
     public MainViewModel() : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ManagerIV"))
     {
@@ -563,12 +607,18 @@ public class MainViewModel : ViewModelBase
         UninstallAsiLoaderCommand = new RelayCommand(async () => await UninstallAsiLoaderAsync(), () => !IsBusy && ActiveProfile != null);
         InstallDxvkCommand = new RelayCommand(async () => await InstallDxvkAsync(), () => !IsBusy && ActiveProfile != null);
         UninstallDxvkCommand = new RelayCommand(async () => await UninstallDxvkAsync(), () => !IsBusy && ActiveProfile != null);
+        InstallScriptHookCommand = new RelayCommand(async () => await InstallScriptHookAsync(), () => !IsBusy && ActiveProfile != null);
+        UninstallScriptHookCommand = new RelayCommand(async () => await UninstallScriptHookAsync(), () => !IsBusy && ActiveProfile != null);
+        InstallMemBiterCommand = new RelayCommand(async () => await InstallMemBiterAsync(), () => !IsBusy && ActiveProfile != null);
+        UninstallMemBiterCommand = new RelayCommand(async () => await UninstallMemBiterAsync(), () => !IsBusy && ActiveProfile != null);
+        InstallBassAudioCommand = new RelayCommand(async () => await InstallBassAudioAsync(), () => !IsBusy && ActiveProfile != null);
+        UninstallBassAudioCommand = new RelayCommand(async () => await UninstallBassAudioAsync(), () => !IsBusy && ActiveProfile != null);
         DeleteModCommand = new RelayCommand<ModViewModel>(async (mod) => await DeleteModAsync(mod), (mod) => !IsBusy && mod != null);
         SetVramPresetCommand = new RelayCommand<object>(SetVramPreset);
         ClearLibraryCommand = new RelayCommand(async () => await ClearLibraryAsync(), () => !IsBusy && LibraryMods.Any());
         ResetGameDirectoryCommand = new RelayCommand(async () => await ResetGameDirectoryAsync(), () => !IsBusy && ActiveProfile != null && !string.IsNullOrEmpty(ActiveProfile.GamePath));
         SaveFusionFixConfigCommand = new RelayCommand(SaveFusionFixConfig, () => IsBackendConfigAvailable && !IsBusy);
-        LoadFusionFixDefaultsCommand = new RelayCommand(LoadFusionFixDefaults, () => IsFusionFixConfigAvailable && !IsBusy);
+        LoadFusionFixDefaultsCommand = new RelayCommand(LoadDefaults, () => !IsBusy);
         RefreshFusionFixConfigCommand = new RelayCommand(RefreshFusionFixConfig, () => IsBackendConfigAvailable && !IsBusy);
         SwitchBackendTabCommand = new RelayCommand<string>(tab =>
         {
@@ -584,18 +634,24 @@ public class MainViewModel : ViewModelBase
         RenameSaveProfileCommand = new RelayCommand<string>(RenameSaveProfile);
         DeleteSaveProfileCommand = new RelayCommand(DeleteSaveProfile);
         RefreshSaveProfilesCommand = new RelayCommand(RefreshSaveProfilesList);
+        OpenGameDirCommand = new RelayCommand(OpenGameDirInExplorer, () => ActiveProfile != null && !string.IsNullOrWhiteSpace(ActiveProfile.GamePath) && Directory.Exists(ActiveProfile.GamePath));
+        OpenLibraryDirCommand = new RelayCommand(OpenLibraryDirInExplorer, () => ActiveProfile != null && !string.IsNullOrWhiteSpace(ActiveProfile.LibraryPath) && Directory.Exists(ActiveProfile.LibraryPath));
+        QuickSnapshotSaveProfileCommand = new RelayCommand(QuickSnapshotSaveProfile, () => !string.IsNullOrEmpty(SelectedBaseProfileId));
+        OpenSaveProfileFolderCommand = new RelayCommand<SaveProfile>(OpenSaveProfileFolder, (sp) => (sp ?? SelectedSaveProfile) != null && Directory.Exists((sp ?? SelectedSaveProfile)!.FullPath));
+        ImportSaveFileCommand = new RelayCommand<object>(ImportSaveFile, (param) => !string.IsNullOrEmpty(SelectedBaseProfileId));
 
         // Initialize collection views and their filters (only if running inside Application context to avoid WPF threading issues in unit tests)
         if (System.Windows.Application.Current != null)
         {
             MainModsCollection = new System.Windows.Data.ListCollectionView(LibraryMods);
             PluginsCollection = new System.Windows.Data.ListCollectionView(LibraryMods);
+            ScriptsCollection = new System.Windows.Data.ListCollectionView(LibraryMods);
 
             MainModsCollection.Filter = (obj) =>
             {
                 if (obj is ModViewModel mod)
                 {
-                    bool matchesTarget = mod.Target != DeployTarget.Plugins;
+                    bool matchesTarget = mod.Target == DeployTarget.Update;
                     bool matchesSearch = string.IsNullOrWhiteSpace(SearchQuery) || mod.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase);
                     return matchesTarget && matchesSearch;
                 }
@@ -607,6 +663,17 @@ public class MainViewModel : ViewModelBase
                 if (obj is ModViewModel mod)
                 {
                     bool matchesTarget = mod.Target == DeployTarget.Plugins;
+                    bool matchesSearch = string.IsNullOrWhiteSpace(SearchQuery) || mod.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase);
+                    return matchesTarget && matchesSearch;
+                }
+                return false;
+            };
+
+            ScriptsCollection.Filter = (obj) =>
+            {
+                if (obj is ModViewModel mod)
+                {
+                    bool matchesTarget = mod.Target == DeployTarget.Scripts;
                     bool matchesSearch = string.IsNullOrWhiteSpace(SearchQuery) || mod.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase);
                     return matchesTarget && matchesSearch;
                 }
@@ -654,8 +721,8 @@ public class MainViewModel : ViewModelBase
                 {
                     foreach (var mod in modsList)
                     {
-                        // Default to update target, enabled = false, priority = 99
-                        LibraryMods.Add(new ModViewModel(ApplyDerivedLibraryTags(mod), false, 99, DeployTarget.Update));
+                        var target = _loadOrderService.DetermineDeployTarget(mod);
+                        LibraryMods.Add(new ModViewModel(ApplyDerivedLibraryTags(mod), false, 99, target));
                     }
                 }
             }
@@ -744,18 +811,32 @@ public class MainViewModel : ViewModelBase
         {
             modVm.IsEnabled = ActiveProfile.EnabledModIds.Contains(modVm.Id);
             
+            // Determine the correct target based on files
+            DeployTarget correctTarget = _loadOrderService.DetermineDeployTarget(modVm.Model);
+
             var orderEntry = entries.FirstOrDefault(e => e.ModId == modVm.Id);
             if (orderEntry != null)
             {
                 modVm.Priority = orderEntry.Priority;
-                modVm.Target = orderEntry.Target;
+                
+                // Migrate legacy incorrect targets (e.g. scripts default-saved as Update)
+                if (orderEntry.Target != correctTarget)
+                {
+                    modVm.Target = correctTarget;
+                    int idx = entries.IndexOf(orderEntry);
+                    entries[idx] = orderEntry with { Target = correctTarget };
+                    loadOrderChanged = true;
+                }
+                else
+                {
+                    modVm.Target = orderEntry.Target;
+                }
             }
             else
             {
-                bool isPlugin = modVm.Model.Files.Any(f => f.RelativePath.EndsWith(".asi", StringComparison.OrdinalIgnoreCase));
-                modVm.Target = isPlugin ? DeployTarget.Plugins : DeployTarget.Update;
+                modVm.Target = correctTarget;
                 
-                var sameTypeEntries = entries.Where(e => (e.Target == DeployTarget.Plugins) == isPlugin).ToList();
+                var sameTypeEntries = entries.Where(e => e.Target == correctTarget).ToList();
                 int maxPriority = sameTypeEntries.Any() ? sameTypeEntries.Max(e => e.Priority) : 0;
                 modVm.Priority = maxPriority + 1;
                 
@@ -775,8 +856,9 @@ public class MainViewModel : ViewModelBase
 
         // Re-sequence all entries in the load order to ensure they are 1..N contiguous per target type
         var plugins = entries.Where(e => e.Target == DeployTarget.Plugins).OrderBy(e => e.Priority).Select((entry, index) => entry with { Priority = index + 1 }).ToList();
-        var mods = entries.Where(e => e.Target != DeployTarget.Plugins).OrderBy(e => e.Priority).Select((entry, index) => entry with { Priority = index + 1 }).ToList();
-        var resequencedEntries = plugins.Concat(mods).ToList();
+        var scripts = entries.Where(e => e.Target == DeployTarget.Scripts).OrderBy(e => e.Priority).Select((entry, index) => entry with { Priority = index + 1 }).ToList();
+        var mods = entries.Where(e => e.Target == DeployTarget.Update).OrderBy(e => e.Priority).Select((entry, index) => entry with { Priority = index + 1 }).ToList();
+        var resequencedEntries = plugins.Concat(scripts).Concat(mods).ToList();
 
         // Check if resequencing changed any priorities
         if (!loadOrderChanged && resequencedEntries.Count == entries.Count)
@@ -1004,6 +1086,9 @@ public class MainViewModel : ViewModelBase
                                 (Directory.Exists(pluginsDir) && Directory.GetFiles(pluginsDir, "*ScriptHook*.dll").Any()) ||
                                 (Directory.Exists(Path.Combine(gamePath, "scripts")) && Directory.GetFiles(Path.Combine(gamePath, "scripts"), "*ScriptHook*.dll").Any());
 
+        bool memBiterExists = File.Exists(Path.Combine(gamePath, "MemBiter.dll"));
+        bool bassAudioExists = File.Exists(Path.Combine(gamePath, "bass.dll")) || File.Exists(Path.Combine(gamePath, "Bass.net.dll"));
+
         string ffVer = "Unknown";
         string asiVer = "Unknown";
         string dxvkVer = "Unknown";
@@ -1015,7 +1100,7 @@ public class MainViewModel : ViewModelBase
             if (ActiveProfile.ToolVersions.TryGetValue("DXVK", out string? vdxvk)) dxvkVer = vdxvk;
         }
 
-        BackendStatus = new BackendStatusViewModel(asiLoaderExists, asiVer, fusionFixExists, ffVer, dxvkExists, dxvkVer, scriptHookExists);
+        BackendStatus = new BackendStatusViewModel(asiLoaderExists, asiVer, fusionFixExists, ffVer, dxvkExists, dxvkVer, scriptHookExists, memBiterExists, bassAudioExists);
 
         // Fetch latest versions from GitHub in the background
         _ = FetchLatestToolVersionsAsync(BackendStatus);
@@ -1099,6 +1184,44 @@ public class MainViewModel : ViewModelBase
         if (dialog.ShowDialog() == true)
         {
             await ImportArchivesAsync(dialog.FileNames);
+        }
+    }
+
+    private void OpenGameDirInExplorer()
+    {
+        if (ActiveProfile != null && !string.IsNullOrWhiteSpace(ActiveProfile.GamePath) && Directory.Exists(ActiveProfile.GamePath))
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = ActiveProfile.GamePath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Failed to open folder: {ex.Message}";
+            }
+        }
+    }
+
+    private void OpenLibraryDirInExplorer()
+    {
+        if (ActiveProfile != null && !string.IsNullOrWhiteSpace(ActiveProfile.LibraryPath) && Directory.Exists(ActiveProfile.LibraryPath))
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = ActiveProfile.LibraryPath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Failed to open folder: {ex.Message}";
+            }
         }
     }
 
@@ -1324,7 +1447,8 @@ public class MainViewModel : ViewModelBase
                     ));
 
                     // Add to library
-                    var vm = new ModViewModel(stagedMod, false, 99, stagedMod.Files.Any(f => f.RelativePath.EndsWith(".asi", StringComparison.OrdinalIgnoreCase)) ? DeployTarget.Plugins : DeployTarget.Update);
+                    var target = _loadOrderService.DetermineDeployTarget(stagedMod);
+                    var vm = new ModViewModel(stagedMod, false, 99, target);
                     
                     if (System.Windows.Application.Current != null && System.Windows.Application.Current.Dispatcher != null)
                     {
@@ -1440,9 +1564,65 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    private void ToggleModEnabled(ModViewModel? modVm)
+    private async void ToggleModEnabled(ModViewModel? modVm)
     {
         if (modVm == null || ActiveProfile == null) return;
+
+        if (!modVm.IsEnabled)
+        {
+            if (modVm.Target == DeployTarget.Plugins)
+            {
+                if (!BackendStatus.AsiLoaderInstalled && !BackendStatus.FusionFixInstalled)
+                {
+                    var result = System.Windows.MessageBox.Show(
+                        $"The mod '{modVm.Name}' is an ASI plugin and requires an ASI Loader to run, but it is not currently installed.\n\n" +
+                        "Would you like to install the Ultimate ASI Loader now?",
+                        "Missing ASI Loader",
+                        System.Windows.MessageBoxButton.YesNo,
+                        System.Windows.MessageBoxImage.Warning);
+
+                    if (result == System.Windows.MessageBoxResult.Yes)
+                    {
+                        await InstallAsiLoaderAsync();
+                        if (!BackendStatus.AsiLoaderInstalled && !BackendStatus.FusionFixInstalled)
+                        {
+                            System.Windows.MessageBox.Show("Ultimate ASI Loader installation was not completed. Mod cannot be enabled.", "Missing Backend", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+            }
+            else if (modVm.Target == DeployTarget.Scripts)
+            {
+                if (!BackendStatus.ScriptHookInstalled)
+                {
+                    var result = System.Windows.MessageBox.Show(
+                        $"The mod '{modVm.Name}' contains scripts and requires ScriptHook to run, but it is not currently installed.\n\n" +
+                        "Would you like to install ScriptHook now?",
+                        "Missing ScriptHook",
+                        System.Windows.MessageBoxButton.YesNo,
+                        System.Windows.MessageBoxImage.Warning);
+
+                    if (result == System.Windows.MessageBoxResult.Yes)
+                    {
+                        await InstallScriptHookAsync();
+                        if (!BackendStatus.ScriptHookInstalled)
+                        {
+                            System.Windows.MessageBox.Show("ScriptHook installation was not completed. Mod cannot be enabled.", "Missing Backend", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+            }
+        }
 
         modVm.IsEnabled = !modVm.IsEnabled;
         
@@ -1948,6 +2128,9 @@ public class MainViewModel : ViewModelBase
 
         try
         {
+            // Backup settings before we reset/wipe the directory
+            BackupSettings();
+
             // 1. Undeploy all mods first from the current active game path
             var adapter = new CompleteEditionAdapter(ActiveProfile.GamePath, _linker);
             foreach (var modVm in LibraryMods)
@@ -2128,9 +2311,53 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    private void LoadFusionFixDefaults()
+    private void LoadDefaults()
     {
-        LoadFusionFixDefaultsInternal(showDialogs: true);
+        if (IsFusionFixTabActive)
+        {
+            LoadFusionFixDefaultsInternal(showDialogs: true);
+        }
+        else
+        {
+            LoadDxvkDefaultsInternal(showDialogs: true);
+        }
+    }
+
+    public void LoadDxvkDefaultsInternal(bool showDialogs)
+    {
+        string defaultConfPath = Path.Combine(_baseDir, "dxvkDefault.conf");
+        if (File.Exists(defaultConfPath))
+        {
+            try
+            {
+                DxvkSettings = DxvkConfig.Load(defaultConfPath);
+                StatusText = "Restored default settings from installed DXVK package.";
+                if (showDialogs)
+                {
+                    MessageBox.Show("DXVK default configuration loaded from the installation package. Click 'Save Configuration' to apply changes to the active game profile.", "Defaults Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (showDialogs)
+                {
+                    MessageBox.Show($"Failed to load DXVK defaults: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+        }
+        else
+        {
+            DxvkSettings = new DxvkConfig();
+            StatusText = "Restored built-in default DXVK settings.";
+            if (showDialogs)
+            {
+                MessageBox.Show("No default configuration file from installation package was found. Restored built-in defaults instead. Click 'Save Configuration' to apply changes to the active game profile.", "Built-in Defaults Loaded", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
     }
 
     private void RefreshFusionFixConfig()
@@ -2216,19 +2443,62 @@ public class MainViewModel : ViewModelBase
 
     private void ActivateSaveProfile(object? param)
     {
-        if (SelectedSaveProfile == null || string.IsNullOrEmpty(SelectedBaseProfileId)) return;
+        var targetProfile = param as SaveProfile ?? SelectedSaveProfile;
+        if (targetProfile == null || string.IsNullOrEmpty(SelectedBaseProfileId)) return;
 
         try
         {
-            _saveProfileManager.ActivateSaveProfile(SelectedBaseProfileId, SelectedSaveProfile, string.Empty);
+            _saveProfileManager.ActivateSaveProfile(SelectedBaseProfileId, targetProfile, string.Empty);
             RenameActiveSaveTo = "";
             RefreshSaveProfilesList();
-            StatusText = $"Activated save profile: '{SelectedSaveProfile.DisplayName}'";
-            MessageBox.Show($"Activated save profile '{SelectedSaveProfile.DisplayName}' successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            StatusText = $"Activated save profile: '{targetProfile.DisplayName}'";
+            MessageBox.Show($"Activated save profile '{targetProfile.DisplayName}' successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             MessageBox.Show($"Failed to activate save profile: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void QuickSnapshotSaveProfile()
+    {
+        if (string.IsNullOrEmpty(SelectedBaseProfileId)) return;
+
+        try
+        {
+            string name = string.IsNullOrWhiteSpace(QuickSnapshotName)
+                ? $"Safety_Snapshot_{DateTime.Now:yyyyMMdd_HHmmss}"
+                : QuickSnapshotName;
+
+            var snapshot = _saveProfileManager.CloneActiveSaveProfile(SelectedBaseProfileId, name);
+            QuickSnapshotName = "";
+            RefreshSaveProfilesList();
+            StatusText = $"Created safety snapshot '{snapshot.DisplayName}' successfully.";
+            MessageBox.Show($"Created safety snapshot '{snapshot.DisplayName}' successfully.", "Instant Snapshot Created", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to create snapshot: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void OpenSaveProfileFolder(SaveProfile? saveProfile)
+    {
+        var target = saveProfile ?? SelectedSaveProfile;
+        if (target != null && Directory.Exists(target.FullPath))
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = target.FullPath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Failed to open save directory: {ex.Message}";
+            }
         }
     }
 
@@ -2300,6 +2570,133 @@ public class MainViewModel : ViewModelBase
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to delete save profile: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    private void ImportSaveFile(object? param)
+    {
+        if (string.IsNullOrEmpty(SelectedBaseProfileId))
+        {
+            MessageBox.Show("Please select a base profile first.", "Cannot Import", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        string targetFileName = param as string ?? "SGTA401";
+
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Filter = "GTA IV Save Files (SGTA40*)|SGTA*|All Files (*.*)|*.*",
+            Title = "Select GTA IV Save File to Import"
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            try
+            {
+                string sourceFile = dialog.FileName;
+                string activePath = Path.Combine(_saveProfileManager.ProfilesPath, SelectedBaseProfileId);
+                
+                if (!Directory.Exists(activePath))
+                {
+                    Directory.CreateDirectory(activePath);
+                }
+
+                string selectedFileName = Path.GetFileName(sourceFile);
+                string destinationFileName = targetFileName;
+                
+                if (selectedFileName.StartsWith("SGTA", StringComparison.OrdinalIgnoreCase) && selectedFileName.Length == 7 && char.IsDigit(selectedFileName[4]) && char.IsDigit(selectedFileName[5]) && char.IsDigit(selectedFileName[6]))
+                {
+                    var slotCodeStr = selectedFileName.Substring(4, 3);
+                    if (int.TryParse(slotCodeStr, out int slotCode))
+                    {
+                        int slotNum = slotCode - 400;
+                        string episode = "GTA IV";
+                        if (slotCode >= 413 && slotCode <= 424)
+                        {
+                            episode = "TLAD";
+                            slotNum = slotCode - 412;
+                        }
+                        else if (slotCode >= 425 && slotCode <= 436)
+                        {
+                            episode = "TBOGT";
+                            slotNum = slotCode - 424;
+                        }
+
+                        var askResult = MessageBox.Show(
+                            $"The selected file '{selectedFileName}' matches {episode} Slot {slotNum}.\n\n" +
+                            $"Would you like to import it as '{selectedFileName}' ({episode} Slot {slotNum})?\n" +
+                            $"Click 'No' to import it into your selected slot (Slot {targetFileName.Substring(4)}) instead.",
+                            "Detect Save Slot",
+                            MessageBoxButton.YesNoCancel,
+                            MessageBoxImage.Question);
+
+                        if (askResult == MessageBoxResult.Cancel)
+                        {
+                            return;
+                        }
+                        else if (askResult == MessageBoxResult.Yes)
+                        {
+                            destinationFileName = selectedFileName;
+                        }
+                    }
+                }
+
+                string destinationPath = Path.Combine(activePath, destinationFileName);
+
+                if (File.Exists(destinationPath))
+                {
+                    int finalSlotCode = int.Parse(destinationFileName.Substring(4));
+                    int finalSlotNum = finalSlotCode - 400;
+                    string finalEpisode = "GTA IV";
+                    if (finalSlotCode >= 413 && finalSlotCode <= 424)
+                    {
+                        finalEpisode = "TLAD";
+                        finalSlotNum = finalSlotCode - 412;
+                    }
+                    else if (finalSlotCode >= 425 && finalSlotCode <= 436)
+                    {
+                        finalEpisode = "TBOGT";
+                        finalSlotNum = finalSlotCode - 424;
+                    }
+
+                    var overwriteResult = MessageBox.Show(
+                        $"A save file already exists in slot {finalEpisode} Slot {finalSlotNum} ({destinationFileName}).\n\n" +
+                        "Are you sure you want to overwrite it? This cannot be undone.",
+                        "Overwrite Save File",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+
+                    if (overwriteResult == MessageBoxResult.No)
+                    {
+                        return;
+                    }
+                }
+
+                File.Copy(sourceFile, destinationPath, overwrite: true);
+
+                RefreshSaveProfilesList();
+                StatusText = $"Successfully imported save file to active {destinationFileName}";
+                
+                int resultSlotCode = int.Parse(destinationFileName.Substring(4));
+                int resultSlotNum = resultSlotCode - 400;
+                string resultEpisode = "GTA IV";
+                if (resultSlotCode >= 413 && resultSlotCode <= 424)
+                {
+                    resultEpisode = "TLAD";
+                    resultSlotNum = resultSlotCode - 412;
+                }
+                else if (resultSlotCode >= 425 && resultSlotCode <= 436)
+                {
+                    resultEpisode = "TBOGT";
+                    resultSlotNum = resultSlotCode - 424;
+                }
+
+                MessageBox.Show($"Successfully imported save file as {destinationFileName} ({resultEpisode} Slot {resultSlotNum}).", "Import Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to import save file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }
@@ -2640,6 +3037,9 @@ public class MainViewModel : ViewModelBase
             manifest.AddRange(newInstalled);
             await SaveToolsManifestAsync(manifest);
 
+            // Restore custom settings if a backup exists
+            RestoreSettingsForTool("FusionFix");
+
             // Update tool versions dictionary in profile
             var toolVersions = new Dictionary<string, string>(ActiveProfile.ToolVersions.ToDictionary(k => k.Key, v => v.Value));
             toolVersions["FusionFix"] = release.TagName;
@@ -2701,6 +3101,12 @@ public class MainViewModel : ViewModelBase
 
         foreach (string file in Directory.GetFiles(sourceDir))
         {
+            if (string.Equals(toolName, "ScriptHook", StringComparison.OrdinalIgnoreCase) && 
+                string.Equals(Path.GetFileName(file), "dsound.dll", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             string targetFile = Path.Combine(targetDir, Path.GetFileName(file));
             File.Copy(file, targetFile, overwrite: true);
             
@@ -2729,6 +3135,191 @@ public class MainViewModel : ViewModelBase
     private async Task UninstallFusionFixAsync()
     {
         await UninstallToolGenericAsync("FusionFix", "FusionFix");
+    }
+
+    private async Task InstallScriptHookAsync()
+    {
+        if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath) || !Directory.Exists(ActiveProfile.GamePath))
+        {
+            MessageBox.Show("Please select a valid game directory first.", "Cannot Install", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        IsBusy = true;
+        StatusText = "Installing ScriptHook files to game directory...";
+
+        try
+        {
+            var manifest = await LoadToolsManifestAsync();
+            // Remove previous ScriptHook files if they exist in manifest to avoid duplicates
+            manifest.RemoveAll(f => string.Equals(f.SourceTool, "ScriptHook", StringComparison.OrdinalIgnoreCase));
+
+            string sourceDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "ScriptHook");
+            if (!Directory.Exists(sourceDir))
+            {
+                throw new DirectoryNotFoundException($"ScriptHook assets not found at {sourceDir}. Please ensure the application was built correctly with the Assets folder.");
+            }
+
+            // Remove dsound.dll if it exists in the game directory to avoid conflicts with FusionFix's ASI Loader
+            string dsoundPath = Path.Combine(ActiveProfile.GamePath, "dsound.dll");
+            if (File.Exists(dsoundPath))
+            {
+                try
+                {
+                    File.Delete(dsoundPath);
+                }
+                catch { }
+            }
+
+            var newInstalled = new System.Collections.Generic.List<InstalledToolFile>();
+            CopyDirectoryWithToolManifest(sourceDir, ActiveProfile.GamePath, ActiveProfile.GamePath, "ScriptHook", newInstalled);
+            
+            manifest.AddRange(newInstalled);
+            await SaveToolsManifestAsync(manifest);
+
+            var toolVersions = ActiveProfile.InstalledToolVersions != null
+                ? new System.Collections.Generic.Dictionary<string, string>(ActiveProfile.InstalledToolVersions)
+                : new System.Collections.Generic.Dictionary<string, string>();
+            toolVersions["ScriptHook"] = "Local Asset";
+            var updatedProfile = ActiveProfile with { InstalledToolVersions = toolVersions };
+            _profileManager.SaveProfile(Path.Combine(_profilesDir, $"{updatedProfile.Id}.json"), updatedProfile);
+            ActiveProfile = updatedProfile;
+
+            StatusText = "Successfully installed ScriptHook!";
+            MessageBox.Show("ScriptHook has been successfully installed!", "Installation Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"ScriptHook installation failed: {ex.Message}";
+            MessageBox.Show($"Installation failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsBusy = false;
+            UpdateBackendStatus();
+            UpdateConflictsAndWatchdog();
+        }
+    }
+
+    private async Task UninstallScriptHookAsync()
+    {
+        await UninstallToolGenericAsync("ScriptHook", "ScriptHook");
+    }
+
+    private async Task InstallMemBiterAsync()
+    {
+        if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath) || !Directory.Exists(ActiveProfile.GamePath))
+        {
+            MessageBox.Show("Please select a valid game directory first.", "Cannot Install", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        IsBusy = true;
+        StatusText = "Installing MemBiter files to game directory...";
+
+        try
+        {
+            var manifest = await LoadToolsManifestAsync();
+            // Remove previous MemBiter files if they exist in manifest to avoid duplicates
+            manifest.RemoveAll(f => string.Equals(f.SourceTool, "MemBiter", StringComparison.OrdinalIgnoreCase));
+
+            string sourceDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "MinorDependencies", "MemBiter");
+            if (!Directory.Exists(sourceDir))
+            {
+                throw new DirectoryNotFoundException($"MemBiter assets not found at {sourceDir}. Please ensure the application was built correctly with the Assets folder.");
+            }
+
+            var newInstalled = new System.Collections.Generic.List<InstalledToolFile>();
+            CopyDirectoryWithToolManifest(sourceDir, ActiveProfile.GamePath, ActiveProfile.GamePath, "MemBiter", newInstalled);
+            
+            manifest.AddRange(newInstalled);
+            await SaveToolsManifestAsync(manifest);
+
+            var toolVersions = ActiveProfile.InstalledToolVersions != null
+                ? new System.Collections.Generic.Dictionary<string, string>(ActiveProfile.InstalledToolVersions)
+                : new System.Collections.Generic.Dictionary<string, string>();
+            toolVersions["MemBiter"] = "v1.1";
+            var updatedProfile = ActiveProfile with { InstalledToolVersions = toolVersions };
+            _profileManager.SaveProfile(Path.Combine(_profilesDir, $"{updatedProfile.Id}.json"), updatedProfile);
+            ActiveProfile = updatedProfile;
+
+            StatusText = "Successfully installed MemBiter!";
+            MessageBox.Show("MemBiter has been successfully installed!", "Installation Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"MemBiter installation failed: {ex.Message}";
+            MessageBox.Show($"Installation failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsBusy = false;
+            UpdateBackendStatus();
+            UpdateConflictsAndWatchdog();
+        }
+    }
+
+    private async Task UninstallMemBiterAsync()
+    {
+        await UninstallToolGenericAsync("MemBiter", "MemBiter");
+    }
+
+    private async Task InstallBassAudioAsync()
+    {
+        if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath) || !Directory.Exists(ActiveProfile.GamePath))
+        {
+            MessageBox.Show("Please select a valid game directory first.", "Cannot Install", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        IsBusy = true;
+        StatusText = "Installing BASS Audio Library files to game directory...";
+
+        try
+        {
+            var manifest = await LoadToolsManifestAsync();
+            // Remove previous BassAudio files if they exist in manifest to avoid duplicates
+            manifest.RemoveAll(f => string.Equals(f.SourceTool, "BassAudio", StringComparison.OrdinalIgnoreCase));
+
+            string sourceDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "MinorDependencies", "BassAudio");
+            if (!Directory.Exists(sourceDir))
+            {
+                throw new DirectoryNotFoundException($"BassAudio assets not found at {sourceDir}. Please ensure the application was built correctly with the Assets folder.");
+            }
+
+            var newInstalled = new System.Collections.Generic.List<InstalledToolFile>();
+            CopyDirectoryWithToolManifest(sourceDir, ActiveProfile.GamePath, ActiveProfile.GamePath, "BassAudio", newInstalled);
+            
+            manifest.AddRange(newInstalled);
+            await SaveToolsManifestAsync(manifest);
+
+            var toolVersions = ActiveProfile.InstalledToolVersions != null
+                ? new System.Collections.Generic.Dictionary<string, string>(ActiveProfile.InstalledToolVersions)
+                : new System.Collections.Generic.Dictionary<string, string>();
+            toolVersions["BassAudio"] = "v2.4";
+            var updatedProfile = ActiveProfile with { InstalledToolVersions = toolVersions };
+            _profileManager.SaveProfile(Path.Combine(_profilesDir, $"{updatedProfile.Id}.json"), updatedProfile);
+            ActiveProfile = updatedProfile;
+
+            StatusText = "Successfully installed BASS Audio Library!";
+            MessageBox.Show("BASS Audio Library has been successfully installed!", "Installation Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"BASS Audio Library installation failed: {ex.Message}";
+            MessageBox.Show($"Installation failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsBusy = false;
+            UpdateBackendStatus();
+            UpdateConflictsAndWatchdog();
+        }
+    }
+
+    private async Task UninstallBassAudioAsync()
+    {
+        await UninstallToolGenericAsync("BassAudio", "BassAudio");
     }
 
     private async Task<System.Collections.Generic.List<InstalledToolFile>> LoadToolsManifestAsync()
@@ -3153,6 +3744,9 @@ public class MainViewModel : ViewModelBase
             manifest.Add(new InstalledToolFile("DXVK", targetPath, hash));
             await SaveToolsManifestAsync(manifest);
 
+            // Restore custom settings if a backup exists
+            RestoreSettingsForTool("DXVK");
+
             // Update tool versions dictionary in profile
             var toolVersions = new Dictionary<string, string>(ActiveProfile.ToolVersions.ToDictionary(k => k.Key, v => v.Value));
             toolVersions["DXVK"] = release.TagName;
@@ -3302,6 +3896,84 @@ public class MainViewModel : ViewModelBase
             File.WriteAllLines(filePath, lines);
         }
         catch { }
+    }
+
+    private void BackupSettings()
+    {
+        if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath)) return;
+
+        try
+        {
+            string backupDir = Path.Combine(_profilesDir, "backups", ActiveProfile.Id);
+            Directory.CreateDirectory(backupDir);
+
+            // Backup FusionFix settings
+            string fusionFixIni = Path.Combine(ActiveProfile.GamePath, "plugins", "GTAIV.EFLC.FusionFix.ini");
+            if (File.Exists(fusionFixIni))
+            {
+                File.Copy(fusionFixIni, Path.Combine(backupDir, "GTAIV.EFLC.FusionFix.ini.bak"), overwrite: true);
+            }
+
+            // Backup DXVK settings
+            string dxvkConf = Path.Combine(ActiveProfile.GamePath, "dxvk.conf");
+            if (File.Exists(dxvkConf))
+            {
+                File.Copy(dxvkConf, Path.Combine(backupDir, "dxvk.conf.bak"), overwrite: true);
+            }
+
+            // Backup commandline settings
+            string commandline = Path.Combine(ActiveProfile.GamePath, "commandline.txt");
+            if (File.Exists(commandline))
+            {
+                File.Copy(commandline, Path.Combine(backupDir, "commandline.txt.bak"), overwrite: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to backup settings: {ex.Message}");
+        }
+    }
+
+    private void RestoreSettingsForTool(string toolName)
+    {
+        if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath)) return;
+
+        try
+        {
+            string backupDir = Path.Combine(_profilesDir, "backups", ActiveProfile.Id);
+            if (!Directory.Exists(backupDir)) return;
+
+            if (string.Equals(toolName, "FusionFix", StringComparison.OrdinalIgnoreCase))
+            {
+                string backupFile = Path.Combine(backupDir, "GTAIV.EFLC.FusionFix.ini.bak");
+                string targetFile = Path.Combine(ActiveProfile.GamePath, "plugins", "GTAIV.EFLC.FusionFix.ini");
+                if (File.Exists(backupFile))
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
+                    File.Copy(backupFile, targetFile, overwrite: true);
+                }
+            }
+            else if (string.Equals(toolName, "DXVK", StringComparison.OrdinalIgnoreCase))
+            {
+                string backupConf = Path.Combine(backupDir, "dxvk.conf.bak");
+                string targetConf = Path.Combine(ActiveProfile.GamePath, "dxvk.conf");
+                if (File.Exists(backupConf))
+                {
+                    File.Copy(backupConf, targetConf, overwrite: true);
+                }
+
+                string backupCmd = Path.Combine(backupDir, "commandline.txt.bak");
+                string targetCmd = Path.Combine(ActiveProfile.GamePath, "commandline.txt");
+                if (File.Exists(backupCmd))
+                {
+                    File.Copy(backupCmd, targetCmd, overwrite: true);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to restore settings for {toolName}: {ex.Message}");
+        }
     }
 }
 

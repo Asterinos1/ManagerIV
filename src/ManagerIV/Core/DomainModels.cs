@@ -166,9 +166,27 @@ public record InstalledToolFile(
 /// <param name="DisplayName">The user-friendly display name.</param>
 /// <param name="IsActive">Whether this save profile is currently the active one loaded by the game.</param>
 /// <param name="FullPath">The absolute physical path to the save profile directory.</param>
+/// <param name="SaveFileCount">Count of SGTA40* save files in the folder.</param>
+/// <param name="LastModified">Most recent save file timestamp.</param>
+/// <param name="TotalSizeBytes">Total byte size of all save files in the directory.</param>
 public record SaveProfile(
     string FolderName,
     string DisplayName,
     bool IsActive,
-    string FullPath
-);
+    string FullPath,
+    int SaveFileCount = 0,
+    DateTime? LastModified = null,
+    long TotalSizeBytes = 0
+)
+{
+    public string SizeDisplay => TotalSizeBytes switch
+    {
+        <= 0 => "0 KB",
+        < 1024 * 1024 => $"{TotalSizeBytes / 1024.0:F1} KB",
+        _ => $"{TotalSizeBytes / (1024.0 * 1024.0):F2} MB"
+    };
+
+    public string LastModifiedDisplay => LastModified.HasValue
+        ? LastModified.Value.ToString("g")
+        : "Unknown";
+};

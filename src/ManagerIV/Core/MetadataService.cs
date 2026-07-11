@@ -295,7 +295,7 @@ public class MetadataService
                 hasScriptHook = true;
             }
 
-            if (ext == ".dll" && file.Contains("scripts", StringComparison.OrdinalIgnoreCase))
+            if (ext == ".dll" && (file.Contains("scripts", StringComparison.OrdinalIgnoreCase) || file.EndsWith(".net.dll", StringComparison.OrdinalIgnoreCase)))
             {
                 hasNetScript = true;
             }

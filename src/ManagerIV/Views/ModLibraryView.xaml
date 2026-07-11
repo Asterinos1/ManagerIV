@@ -75,6 +75,7 @@
                         <ColumnDefinition Width="Auto" />  <!-- Drag Handle & Checkbox -->
                         <ColumnDefinition Width="*" />     <!-- Mod Info -->
                         <ColumnDefinition Width="Auto" />  <!-- Edit Button -->
+                        <ColumnDefinition Width="Auto" />  <!-- Trash Button -->
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -132,9 +133,8 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </WrapPanel>
-
                     <!-- Edit Button & Popup Menu -->
-                    <ToggleButton x:Name="EditButton" Grid.Column="2" Grid.RowSpan="2" Margin="4,0,24,0" Width="28" Height="28" Background="Transparent" BorderThickness="0" ToolTip="Edit Details" AutomationProperties.Name="Edit Mod Details">
+                    <ToggleButton x:Name="EditButton" Grid.Column="2" Grid.RowSpan="2" Margin="4,0,4,0" Width="28" Height="28" Background="Transparent" BorderThickness="0" ToolTip="Edit Details" AutomationProperties.Name="Edit Mod Details">
                         <ui:SymbolIcon Symbol="Edit24" />
                     </ToggleButton>
                     <Popup IsOpen="{Binding IsChecked, ElementName=EditButton}" StaysOpen="False" PlacementTarget="{Binding ElementName=EditButton}" Placement="Left" AllowsTransparency="True">
@@ -144,55 +144,54 @@
                                     <RowDefinition Height="*" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
-
+ 
                                 <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" MaxHeight="300">
                                     <StackPanel>
                                         <TextBlock Text="Mod Details" FontSize="13" FontWeight="Bold" Margin="0,0,0,6" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-
+ 
                                         <TextBlock Text="Name" FontSize="9" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,1" />
                                         <ui:TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,5" />
-
+ 
                                         <TextBlock Text="Version" FontSize="9" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,1" />
                                         <ui:TextBox Text="{Binding Version, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,5" />
-
+ 
                                         <TextBlock Text="Compatibility" FontSize="9" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,1" />
                                         <ui:TextBox Text="{Binding Compatibility, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,5" />
-
+ 
                                         <TextBlock Text="Description" FontSize="9" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,1" />
                                         <ui:TextBox Text="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                                                    AcceptsReturn="True" 
-                                                    TextWrapping="Wrap" 
-                                                    MinLines="2" 
-                                                    Margin="0,0,0,5" />
+                                                     AcceptsReturn="True" 
+                                                     TextWrapping="Wrap" 
+                                                     MinLines="2" 
+                                                     Margin="0,0,0,5" />
                                     </StackPanel>
                                 </ScrollViewer>
-
+ 
                                 <Grid Grid.Row="1" Margin="0,5,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    
-                                    <ui:Button Grid.Column="0"
-                                               Content="Delete" 
-                                               Icon="{ui:SymbolIcon Delete24}" 
-                                               AutomationProperties.Name="Delete Mod"
-                                               Command="{Binding DataContext.DeleteModCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                               CommandParameter="{Binding}"
-                                               Appearance="Danger" 
-                                               HorizontalAlignment="Left" />
-                                               
-                                    <ui:Button Grid.Column="1" 
-                                               Content="Close" 
+                                    <ui:Button Content="Close" 
                                                Icon="{ui:SymbolIcon Dismiss24}" 
                                                AutomationProperties.Name="Close Edit Popup"
                                                Command="{Binding DataContext.SaveModDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                               Click="ClosePopup_Click"
                                                Appearance="Primary" 
                                                HorizontalAlignment="Right" />
                                 </Grid>
                             </Grid>
                         </ui:Card>
                     </Popup>
+ 
+                    <!-- Trash Button -->
+                    <ui:Button Grid.Column="3" Grid.RowSpan="2"
+                               Icon="{ui:SymbolIcon Delete24}"
+                               Command="{Binding DataContext.DeleteModCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                               CommandParameter="{Binding}"
+                               Appearance="Transparent"
+                               Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                               Padding="4" 
+                               Margin="4,0,8,0"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" 
+                               ToolTip="Delete Mod" />
                 </Grid>
             </Border>
             <DataTemplate.Triggers>
@@ -373,10 +372,10 @@
                 <RowDefinition Height="*" />
                 <RowDefinition Height="0" />
             </Grid.RowDefinitions>
-
             <Grid x:Name="ListsContainerGrid" Grid.Row="0" Margin="0,0,0,0">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="7*" />
+                    <ColumnDefinition Width="4*" />
+                    <ColumnDefinition Width="3*" />
                     <ColumnDefinition Width="3*" />
                 </Grid.ColumnDefinitions>
 
@@ -388,7 +387,7 @@
                         </Grid.RowDefinitions>
                         
                         <StackPanel Grid.Row="0" Margin="12,12,12,8">
-                            <TextBlock Text="Mod List" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock Text="Assets List (Mods)" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                             <TextBlock Text="Note: Every mod will be placed higher than the FusionFix folder in the update folder." FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,8" TextWrapping="Wrap" />
                         </StackPanel>
                         
@@ -410,7 +409,37 @@
                     </Grid>
                 </ui:Card>
 
-                <ui:Card x:Name="PluginsListCard" Grid.Column="1" Margin="6,0,0,4" Padding="0" VerticalAlignment="Stretch" VerticalContentAlignment="Top" BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                <ui:Card x:Name="ScriptsListCard" Grid.Column="1" Margin="6,0,6,4" Padding="0" VerticalAlignment="Stretch" VerticalContentAlignment="Top" BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        
+                        <StackPanel Grid.Row="0" Margin="12,12,12,8">
+                            <TextBlock Text="Scripts List (.NET)" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock Text="Note: .NET scripts (.dll, .cs, .vb) are loaded from the scripts folder." FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,8" TextWrapping="Wrap" />
+                        </StackPanel>
+                        
+                        <Border Grid.Row="1" Margin="12,0,12,12" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="4">
+                            <ListBox x:Name="ScriptsListBox" ItemsSource="{Binding ScriptsCollection}"
+                                     SelectedItem="{Binding SelectedScriptMod, Mode=TwoWay}"
+                                     ItemTemplate="{StaticResource ModItemTemplate}"
+                                     ItemContainerStyle="{StaticResource CleanListBoxItemStyle}"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     VirtualizingPanel.ScrollUnit="Pixel"
+                                     PreviewMouseLeftButtonDown="ListBox_PreviewMouseLeftButtonDown"
+                                     MouseMove="ListBox_MouseMove"
+                                     DragOver="ListBox_DragOver"
+                                     Drop="ListBox_Drop"
+                                     AllowDrop="True"
+                                     Background="Transparent"
+                                     BorderThickness="0" />
+                        </Border>
+                    </Grid>
+                </ui:Card>
+
+                <ui:Card x:Name="PluginsListCard" Grid.Column="2" Margin="6,0,0,4" Padding="0" VerticalAlignment="Stretch" VerticalContentAlignment="Top" BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />

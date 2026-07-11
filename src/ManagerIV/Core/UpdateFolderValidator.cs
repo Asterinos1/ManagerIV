@@ -36,12 +36,12 @@ public class UpdateFolderValidator
 
         // 1. Resolve Target matching CompleteEditionAdapter logic
         DeployTarget target = DeployTarget.Update;
-        string firstPath = mod.Files[0].RelativePath.Replace('\\', '/').ToLowerInvariant();
-        if (firstPath.EndsWith(".asi"))
+        if (mod.Files.Any(f => f.RelativePath.EndsWith(".asi", StringComparison.OrdinalIgnoreCase)))
         {
             target = DeployTarget.Plugins;
         }
-        else if (firstPath.Contains("scripts/") || firstPath.EndsWith(".dll"))
+        else if (mod.Files.Any(f => f.RelativePath.Replace('\\', '/').Contains("scripts/", StringComparison.OrdinalIgnoreCase) || 
+                                   f.RelativePath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))
         {
             target = DeployTarget.Scripts;
         }
