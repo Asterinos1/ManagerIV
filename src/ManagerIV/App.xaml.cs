@@ -58,6 +58,7 @@ public partial class App : Application
         services.AddSingleton(sp => new BackupRollbackService(sp.GetRequiredService<IFileSystemLinker>(), Path.Combine(baseDir, "Backup")));
 
         services.AddSingleton<SaveProfileViewModel>();
+        services.AddSingleton<LibraryViewModel>();
 
         // ViewModels
         services.AddSingleton(sp => 
@@ -74,6 +75,7 @@ public partial class App : Application
                 sp.GetRequiredService<BackendToolManager>(),
                 sp.GetRequiredService<IModStructureAnalyzer>(),
                 sp.GetRequiredService<SaveProfileViewModel>(),
+                sp.GetRequiredService<LibraryViewModel>(),
                 sp.GetRequiredService<ILogger<MainViewModel>>()
             ));
 

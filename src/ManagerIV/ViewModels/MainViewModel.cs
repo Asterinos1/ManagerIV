@@ -19,9 +19,9 @@ public class MainViewModel : ViewModelBase
     private readonly ArchiveHandler _archiveHandler;
     private readonly MetadataService _metadataService;
     private readonly ProfileManager _profileManager;
-    private readonly LoadOrderService _loadOrderService;
+    internal readonly LoadOrderService _loadOrderService;
     private readonly ConflictDetector _conflictDetector;
-    private readonly IFileSystemLinker _linker;
+    internal readonly IFileSystemLinker _linker;
     private readonly BackupRollbackService _rollbackService;
     private readonly UpdateWatchdog _watchdog;
     private readonly BackendToolManager _backendToolManager;
@@ -31,6 +31,8 @@ public class MainViewModel : ViewModelBase
     private readonly string _baseDir;
     private readonly string _profilesDir;
     private readonly string _backupDir;
+    internal readonly string _libraryDir;
+    internal readonly string _libraryManifestFile;
 
     // State Fields
     private ObservableCollection<Profile> _profiles = new();
@@ -479,6 +481,7 @@ public class MainViewModel : ViewModelBase
     {
         _logger = logger;
         LibraryVM = libraryVM;
+        LibraryVM.MainVM = this;
         _baseDir = baseDir;
         _archiveHandler = archiveHandler;
         _metadataService = metadataService;
@@ -549,7 +552,7 @@ public class MainViewModel : ViewModelBase
         if (System.Windows.Application.Current != null)
         {
 
-            MainModsCollection.Filter = (obj) =>
+            LibraryVM.MainModsCollection.Filter = (obj) =>
             {
                 if (obj is ModViewModel mod)
                 {
@@ -560,7 +563,7 @@ public class MainViewModel : ViewModelBase
                 return false;
             };
 
-            PluginsCollection.Filter = (obj) =>
+            LibraryVM.PluginsCollection.Filter = (obj) =>
             {
                 if (obj is ModViewModel mod)
                 {
@@ -571,7 +574,7 @@ public class MainViewModel : ViewModelBase
                 return false;
             };
 
-            ScriptsCollection.Filter = (obj) =>
+            LibraryVM.ScriptsCollection.Filter = (obj) =>
             {
                 if (obj is ModViewModel mod)
                 {
@@ -584,7 +587,7 @@ public class MainViewModel : ViewModelBase
         }
 
         // Load data
-        LoadLibrary();
+        LibraryVM.LoadLibrary();
         LoadProfiles();
 
         // Load settings
@@ -662,7 +665,7 @@ public class MainViewModel : ViewModelBase
         ActiveProfile = Profiles.First();
     }
 
-    private void RefreshActiveModsList()
+    internal void RefreshActiveModsList()
     {
         if (ActiveProfile == null) return;
 
@@ -765,7 +768,7 @@ public class MainViewModel : ViewModelBase
         LibraryVM.ApplyFilter();
     }
 
-    private void UpdateConflictsAndWatchdog()
+    internal void UpdateConflictsAndWatchdog()
     {
         if (ActiveProfile == null) return;
 
@@ -1277,7 +1280,7 @@ public class MainViewModel : ViewModelBase
                     }
 
                     // Build StagedMod record
-                    var stagedMod = ApplyDerivedLibraryTags(new StagedMod(
+                    var stagedMod = LibraryViewModel.ApplyDerivedLibraryTags(new StagedMod(
                         Id: Guid.NewGuid().ToString("N"),
                         Name: displayName,
                         Version: version,
@@ -1544,7 +1547,7 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    private void SaveProfileState(Profile profile)
+    internal void SaveProfileState(Profile profile)
     {
         string file = Path.Combine(_profilesDir, $"{profile.Id}.json");
         _profileManager.SaveProfile(file, profile);
@@ -2761,7 +2764,7 @@ public class MainViewModel : ViewModelBase
         await UninstallToolGenericAsync("FusionFix", "FusionFix");
     }
 
-    private async Task InstallScriptHookAsync()
+    internal async Task InstallScriptHookAsync()
     {
         if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath) || !Directory.Exists(ActiveProfile.GamePath))
         {
@@ -3175,7 +3178,7 @@ public class MainViewModel : ViewModelBase
         return System.Array.Empty<string>();
     }
 
-    private async Task InstallAsiLoaderAsync()
+    internal async Task InstallAsiLoaderAsync()
     {
         if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath) || !Directory.Exists(ActiveProfile.GamePath))
         {

@@ -24,6 +24,43 @@ public class StateAndConflictTests : IDisposable
         _conflictDetector = new ConflictDetector();
     }
 
+    private ManagerIV.ViewModels.MainViewModel CreateMainViewModel(string baseDir)
+    {
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<ManagerIV.ViewModels.MainViewModel>.Instance;
+        var saveProfileLogger = Microsoft.Extensions.Logging.Abstractions.NullLogger<ManagerIV.ViewModels.SaveProfileViewModel>.Instance;
+        
+        var linker = new NativeFileSystemLinker();
+        var archiveHandler = new ArchiveHandler();
+        var metadataService = new MetadataService();
+        var profileManager = new ProfileManager();
+        var loadOrderService = new LoadOrderService();
+        var conflictDetector = new ConflictDetector();
+        var rollbackService = new BackupRollbackService(linker, Path.Combine(baseDir, "Backup"));
+        var watchdog = new UpdateWatchdog();
+        var backendToolManager = new BackendToolManager(Path.Combine(baseDir, "Cache"));
+        var modStructureAnalyzer = new ModStructureAnalyzer();
+
+        var saveProfileVM = new ManagerIV.ViewModels.SaveProfileViewModel(saveProfileLogger);
+        var libraryVM = new ManagerIV.ViewModels.LibraryViewModel();
+        
+        return new ManagerIV.ViewModels.MainViewModel(
+            baseDir,
+            archiveHandler,
+            metadataService,
+            profileManager,
+            loadOrderService,
+            conflictDetector,
+            linker,
+            rollbackService,
+            watchdog,
+            backendToolManager,
+            modStructureAnalyzer,
+            saveProfileVM,
+            libraryVM,
+            logger
+        );
+    }
+
     [Fact]
     public void TestConflictDetectionAndLoadOrderWinner()
     {
@@ -160,7 +197,7 @@ public class StateAndConflictTests : IDisposable
         string baseDir = Path.Combine(_tempDir, "vm_test");
         Directory.CreateDirectory(baseDir);
         
-        var vm = new ManagerIV.ViewModels.MainViewModel(baseDir);
+        var vm = CreateMainViewModel(baseDir);
         Assert.NotNull(vm.ActiveProfile);
         Assert.Equal(0, vm.ActiveImgArchiveCount);
         Assert.Equal("Safe", vm.ActiveImgArchiveStatus);
@@ -217,18 +254,18 @@ public class StateAndConflictTests : IDisposable
         var modVm2 = new ManagerIV.ViewModels.ModViewModel(mod2, false, 99, DeployTarget.Update);
         var modVm3 = new ManagerIV.ViewModels.ModViewModel(mod3, false, 99, DeployTarget.Update);
         
-        vm.LibraryMods.Add(modVm1);
-        vm.LibraryMods.Add(modVm2);
-        vm.LibraryMods.Add(modVm3);
+        vm.LibraryVM.LibraryMods.Add(modVm1);
+        vm.LibraryVM.LibraryMods.Add(modVm2);
+        vm.LibraryVM.LibraryMods.Add(modVm3);
 
         // 3. Act & Assert: Enable mod1 (30 img files -> Safe)
-        vm.ToggleModEnabledCommand.Execute(modVm1);
+        vm.LibraryVM.ToggleModEnabledCommand.Execute(modVm1);
         Assert.Equal(30, vm.ActiveImgArchiveCount);
         Assert.Equal("Safe", vm.ActiveImgArchiveSeverity);
         Assert.False(vm.ActiveImgArchiveHasWarning);
 
         // 4. Act & Assert: Enable mod2 (30 + 15 = 45 img files -> Danger Zone / Warning)
-        vm.ToggleModEnabledCommand.Execute(modVm2);
+        vm.LibraryVM.ToggleModEnabledCommand.Execute(modVm2);
         Assert.Equal(45, vm.ActiveImgArchiveCount);
         Assert.Equal("Warning", vm.ActiveImgArchiveSeverity);
         Assert.True(vm.ActiveImgArchiveHasWarning);
@@ -236,7 +273,7 @@ public class StateAndConflictTests : IDisposable
         Assert.Contains("Stability Limits", vm.ActiveImgArchiveWarningTitle);
 
         // 5. Act & Assert: Enable mod3 (45 + 10 = 55 img files -> Crash Risk / Danger)
-        vm.ToggleModEnabledCommand.Execute(modVm3);
+        vm.LibraryVM.ToggleModEnabledCommand.Execute(modVm3);
         Assert.Equal(55, vm.ActiveImgArchiveCount);
         Assert.Equal("Danger", vm.ActiveImgArchiveSeverity);
         Assert.True(vm.ActiveImgArchiveHasWarning);
@@ -244,8 +281,8 @@ public class StateAndConflictTests : IDisposable
         Assert.Contains("Limit Exceeded", vm.ActiveImgArchiveWarningTitle);
 
         // 6. Act & Assert: Disable mod2 and mod3 (should drop back to 30 -> Safe)
-        vm.ToggleModEnabledCommand.Execute(modVm2);
-        vm.ToggleModEnabledCommand.Execute(modVm3);
+        vm.LibraryVM.ToggleModEnabledCommand.Execute(modVm2);
+        vm.LibraryVM.ToggleModEnabledCommand.Execute(modVm3);
         Assert.Equal(30, vm.ActiveImgArchiveCount);
         Assert.Equal("Safe", vm.ActiveImgArchiveSeverity);
         Assert.False(vm.ActiveImgArchiveHasWarning);
@@ -258,7 +295,7 @@ public class StateAndConflictTests : IDisposable
         string baseDir = Path.Combine(_tempDir, "vram_preset_test");
         Directory.CreateDirectory(baseDir);
         
-        var vm = new ManagerIV.ViewModels.MainViewModel(baseDir);
+        var vm = CreateMainViewModel(baseDir);
         Assert.NotNull(vm.ActiveProfile);
         
         // Assert default
@@ -284,8 +321,8 @@ public class StateAndConflictTests : IDisposable
         string baseDir = Path.Combine(_tempDir, "clear_lib_test");
         Directory.CreateDirectory(baseDir);
 
-        var vm = new ManagerIV.ViewModels.MainViewModel(baseDir);
-        Assert.Empty(vm.LibraryMods);
+        var vm = CreateMainViewModel(baseDir);
+        Assert.Empty(vm.LibraryVM.LibraryMods);
 
         // Add a mock mod to the library list
         var fileA = new ModFile("data/handling.dat", 1024, "hashA");
@@ -303,14 +340,14 @@ public class StateAndConflictTests : IDisposable
         File.WriteAllText(Path.Combine(modA.LibraryPath, "handling.dat"), "mock content");
 
         var modVm = new ManagerIV.ViewModels.ModViewModel(modA, true, 1, DeployTarget.Update);
-        vm.LibraryMods.Add(modVm);
-        Assert.Single(vm.LibraryMods);
+        vm.LibraryVM.LibraryMods.Add(modVm);
+        Assert.Single(vm.LibraryVM.LibraryMods);
 
         // Act: Execute the internal method directly to avoid the UI Dialog popup
-        await vm.ClearLibraryInternalAsync(showSuccessMessage: false);
+        await vm.LibraryVM.ClearLibraryInternalAsync(showSuccessMessage: false);
 
         // Assert
-        Assert.Empty(vm.LibraryMods);
+        Assert.Empty(vm.LibraryVM.LibraryMods);
         Assert.False(Directory.Exists(modA.LibraryPath));
     }
 
@@ -321,8 +358,8 @@ public class StateAndConflictTests : IDisposable
         string baseDir = Path.Combine(_tempDir, "multi_import_test");
         Directory.CreateDirectory(baseDir);
 
-        var vm = new ManagerIV.ViewModels.MainViewModel(baseDir);
-        Assert.Empty(vm.LibraryMods);
+        var vm = CreateMainViewModel(baseDir);
+        Assert.Empty(vm.LibraryVM.LibraryMods);
 
         // Create two dummy archives
         string zip1Path = Path.Combine(baseDir, "mod1.zip");
@@ -352,10 +389,10 @@ public class StateAndConflictTests : IDisposable
         await vm.ImportArchivesAsync(archives);
 
         // Assert
-        Assert.Equal(2, vm.LibraryMods.Count);
+        Assert.Equal(2, vm.LibraryVM.LibraryMods.Count);
         
-        var firstMod = vm.LibraryMods.FirstOrDefault(m => m.Name == "Mod1");
-        var secondMod = vm.LibraryMods.FirstOrDefault(m => m.Name == "Mod2");
+        var firstMod = vm.LibraryVM.LibraryMods.FirstOrDefault(m => m.Name == "Mod1");
+        var secondMod = vm.LibraryVM.LibraryMods.FirstOrDefault(m => m.Name == "Mod2");
 
         Assert.NotNull(firstMod);
         Assert.NotNull(secondMod);
@@ -370,8 +407,8 @@ public class StateAndConflictTests : IDisposable
         string baseDir = Path.Combine(_tempDir, "asi_import_test");
         Directory.CreateDirectory(baseDir);
 
-        var vm = new ManagerIV.ViewModels.MainViewModel(baseDir);
-        Assert.Empty(vm.LibraryMods);
+        var vm = CreateMainViewModel(baseDir);
+        Assert.Empty(vm.LibraryVM.LibraryMods);
 
         // Create a dummy .asi file
         string asiPath = Path.Combine(baseDir, "test_plugin.asi");
@@ -381,8 +418,8 @@ public class StateAndConflictTests : IDisposable
         await vm.ImportArchiveAsync(asiPath);
 
         // Assert
-        Assert.Single(vm.LibraryMods);
-        var importedMod = vm.LibraryMods[0];
+        Assert.Single(vm.LibraryVM.LibraryMods);
+        var importedMod = vm.LibraryVM.LibraryMods[0];
         Assert.Equal("Test Plugin", importedMod.Name);
         Assert.Equal(DeployTarget.Plugins, importedMod.Target);
         Assert.Contains(importedMod.Model.Files, f => f.RelativePath == "test_plugin.asi");
@@ -642,7 +679,7 @@ ReflectionMSAAQuality = 0
         string baseDir = Path.Combine(_tempDir, "defaults_test");
         Directory.CreateDirectory(baseDir);
         
-        var vm = new ManagerIV.ViewModels.MainViewModel(baseDir);
+        var vm = CreateMainViewModel(baseDir);
         vm.IsFusionFixConfigAvailable = true;
 
         // Act 1: Load defaults when no default INI is present (should fall back to hardcoded defaults)

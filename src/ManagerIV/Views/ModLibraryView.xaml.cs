@@ -211,7 +211,7 @@ public partial class ModLibraryView : UserControl
                         int targetPriority = targetMod.Priority;
                         // For a real insertion, if dragging down and dropping on top half, priority is targetPriority.
                         // For simplicity, we just pass the targetPriority as it was.
-                        vm.ReorderModCommand.Execute(new Tuple<ModViewModel, int>(droppedMod, targetPriority));
+                        vm.LibraryVM.ReorderModCommand.Execute(new Tuple<ModViewModel, int>(droppedMod, targetPriority));
                     }
                 }
             }
