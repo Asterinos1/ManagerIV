@@ -5,11 +5,11 @@
 
 [![.NET 8.0](https://img.shields.io/badge/Framework-.NET%208.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/) [![C# 12.0](https://img.shields.io/badge/C%23-12.0-239120?logo=csharp)](https://docs.microsoft.com/en-us/dotnet/csharp/) [![WPF-UI 4.3.0](https://img.shields.io/badge/WPF--UI-4.3.0-0078D7)](https://github.com/lepoco/wpfui) [![Octokit 14.0.0](https://img.shields.io/badge/Octokit.NET-14.0.0-black?logo=github)](https://github.com/octokit/octokit.net) [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6?logo=windows)](https://github.com/Asterinos1/ManagerIV) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-*This is a side project I've been working on for the past few months. The core idea was born out of my love for modding—I wanted to create a tool that allows you to easily experiment with mods (and more) without the hassle of drag-and-drop and breaking stuff.*
+*This is a side project I've been working on for the past few months. The core idea was born out of my love for modding. I wanted to create a tool that allows you to easily experiment with mods (and more) without the hassle of drag-and-drop and breaking stuff.*
 
 A comprehensive, Fluent UI-driven environment manager for **GTA IV: Complete Edition**. ManagerIV handles automated tool installations, safe mod deployments via zero-mutation file linking, and advanced features like save slots, DXVK scaling, and Independence FM manifest generation.
 
-[Overview](#overview) • [Features](#features) • [Architecture](#architecture) • [Core Components](#core-components) • [Download](#download) • [Getting Started](#getting-started) • [Acknowledgements](#acknowledgements) • [Authors](#authors)
+[Overview](#overview) • [Features](#features) • [Architecture](#architecture) • [Core Components](#core-components) • [Download](#download) • [Getting Started](#getting-started) • [Authors](#authors)
 
 </div>
 
@@ -81,6 +81,7 @@ Finally, the Loading Layer interfaces directly with native game loaders through 
 ---
 
 ## Download
+**Coming Soon! (hopefully)**
 
 You can download the latest version of ManagerIV from the [Releases page](https://github.com/Asterinos1/ManagerIV/releases/latest).
 
