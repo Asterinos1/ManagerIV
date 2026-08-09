@@ -1,5 +1,6 @@
 using System.Windows;
 using ManagerIV.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ManagerIV;
 
@@ -11,6 +12,6 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        DataContext = new MainViewModel();
+        DataContext = App.Current.Services.GetRequiredService<MainViewModel>();
     }
 }

@@ -8,11 +8,13 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using ManagerIV.Core;
+using Microsoft.Extensions.Logging;
 
 namespace ManagerIV.ViewModels;
 
 public class MainViewModel : ViewModelBase
 {
+    private readonly ILogger<MainViewModel> _logger;
     // Services
     private readonly ArchiveHandler _archiveHandler;
     private readonly MetadataService _metadataService;
@@ -27,15 +29,12 @@ public class MainViewModel : ViewModelBase
 
     // Config Paths
     private readonly string _baseDir;
-    private readonly string _libraryDir;
     private readonly string _profilesDir;
     private readonly string _backupDir;
-    private readonly string _libraryManifestFile;
 
     // State Fields
     private ObservableCollection<Profile> _profiles = new();
     private Profile? _activeProfile;
-    private ObservableCollection<ModViewModel> _libraryMods = new();
     private string _gameDir = "";
     private string _watchdogWarning = "";
     private bool _hasWatchdogWarning;
@@ -44,9 +43,6 @@ public class MainViewModel : ViewModelBase
     private BackendStatusViewModel _backendStatus = new();
     private bool _isDarkTheme = true;
     private MusicViewModel _music;
-    private ModViewModel? _selectedLibraryMod;
-    private ModViewModel? _selectedPluginMod;
-    private ModViewModel? _selectedScriptMod;
     private ModViewModel? _selectedMod;
 
     // Save Profiles fields
@@ -98,82 +94,9 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    public ObservableCollection<ModViewModel> LibraryMods
-    {
-        get => _libraryMods;
-        set => SetProperty(ref _libraryMods, value);
-    }
-
     public ObservableCollection<ActiveMergedUpdateFileViewModel> ActiveMergedUpdateFiles { get; } = new();
 
     public int ActiveMergedUpdateFileCount => ActiveMergedUpdateFiles.Count;
-
-    public System.ComponentModel.ICollectionView? MainModsCollection { get; }
-    public System.ComponentModel.ICollectionView? PluginsCollection { get; }
-    public System.ComponentModel.ICollectionView? ScriptsCollection { get; }
-
-    public ModViewModel? SelectedLibraryMod
-    {
-        get => _selectedLibraryMod;
-        set
-        {
-            if (SetProperty(ref _selectedLibraryMod, value))
-            {
-                if (value != null)
-                {
-                    SelectedPluginMod = null;
-                    SelectedScriptMod = null;
-                    SelectedMod = value;
-                }
-                else if (SelectedPluginMod == null && SelectedScriptMod == null)
-                {
-                    SelectedMod = null;
-                }
-            }
-        }
-    }
-
-    public ModViewModel? SelectedPluginMod
-    {
-        get => _selectedPluginMod;
-        set
-        {
-            if (SetProperty(ref _selectedPluginMod, value))
-            {
-                if (value != null)
-                {
-                    SelectedLibraryMod = null;
-                    SelectedScriptMod = null;
-                    SelectedMod = value;
-                }
-                else if (SelectedLibraryMod == null && SelectedScriptMod == null)
-                {
-                    SelectedMod = null;
-                }
-            }
-        }
-    }
-
-    public ModViewModel? SelectedScriptMod
-    {
-        get => _selectedScriptMod;
-        set
-        {
-            if (SetProperty(ref _selectedScriptMod, value))
-            {
-                if (value != null)
-                {
-                    SelectedLibraryMod = null;
-                    SelectedPluginMod = null;
-                    SelectedMod = value;
-                }
-                else if (SelectedLibraryMod == null && SelectedPluginMod == null)
-                {
-                    SelectedMod = null;
-                }
-            }
-        }
-    }
 
     public ModViewModel? SelectedMod
     {
@@ -346,27 +269,9 @@ public class MainViewModel : ViewModelBase
         {
             if (SetProperty(ref _searchQuery, value))
             {
-                ApplyFilter();
+                LibraryVM.ApplyFilter();
             }
         }
-    }
-
-    private void ApplyFilter()
-    {
-        if (Application.Current == null || Application.Current.Dispatcher == null)
-        {
-            return;
-        }
-
-        if (!Application.Current.Dispatcher.CheckAccess())
-        {
-            Application.Current.Dispatcher.BeginInvoke(new Action(ApplyFilter));
-            return;
-        }
-
-        MainModsCollection?.Refresh();
-        PluginsCollection?.Refresh();
-        ScriptsCollection?.Refresh();
     }
 
     private int _activeImgArchiveCount;
@@ -519,13 +424,9 @@ public class MainViewModel : ViewModelBase
     public ICommand ApplyDeploymentCommand { get; }
     public ICommand SwitchProfileCommand { get; }
     public ICommand CreateProfileCommand { get; }
-    public ICommand ToggleModEnabledCommand { get; }
-    public ICommand ImportModArchiveCommand { get; }
-    public ICommand ReorderModCommand { get; }
     public ICommand SelectGameDirCommand { get; }
     public ICommand RemoveProfileCommand { get; }
     public ICommand RenameProfileCommand { get; }
-    public ICommand SaveModDetailsCommand { get; }
     public ICommand InstallFusionFixCommand { get; }
     public ICommand UninstallFusionFixCommand { get; }
     public ICommand InstallAsiLoaderCommand { get; }
@@ -538,9 +439,7 @@ public class MainViewModel : ViewModelBase
     public ICommand UninstallMemBiterCommand { get; }
     public ICommand InstallBassAudioCommand { get; }
     public ICommand UninstallBassAudioCommand { get; }
-    public ICommand DeleteModCommand { get; }
     public ICommand SetVramPresetCommand { get; }
-    public ICommand ClearLibraryCommand { get; }
     public ICommand ResetGameDirectoryCommand { get; }
     public ICommand SaveFusionFixConfigCommand { get; }
     public ICommand LoadFusionFixDefaultsCommand { get; }
@@ -555,30 +454,45 @@ public class MainViewModel : ViewModelBase
     public ICommand DeleteSaveProfileCommand { get; }
     public ICommand RefreshSaveProfilesCommand { get; }
     public ICommand OpenGameDirCommand { get; }
-    public ICommand OpenLibraryDirCommand { get; }
     public ICommand QuickSnapshotSaveProfileCommand { get; }
     public ICommand OpenSaveProfileFolderCommand { get; }
     public ICommand ImportSaveFileCommand { get; }
 
-    public MainViewModel() : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ManagerIV"))
-    {
-    }
+    public SaveProfileViewModel SaveProfileVM { get; }
+    public LibraryViewModel LibraryVM { get; }
 
-    public MainViewModel(string baseDir, IFileSystemLinker? linker = null)
+    public MainViewModel(
+        string baseDir,
+        ArchiveHandler archiveHandler,
+        MetadataService metadataService,
+        ProfileManager profileManager,
+        LoadOrderService loadOrderService,
+        ConflictDetector conflictDetector,
+        IFileSystemLinker linker,
+        BackupRollbackService rollbackService,
+        UpdateWatchdog watchdog,
+        BackendToolManager backendToolManager,
+        IModStructureAnalyzer modStructureAnalyzer,
+        SaveProfileViewModel saveProfileVM,
+        LibraryViewModel libraryVM,
+        ILogger<MainViewModel> logger)
     {
-        // Core initialization
-        _archiveHandler = new ArchiveHandler();
-        _metadataService = new MetadataService();
-        _profileManager = new ProfileManager();
-        _loadOrderService = new LoadOrderService();
-        _conflictDetector = new ConflictDetector();
-        _linker = linker ?? new NativeFileSystemLinker();
-        _watchdog = new UpdateWatchdog();
-        _modStructureAnalyzer = new ModStructureAnalyzer();
+        _logger = logger;
+        LibraryVM = libraryVM;
+        _baseDir = baseDir;
+        _archiveHandler = archiveHandler;
+        _metadataService = metadataService;
+        _profileManager = profileManager;
+        _loadOrderService = loadOrderService;
+        _conflictDetector = conflictDetector;
+        _linker = linker;
+        _rollbackService = rollbackService;
+        _watchdog = watchdog;
+        _backendToolManager = backendToolManager;
+        _modStructureAnalyzer = modStructureAnalyzer;
+        SaveProfileVM = saveProfileVM;
 
         // Establish paths
-        _baseDir = baseDir;
-        _backendToolManager = new BackendToolManager(Path.Combine(_baseDir, "Cache"));
         _libraryDir = Path.Combine(_baseDir, "Library");
         _profilesDir = Path.Combine(_baseDir, "Profiles");
         _backupDir = Path.Combine(_baseDir, "Backup");
@@ -588,19 +502,13 @@ public class MainViewModel : ViewModelBase
         Directory.CreateDirectory(_profilesDir);
         Directory.CreateDirectory(_backupDir);
 
-        _rollbackService = new BackupRollbackService(_linker, _backupDir);
-
         // Command bindings
         ApplyDeploymentCommand = new RelayCommand(async () => await ApplyDeploymentAsync(), () => !IsBusy && ActiveProfile != null);
         SwitchProfileCommand = new RelayCommand<Profile>(async (p) => await SwitchProfileAsync(p), (p) => !IsBusy && p != null);
         CreateProfileCommand = new RelayCommand<string>(CreateProfile, (name) => !string.IsNullOrWhiteSpace(name));
-        ToggleModEnabledCommand = new RelayCommand<ModViewModel>(ToggleModEnabled);
-        ImportModArchiveCommand = new RelayCommand(async () => await PromptAndImportArchiveAsync());
-        ReorderModCommand = new RelayCommand<Tuple<ModViewModel, int>>(ReorderMod);
         SelectGameDirCommand = new RelayCommand(SelectGameDir, () => !IsBusy && ActiveProfile != null);
         RemoveProfileCommand = new RelayCommand(RemoveActiveProfile, () => !IsBusy && ActiveProfile != null && Profiles.Count > 1);
         RenameProfileCommand = new RelayCommand<string>(RenameActiveProfile, (name) => !IsBusy && ActiveProfile != null && !string.IsNullOrWhiteSpace(name));
-        SaveModDetailsCommand = new RelayCommand(SaveModDetails, () => !IsBusy);
         InstallFusionFixCommand = new RelayCommand(async () => await InstallFusionFixAsync(), () => !IsBusy && ActiveProfile != null);
         UninstallFusionFixCommand = new RelayCommand(async () => await UninstallFusionFixAsync(), () => !IsBusy && ActiveProfile != null);
         InstallAsiLoaderCommand = new RelayCommand(async () => await InstallAsiLoaderAsync(), () => !IsBusy && ActiveProfile != null);
@@ -613,9 +521,7 @@ public class MainViewModel : ViewModelBase
         UninstallMemBiterCommand = new RelayCommand(async () => await UninstallMemBiterAsync(), () => !IsBusy && ActiveProfile != null);
         InstallBassAudioCommand = new RelayCommand(async () => await InstallBassAudioAsync(), () => !IsBusy && ActiveProfile != null);
         UninstallBassAudioCommand = new RelayCommand(async () => await UninstallBassAudioAsync(), () => !IsBusy && ActiveProfile != null);
-        DeleteModCommand = new RelayCommand<ModViewModel>(async (mod) => await DeleteModAsync(mod), (mod) => !IsBusy && mod != null);
         SetVramPresetCommand = new RelayCommand<object>(SetVramPreset);
-        ClearLibraryCommand = new RelayCommand(async () => await ClearLibraryAsync(), () => !IsBusy && LibraryMods.Any());
         ResetGameDirectoryCommand = new RelayCommand(async () => await ResetGameDirectoryAsync(), () => !IsBusy && ActiveProfile != null && !string.IsNullOrEmpty(ActiveProfile.GamePath));
         SaveFusionFixConfigCommand = new RelayCommand(SaveFusionFixConfig, () => IsBackendConfigAvailable && !IsBusy);
         LoadFusionFixDefaultsCommand = new RelayCommand(LoadDefaults, () => !IsBusy);
@@ -635,7 +541,6 @@ public class MainViewModel : ViewModelBase
         DeleteSaveProfileCommand = new RelayCommand(DeleteSaveProfile);
         RefreshSaveProfilesCommand = new RelayCommand(RefreshSaveProfilesList);
         OpenGameDirCommand = new RelayCommand(OpenGameDirInExplorer, () => ActiveProfile != null && !string.IsNullOrWhiteSpace(ActiveProfile.GamePath) && Directory.Exists(ActiveProfile.GamePath));
-        OpenLibraryDirCommand = new RelayCommand(OpenLibraryDirInExplorer, () => ActiveProfile != null && !string.IsNullOrWhiteSpace(ActiveProfile.LibraryPath) && Directory.Exists(ActiveProfile.LibraryPath));
         QuickSnapshotSaveProfileCommand = new RelayCommand(QuickSnapshotSaveProfile, () => !string.IsNullOrEmpty(SelectedBaseProfileId));
         OpenSaveProfileFolderCommand = new RelayCommand<SaveProfile>(OpenSaveProfileFolder, (sp) => (sp ?? SelectedSaveProfile) != null && Directory.Exists((sp ?? SelectedSaveProfile)!.FullPath));
         ImportSaveFileCommand = new RelayCommand<object>(ImportSaveFile, (param) => !string.IsNullOrEmpty(SelectedBaseProfileId));
@@ -643,9 +548,6 @@ public class MainViewModel : ViewModelBase
         // Initialize collection views and their filters (only if running inside Application context to avoid WPF threading issues in unit tests)
         if (System.Windows.Application.Current != null)
         {
-            MainModsCollection = new System.Windows.Data.ListCollectionView(LibraryMods);
-            PluginsCollection = new System.Windows.Data.ListCollectionView(LibraryMods);
-            ScriptsCollection = new System.Windows.Data.ListCollectionView(LibraryMods);
 
             MainModsCollection.Filter = (obj) =>
             {
@@ -708,45 +610,6 @@ public class MainViewModel : ViewModelBase
         _music = new MusicViewModel(_baseDir, _linker);
     }
 
-    private void LoadLibrary()
-    {
-        LibraryMods.Clear();
-        if (File.Exists(_libraryManifestFile))
-        {
-            try
-            {
-                string json = File.ReadAllText(_libraryManifestFile);
-                var modsList = JsonSerializer.Deserialize<System.Collections.Generic.List<StagedMod>>(json);
-                if (modsList != null)
-                {
-                    foreach (var mod in modsList)
-                    {
-                        var target = _loadOrderService.DetermineDeployTarget(mod);
-                        LibraryMods.Add(new ModViewModel(ApplyDerivedLibraryTags(mod), false, 99, target));
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                StatusText = $"Failed to load mod library manifest: {ex.Message}";
-            }
-        }
-    }
-
-    private void SaveLibrary()
-    {
-        try
-        {
-            var rawModels = LibraryMods.Select(m => m.Model).ToList();
-            string json = JsonSerializer.Serialize(rawModels, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_libraryManifestFile, json);
-        }
-        catch (Exception ex)
-        {
-            StatusText = $"Failed to save library manifest: {ex.Message}";
-        }
-    }
-
 
 
     private void LoadProfiles()
@@ -806,8 +669,8 @@ public class MainViewModel : ViewModelBase
         var entries = ActiveProfile.LoadOrder.Entries.ToList();
         bool loadOrderChanged = false;
 
-        // Ensure every mod in LibraryMods has a valid, unique LoadOrder entry
-        foreach (var modVm in LibraryMods)
+        // Ensure every mod in LibraryVM.LibraryMods has a valid, unique LoadOrder entry
+        foreach (var modVm in LibraryVM.LibraryMods)
         {
             modVm.IsEnabled = ActiveProfile.EnabledModIds.Contains(modVm.Id);
             
@@ -845,8 +708,8 @@ public class MainViewModel : ViewModelBase
             }
         }
 
-        // Clean up entries for mods that no longer exist in LibraryMods
-        var libraryModIds = LibraryMods.Select(m => m.Id).ToHashSet();
+        // Clean up entries for mods that no longer exist in LibraryVM.LibraryMods
+        var libraryModIds = LibraryVM.LibraryMods.Select(m => m.Id).ToHashSet();
         int initialCount = entries.Count;
         entries.RemoveAll(e => !libraryModIds.Contains(e.ModId));
         if (entries.Count != initialCount)
@@ -880,7 +743,7 @@ public class MainViewModel : ViewModelBase
         }
 
         // Apply the resequenced priorities back to modViewModels
-        foreach (var modVm in LibraryMods)
+        foreach (var modVm in LibraryVM.LibraryMods)
         {
             var entry = resequencedEntries.FirstOrDefault(e => e.ModId == modVm.Id);
             if (entry != null)
@@ -890,16 +753,16 @@ public class MainViewModel : ViewModelBase
             }
         }
 
-        // Sort LibraryMods collection by Priority
-        var sorted = LibraryMods.OrderBy(m => m.Priority).ToList();
-        LibraryMods.Clear();
+        // Sort LibraryVM.LibraryMods collection by Priority
+        var sorted = LibraryVM.LibraryMods.OrderBy(m => m.Priority).ToList();
+        LibraryVM.LibraryMods.Clear();
         foreach (var mod in sorted)
         {
-            LibraryMods.Add(mod);
+            LibraryVM.LibraryMods.Add(mod);
         }
 
         UpdateConflictsAndWatchdog();
-        ApplyFilter();
+        LibraryVM.ApplyFilter();
     }
 
     private void UpdateConflictsAndWatchdog()
@@ -910,7 +773,7 @@ public class MainViewModel : ViewModelBase
         LoadFusionFixConfig();
 
         // Build sorted enabled mods list
-        var enabledVms = LibraryMods.Where(m => m.IsEnabled).ToList();
+        var enabledVms = LibraryVM.LibraryMods.Where(m => m.IsEnabled).ToList();
         var enabledModels = enabledVms.Select(v => v.Model).ToList();
 
         // Make sure load order has all enabled entries
@@ -940,7 +803,7 @@ public class MainViewModel : ViewModelBase
 
         // Map conflicts and structure validations back to ViewModels
         var validator = new UpdateFolderValidator();
-        foreach (var modVm in LibraryMods)
+        foreach (var modVm in LibraryVM.LibraryMods)
         {
             var validationIssues = validator.Validate(modVm.Model);
             var targetConflicts = conflictState.Conflicts.Values.Where(c => c.WinnerModId == modVm.Id || c.ConflictingModIds.Contains(modVm.Id)).ToList();
@@ -964,7 +827,7 @@ public class MainViewModel : ViewModelBase
                     details.Add($"[Conflict] Overridden by other mods on {losses.Count} file(s):");
                     foreach (var loss in losses)
                     {
-                        var winnerName = LibraryMods.FirstOrDefault(m => m.Id == loss.WinnerModId)?.Name ?? "Another Mod";
+                        var winnerName = LibraryVM.LibraryMods.FirstOrDefault(m => m.Id == loss.WinnerModId)?.Name ?? "Another Mod";
                         details.Add($"  - '{loss.TargetPath}' overridden by '{winnerName}'");
                     }
                 }
@@ -999,7 +862,7 @@ public class MainViewModel : ViewModelBase
 
         // Calculate custom .img archive count
         int imgCount = 0;
-        foreach (var modVm in LibraryMods)
+        foreach (var modVm in LibraryVM.LibraryMods)
         {
             if (modVm.IsEnabled && modVm.Target == DeployTarget.Update)
             {
@@ -1196,25 +1059,6 @@ public class MainViewModel : ViewModelBase
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = ActiveProfile.GamePath,
-                    UseShellExecute = true
-                });
-            }
-            catch (Exception ex)
-            {
-                StatusText = $"Failed to open folder: {ex.Message}";
-            }
-        }
-    }
-
-    private void OpenLibraryDirInExplorer()
-    {
-        if (ActiveProfile != null && !string.IsNullOrWhiteSpace(ActiveProfile.LibraryPath) && Directory.Exists(ActiveProfile.LibraryPath))
-        {
-            try
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = ActiveProfile.LibraryPath,
                     UseShellExecute = true
                 });
             }
@@ -1454,12 +1298,12 @@ public class MainViewModel : ViewModelBase
                     {
                         System.Windows.Application.Current.Dispatcher.Invoke(() =>
                         {
-                            LibraryMods.Add(vm);
+                            LibraryVM.LibraryMods.Add(vm);
                         });
                     }
                     else
                     {
-                        LibraryMods.Add(vm);
+                        LibraryVM.LibraryMods.Add(vm);
                     }
 
                     successCount++;
@@ -1475,13 +1319,13 @@ public class MainViewModel : ViewModelBase
             {
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
-                    SaveLibrary();
+                    LibraryVM.SaveLibrary();
                     RefreshActiveModsList();
                 });
             }
             else
             {
-                SaveLibrary();
+                LibraryVM.SaveLibrary();
                 RefreshActiveModsList();
             }
 
@@ -1509,19 +1353,6 @@ public class MainViewModel : ViewModelBase
         {
             GpuVramMb = vramMb;
         }
-    }
-
-    private static StagedMod ApplyDerivedLibraryTags(StagedMod mod)
-    {
-        var tags = (mod.Tags ?? Array.Empty<string>()).ToList();
-
-        if (UpdateDeploymentClassifier.IsMergeOnlyUpdateMod(mod) &&
-            !tags.Contains("invisible", StringComparer.OrdinalIgnoreCase))
-        {
-            tags.Add("invisible");
-        }
-
-        return mod with { Tags = tags };
     }
 
     private void SetVehicleBudgetPreset(object? param)
@@ -1564,97 +1395,6 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    private async void ToggleModEnabled(ModViewModel? modVm)
-    {
-        if (modVm == null || ActiveProfile == null) return;
-
-        if (!modVm.IsEnabled)
-        {
-            if (modVm.Target == DeployTarget.Plugins)
-            {
-                if (!BackendStatus.AsiLoaderInstalled && !BackendStatus.FusionFixInstalled)
-                {
-                    var result = System.Windows.MessageBox.Show(
-                        $"The mod '{modVm.Name}' is an ASI plugin and requires an ASI Loader to run, but it is not currently installed.\n\n" +
-                        "Would you like to install the Ultimate ASI Loader now?",
-                        "Missing ASI Loader",
-                        System.Windows.MessageBoxButton.YesNo,
-                        System.Windows.MessageBoxImage.Warning);
-
-                    if (result == System.Windows.MessageBoxResult.Yes)
-                    {
-                        await InstallAsiLoaderAsync();
-                        if (!BackendStatus.AsiLoaderInstalled && !BackendStatus.FusionFixInstalled)
-                        {
-                            System.Windows.MessageBox.Show("Ultimate ASI Loader installation was not completed. Mod cannot be enabled.", "Missing Backend", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        return;
-                    }
-                }
-            }
-            else if (modVm.Target == DeployTarget.Scripts)
-            {
-                if (!BackendStatus.ScriptHookInstalled)
-                {
-                    var result = System.Windows.MessageBox.Show(
-                        $"The mod '{modVm.Name}' contains scripts and requires ScriptHook to run, but it is not currently installed.\n\n" +
-                        "Would you like to install ScriptHook now?",
-                        "Missing ScriptHook",
-                        System.Windows.MessageBoxButton.YesNo,
-                        System.Windows.MessageBoxImage.Warning);
-
-                    if (result == System.Windows.MessageBoxResult.Yes)
-                    {
-                        await InstallScriptHookAsync();
-                        if (!BackendStatus.ScriptHookInstalled)
-                        {
-                            System.Windows.MessageBox.Show("ScriptHook installation was not completed. Mod cannot be enabled.", "Missing Backend", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        return;
-                    }
-                }
-            }
-        }
-
-        modVm.IsEnabled = !modVm.IsEnabled;
-        
-        var list = ActiveProfile.EnabledModIds.ToList();
-        if (modVm.IsEnabled)
-        {
-            if (!list.Contains(modVm.Id)) list.Add(modVm.Id);
-        }
-        else
-        {
-            list.Remove(modVm.Id);
-        }
-
-        var updatedProfile = ActiveProfile with { EnabledModIds = list };
-        SaveProfileState(updatedProfile);
-        RefreshActiveModsList();
-    }
-
-    private void ReorderMod(Tuple<ModViewModel, int>? param)
-    {
-        if (param == null || ActiveProfile == null) return;
-
-        var modVm = param.Item1;
-        int targetPriority = param.Item2;
-
-        var newOrder = _loadOrderService.ReorderMod(ActiveProfile.LoadOrder, modVm.Id, targetPriority);
-        
-        var updatedProfile = ActiveProfile with { LoadOrder = newOrder };
-        SaveProfileState(updatedProfile);
-        RefreshActiveModsList();
-    }
-
     private void CreateProfile(string? name)
     {
         if (string.IsNullOrWhiteSpace(name)) return;
@@ -1692,7 +1432,7 @@ public class MainViewModel : ViewModelBase
             
             try
             {
-                var enabledVms = LibraryMods.Where(m => ActiveProfile.EnabledModIds.Contains(m.Id)).ToList();
+                var enabledVms = LibraryVM.LibraryMods.Where(m => ActiveProfile.EnabledModIds.Contains(m.Id)).ToList();
                 foreach (var vm in enabledVms)
                 {
                     await adapter.UndeployAsync(vm.Model);
@@ -1715,89 +1455,92 @@ public class MainViewModel : ViewModelBase
     {
         if (ActiveProfile == null) return;
 
-        IsBusy = true;
-        StatusText = "Creating deployment Restore Point...";
-
-        // Ensure directories exist in game dir
-        try
+        using (new ProfilerBlock(_logger, "ApplyDeploymentAsync"))
         {
-            Directory.CreateDirectory(Path.Combine(ActiveProfile.GamePath, "update"));
-            Directory.CreateDirectory(Path.Combine(ActiveProfile.GamePath, "plugins"));
-            Directory.CreateDirectory(Path.Combine(ActiveProfile.GamePath, "scripts"));
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Failed to initialize game subfolders: {ex.Message}", "Deployment Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            IsBusy = false;
-            return;
-        }
+            IsBusy = true;
+            StatusText = "Creating deployment Restore Point...";
 
-        var journal = new TransactionJournal();
-        var adapter = new CompleteEditionAdapter(ActiveProfile.GamePath, _linker, journal);
-
-        try
-        {
-            var sortedEnabled = LibraryMods
-                .Where(m => m.IsEnabled)
-                .OrderBy(m => m.Priority)
-                .ToList();
-
-            // A. Validate structure of all enabled mods
-            var validator = new UpdateFolderValidator();
-            var allErrors = new List<string>();
-            foreach (var vm in sortedEnabled)
+            // Ensure directories exist in game dir
+            try
             {
-                var issues = validator.Validate(vm.Model);
-                var errors = issues.Where(i => i.Severity == "Error").Select(i => $"[{vm.Name}] {i.Message}").ToList();
-                allErrors.AddRange(errors);
+                Directory.CreateDirectory(Path.Combine(ActiveProfile.GamePath, "update"));
+                Directory.CreateDirectory(Path.Combine(ActiveProfile.GamePath, "plugins"));
+                Directory.CreateDirectory(Path.Combine(ActiveProfile.GamePath, "scripts"));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to initialize game subfolders: {ex.Message}", "Deployment Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                IsBusy = false;
+                return;
             }
 
-            if (allErrors.Any())
+            var journal = new TransactionJournal();
+            var adapter = new CompleteEditionAdapter(ActiveProfile.GamePath, _linker, journal);
+
+            try
             {
-                throw new InvalidOperationException($"Mod structure errors detected:\n\n{string.Join(Environment.NewLine, allErrors)}");
+                var sortedEnabled = LibraryVM.LibraryMods
+                    .Where(m => m.IsEnabled)
+                    .OrderBy(m => m.Priority)
+                    .ToList();
+
+                // A. Validate structure of all enabled mods
+                var validator = new UpdateFolderValidator();
+                var allErrors = new List<string>();
+                foreach (var vm in sortedEnabled)
+                {
+                    var issues = validator.Validate(vm.Model);
+                    var errors = issues.Where(i => i.Severity == "Error").Select(i => $"[{vm.Name}] {i.Message}").ToList();
+                    allErrors.AddRange(errors);
+                }
+
+                if (allErrors.Any())
+                {
+                    throw new InvalidOperationException($"Mod structure errors detected:\n\n{string.Join(Environment.NewLine, allErrors)}");
+                }
+
+                // B. Detect loose file conflicts
+                var entries = sortedEnabled.Select(v => new LoadOrderEntry(v.Id, v.Target, v.Priority)).OrderBy(e => e.Priority).ToList();
+                var currentLoadOrder = new LoadOrderModel(entries);
+                var enabledModels = sortedEnabled.Select(v => v.Model).ToList();
+                var conflictState = _conflictDetector.DetectConflicts(enabledModels, currentLoadOrder);
+
+                // 1. Undeploy currently active links
+                StatusText = "Clearing physical links...";
+                foreach (var modVm in LibraryVM.LibraryMods)
+                {
+                    await adapter.UndeployAsync(modVm.Model);
+                }
+
+                // 2. Deploy enabled links in load order priority sequence
+                StatusText = "Applying junctions and hard links...";
+                foreach (var vm in sortedEnabled)
+                {
+                    StatusText = $"Deploying '{vm.Name}' (Priority {vm.Priority})...";
+                    await adapter.DeployAsync(vm.Model, vm.Priority);
+                }
+
+                // 3. Update game watchdog reference
+                StatusText = "Updating watchdog version reference...";
+                var currentVersion = await _watchdog.CaptureCurrentVersionAsync(ActiveProfile.GamePath);
+                var finalProfile = ActiveProfile with { LastKnownVersion = currentVersion };
+                SaveProfileState(finalProfile);
+
+                StatusText = "Deployment applied successfully!";
+                MessageBox.Show("Mod load order deployed successfully! Game files are completely untouched.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
-
-            // B. Detect loose file conflicts
-            var entries = sortedEnabled.Select(v => new LoadOrderEntry(v.Id, v.Target, v.Priority)).OrderBy(e => e.Priority).ToList();
-            var currentLoadOrder = new LoadOrderModel(entries);
-            var enabledModels = sortedEnabled.Select(v => v.Model).ToList();
-            var conflictState = _conflictDetector.DetectConflicts(enabledModels, currentLoadOrder);
-
-            // 1. Undeploy currently active links
-            StatusText = "Clearing physical links...";
-            foreach (var modVm in LibraryMods)
+            catch (Exception ex)
             {
-                await adapter.UndeployAsync(modVm.Model);
+                StatusText = "Deployment failed! Rolling back changes...";
+                _rollbackService.Rollback(journal);
+                StatusText = "Rollback completed. Prior system state restored.";
+                MessageBox.Show($"Deployment failed: {ex.Message}\nAll filesystem changes have been automatically rolled back safely.", "Deployment Failure", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-
-            // 2. Deploy enabled links in load order priority sequence
-            StatusText = "Applying junctions and hard links...";
-            foreach (var vm in sortedEnabled)
+            finally
             {
-                StatusText = $"Deploying '{vm.Name}' (Priority {vm.Priority})...";
-                await adapter.DeployAsync(vm.Model, vm.Priority);
+                IsBusy = false;
+                UpdateConflictsAndWatchdog();
             }
-
-            // 3. Update game watchdog reference
-            StatusText = "Updating watchdog version reference...";
-            var currentVersion = await _watchdog.CaptureCurrentVersionAsync(ActiveProfile.GamePath);
-            var finalProfile = ActiveProfile with { LastKnownVersion = currentVersion };
-            SaveProfileState(finalProfile);
-
-            StatusText = "Deployment applied successfully!";
-            MessageBox.Show("Mod load order deployed successfully! Game files are completely untouched.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-        catch (Exception ex)
-        {
-            StatusText = "Deployment failed! Rolling back changes...";
-            _rollbackService.Rollback(journal);
-            StatusText = "Rollback completed. Prior system state restored.";
-            MessageBox.Show($"Deployment failed: {ex.Message}\nAll filesystem changes have been automatically rolled back safely.", "Deployment Failure", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        finally
-        {
-            IsBusy = false;
-            UpdateConflictsAndWatchdog();
         }
     }
 
@@ -1842,7 +1585,7 @@ public class MainViewModel : ViewModelBase
             {
                 var journal = new TransactionJournal();
                 var adapter = new CompleteEditionAdapter(profileToDelete.GamePath, _linker, journal);
-                var enabledVms = LibraryMods.Where(m => profileToDelete.EnabledModIds.Contains(m.Id)).ToList();
+                var enabledVms = LibraryVM.LibraryMods.Where(m => profileToDelete.EnabledModIds.Contains(m.Id)).ToList();
                 await Task.WhenAll(enabledVms.Select(vm => adapter.UndeployAsync(vm.Model)));
             }
             catch (Exception ex)
@@ -1883,13 +1626,6 @@ public class MainViewModel : ViewModelBase
         var updatedProfile = ActiveProfile with { Name = newName };
         SaveProfileState(updatedProfile);
         StatusText = $"Renamed profile from '{oldName}' to '{newName}'.";
-    }
-
-    private void SaveModDetails()
-    {
-        SaveLibrary();
-        StatusText = "Mod details saved successfully.";
-        MessageBox.Show("Mod details saved successfully to the library manifest.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private async Task DeleteModAsync(ModViewModel? modVm)
@@ -1952,20 +1688,20 @@ public class MainViewModel : ViewModelBase
             {
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
-                    LibraryMods.Remove(modVm);
+                    LibraryVM.LibraryMods.Remove(modVm);
                     if (SelectedMod == modVm) SelectedMod = null;
-                    if (SelectedLibraryMod == modVm) SelectedLibraryMod = null;
-                    if (SelectedPluginMod == modVm) SelectedPluginMod = null;
+                    if (LibraryVM.SelectedLibraryMod == modVm) LibraryVM.SelectedLibraryMod = null;
+                    if (LibraryVM.SelectedPluginMod == modVm) LibraryVM.SelectedPluginMod = null;
                 });
             }
             else
             {
-                LibraryMods.Remove(modVm);
+                LibraryVM.LibraryMods.Remove(modVm);
                 if (SelectedMod == modVm) SelectedMod = null;
-                if (SelectedLibraryMod == modVm) SelectedLibraryMod = null;
-                if (SelectedPluginMod == modVm) SelectedPluginMod = null;
+                if (LibraryVM.SelectedLibraryMod == modVm) LibraryVM.SelectedLibraryMod = null;
+                if (LibraryVM.SelectedPluginMod == modVm) LibraryVM.SelectedPluginMod = null;
             }
-            SaveLibrary();
+            LibraryVM.SaveLibrary();
 
             // 4. Delete the physical directory
             if (Directory.Exists(modVm.Model.LibraryPath))
@@ -1982,118 +1718,6 @@ public class MainViewModel : ViewModelBase
         {
             StatusText = $"Failed to delete mod: {ex.Message}";
             MessageBox.Show($"Failed to delete mod: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        finally
-        {
-            IsBusy = false;
-            UpdateConflictsAndWatchdog();
-        }
-    }
-
-    private async Task ClearLibraryAsync()
-    {
-        if (!LibraryMods.Any()) return;
-
-        var result = MessageBox.Show(
-            "Are you sure you want to permanently delete ALL mods from the library?\n\nThis will physically undeploy all active mods from the game directory, remove them from all profiles, and delete all mod files from your disk. This action CANNOT be undone.",
-            "Clear Mod Library",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-
-        if (result == MessageBoxResult.No)
-        {
-            return;
-        }
-
-        await ClearLibraryInternalAsync(showSuccessMessage: true);
-    }
-
-    public async Task ClearLibraryInternalAsync(bool showSuccessMessage = false)
-    {
-        IsBusy = true;
-        StatusText = "Clearing mod library...";
-
-        try
-        {
-            // 1. Undeploy all mods first from the current active game path
-            if (ActiveProfile != null && !string.IsNullOrEmpty(ActiveProfile.GamePath) && Directory.Exists(ActiveProfile.GamePath))
-            {
-                var adapter = new CompleteEditionAdapter(ActiveProfile.GamePath, _linker);
-                foreach (var modVm in LibraryMods)
-                {
-                    try
-                    {
-                        await adapter.UndeployAsync(modVm.Model);
-                    }
-                    catch { /* Ignore individual undeploy errors */ }
-                }
-            }
-
-            // 2. Remove all mods from all profiles
-            var profilesList = Profiles.ToList();
-            foreach (var profile in profilesList)
-            {
-                var updatedProfile = profile with
-                {
-                    EnabledModIds = Array.Empty<string>(),
-                    LoadOrder = new LoadOrderModel(Array.Empty<LoadOrderEntry>())
-                };
-                SaveProfileState(updatedProfile);
-            }
-
-            // 3. Delete physical library directory contents
-            if (Directory.Exists(_libraryDir))
-            {
-                await Task.Run(() =>
-                {
-                    foreach (var dir in Directory.GetDirectories(_libraryDir))
-                    {
-                        try { Directory.Delete(dir, true); } catch { }
-                    }
-                    foreach (var file in Directory.GetFiles(_libraryDir))
-                    {
-                        if (!Path.GetFileName(file).Equals("mods.json", StringComparison.OrdinalIgnoreCase))
-                        {
-                            try { File.Delete(file); } catch { }
-                        }
-                    }
-                });
-            }
-
-            // 4. Clear library mods list and save manifest
-            if (Application.Current != null && Application.Current.Dispatcher != null)
-            {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    LibraryMods.Clear();
-                });
-            }
-            else
-            {
-                LibraryMods.Clear();
-            }
-            SaveLibrary();
-
-            // 5. Refresh active profile links list
-            RefreshActiveModsList();
-
-            StatusText = "Mod library cleared successfully.";
-            if (showSuccessMessage)
-            {
-                MessageBox.Show("Mod library has been cleared completely.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-        }
-        catch (Exception ex)
-        {
-            StatusText = $"Failed to clear mod library: {ex.Message}";
-            if (showSuccessMessage)
-            {
-                MessageBox.Show($"Failed to clear library: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            else
-            {
-                throw;
-            }
         }
         finally
         {
@@ -2133,7 +1757,7 @@ public class MainViewModel : ViewModelBase
 
             // 1. Undeploy all mods first from the current active game path
             var adapter = new CompleteEditionAdapter(ActiveProfile.GamePath, _linker);
-            foreach (var modVm in LibraryMods)
+            foreach (var modVm in LibraryVM.LibraryMods)
             {
                 try
                 {

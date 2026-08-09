@@ -81,11 +81,11 @@
                         <ui:Button Grid.Row="0" Grid.Column="1" 
                                    Content="Browse..." 
                                    Icon="{ui:SymbolIcon Folder24}" 
-                                   Command="{Binding BrowseSaveProfilesPathCommand}" 
-                                   VerticalAlignment="Center" />
+                                   Command="{Binding SaveProfileVM.BrowseSaveProfilesPathCommand}" 
+                                   ToolTipService.ToolTip="Browse..." />
 
                         <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" 
-                                   Text="{Binding GtaSaveProfilesPath, FallbackValue='Default path (using user Documents)'}" 
+                                   Text="{Binding SaveProfileVM.GtaSaveProfilesPath, FallbackValue='Default path (using user Documents)'}" 
                                    FontSize="12" 
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" 
                                    Margin="0,10,0,0" 

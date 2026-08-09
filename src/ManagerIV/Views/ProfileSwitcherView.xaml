@@ -633,6 +633,7 @@
             <!-- TAB 3: SAVE GAME STATE MANAGER                                           -->
             <!-- ========================================================================= -->
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          DataContext="{Binding SaveProfileVM}"
                           Visibility="{Binding IsChecked, ElementName=TabSaveStates, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid Margin="0,0,0,10">
                     <Grid.RowDefinitions>
@@ -751,7 +752,7 @@
 
                                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
                                                         <ui:Button Icon="{ui:SymbolIcon FolderOpen24}" 
-                                                                   Command="{Binding DataContext.OpenSaveProfileFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                   Command="{Binding DataContext.SaveProfileVM.OpenSaveProfileFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                    CommandParameter="{Binding}"
                                                                    ToolTip="Open Save Folder in Explorer"
                                                                    Margin="0,0,6,0"
