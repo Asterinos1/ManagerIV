@@ -1,10 +1,7 @@
-using System;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Octokit;
 
 namespace ManagerIV.Core;

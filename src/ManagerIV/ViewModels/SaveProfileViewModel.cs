@@ -1,8 +1,5 @@
-using System;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using ManagerIV.Core;
@@ -13,7 +10,7 @@ namespace ManagerIV.ViewModels;
 public class SaveProfileViewModel : ViewModelBase
 {
     private readonly ILogger<SaveProfileViewModel> _logger;
-    private SaveProfileManager _saveProfileManager;
+    private SaveProfileManager? _saveProfileManager;
     private string _gtaSaveProfilesPath = "";
     private ObservableCollection<string> _baseProfileIds = new();
     private string? _selectedBaseProfileId;

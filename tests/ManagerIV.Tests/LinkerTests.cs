@@ -1,6 +1,4 @@
-using System;
 using System.IO;
-using Xunit;
 using ManagerIV.Core;
 
 namespace ManagerIV.Tests;

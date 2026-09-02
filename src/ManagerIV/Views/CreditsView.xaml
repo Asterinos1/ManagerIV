@@ -75,11 +75,58 @@
                     </Grid>
                 </ui:Card>
 
+                <!-- ScriptHook & DotNet Card -->
+                <ui:Card Padding="15" Margin="0,0,0,15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                            <TextBlock Text="ScriptHook &amp; ScriptHookDotNet" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock Text="Created by Aru, HazardX, Alexander Blade &amp; LMS" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,2,0,6" />
+                            <TextBlock Text="C++ script loader and .NET runtime framework providing essential scripting hooks and event loops for custom GTA IV scripts and police plugins." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Grid>
+                </ui:Card>
+
+                <!-- BASS Audio Library Card -->
+                <ui:Card Padding="15" Margin="0,0,0,15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                            <TextBlock Text="BASS Audio Library &amp; BASS.NET" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock Text="Created by Ian Luck (Un4seen Developments) &amp; Bernd Niedergesaess (radio42)" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,2,0,6" />
+                            <TextBlock Text="Low-level audio streaming engine and .NET interop layer used by sound modification scripts and Independence FM integrations." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ui:Button Grid.Column="1" Content="Website" Icon="{ui:SymbolIcon Open24}" Click="Button_GitHub_Click" Tag="https://www.un4seen.com/" VerticalAlignment="Center" />
+                    </Grid>
+                </ui:Card>
+
+                <!-- Liberty's Legacy Trainer Card -->
+                <ui:Card Padding="15" Margin="0,0,0,15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                            <TextBlock Text="Liberty's Legacy Trainer" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock Text="Created by const96b" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,2,0,6" />
+                            <TextBlock Text="Modern feature-rich in-game native trainer for GTA IV Complete Edition, built with controller support and modern GUI menus." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ui:Button Grid.Column="1" Content="GTAForums" Icon="{ui:SymbolIcon Open24}" Click="Button_GitHub_Click" Tag="https://gtaforums.com/topic/973091-libertys-legacy-trainer-gta-iv-ce-12043-above/" VerticalAlignment="Center" />
+                    </Grid>
+                </ui:Card>
+
                 <!-- General Credits -->
                 <ui:Card Padding="15" Margin="0,0,0,15" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
                     <StackPanel>
                         <TextBlock Text="Additional Integrations" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,10" />
-                        <TextBlock Text="• ScriptHook / ScriptHookDotNet (Modding Community)" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2" />
+                        <TextBlock Text="• MemBiter (Community - vehicle and memory parameter manipulation)" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2" />
                         <TextBlock Text="• SharpCompress (Zip, Rar &amp; 7z extraction archive libraries)" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2" />
                         <TextBlock Text="• Octokit.NET (GitHub Releases integrations API client)" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2" />
                         <TextBlock Text="• WPF-UI (Modern Win11 Fluent UI style controls library)" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2" />

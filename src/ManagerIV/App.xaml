@@ -21,7 +21,7 @@
 
             <!-- Explicit boundary for text inputs so they read as framed controls in
                  both themes. Per-instance Background/BorderThickness still override. -->
-            <Style TargetType="{x:Type ui:TextBox}" BasedOn="{StaticResource {x:Type ui:TextBox}}">
+            <Style TargetType="{x:Type ui:TextBox}" BasedOn="{StaticResource DefaultUiTextBoxStyle}">
                 <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
                 <Setter Property="BorderThickness" Value="1" />

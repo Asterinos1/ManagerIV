@@ -1,16 +1,19 @@
-using System;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
 using ManagerIV.Core;
-using Microsoft.Extensions.Logging;
 
 namespace ManagerIV.ViewModels;
+
+public enum ModCategoryFilter
+{
+    All,
+    Assets,
+    Plugins,
+    Scripts
+}
 
 public class LibraryViewModel: ViewModelBase
 {
@@ -19,6 +22,50 @@ public class LibraryViewModel: ViewModelBase
     private ModViewModel? _selectedLibraryMod;
     private ModViewModel? _selectedPluginMod;
     private ModViewModel? _selectedScriptMod;
+    private ModCategoryFilter _selectedCategoryFilter = ModCategoryFilter.Assets;
+
+    private bool _isEditingMod;
+    private ModViewModel? _editingMod;
+    private string _editingName = "";
+    private string _editingVersion = "";
+    private string _editingCompatibility = "";
+    private string _editingDescription = "";
+
+    public bool IsEditingMod
+    {
+        get => _isEditingMod;
+        set => SetProperty(ref _isEditingMod, value);
+    }
+
+    public ModViewModel? EditingMod
+    {
+        get => _editingMod;
+        set => SetProperty(ref _editingMod, value);
+    }
+
+    public string EditingName
+    {
+        get => _editingName;
+        set => SetProperty(ref _editingName, value);
+    }
+
+    public string EditingVersion
+    {
+        get => _editingVersion;
+        set => SetProperty(ref _editingVersion, value);
+    }
+
+    public string EditingCompatibility
+    {
+        get => _editingCompatibility;
+        set => SetProperty(ref _editingCompatibility, value);
+    }
+
+    public string EditingDescription
+    {
+        get => _editingDescription;
+        set => SetProperty(ref _editingDescription, value);
+    }
 
     public ObservableCollection<ModViewModel> LibraryMods
     {
@@ -29,25 +76,100 @@ public class LibraryViewModel: ViewModelBase
     public System.ComponentModel.ICollectionView? MainModsCollection { get; }
     public System.ComponentModel.ICollectionView? PluginsCollection { get; }
     public System.ComponentModel.ICollectionView? ScriptsCollection { get; }
+    public System.ComponentModel.ICollectionView? UnifiedModsCollection { get; }
+
+    public ModCategoryFilter SelectedCategoryFilter
+    {
+        get => _selectedCategoryFilter;
+        set
+        {
+            if (SetProperty(ref _selectedCategoryFilter, value))
+            {
+                OnPropertyChanged(nameof(IsAllFilterActive));
+                OnPropertyChanged(nameof(IsAssetsFilterActive));
+                OnPropertyChanged(nameof(IsPluginsFilterActive));
+                OnPropertyChanged(nameof(IsScriptsFilterActive));
+                ApplyFilter();
+            }
+        }
+    }
+
+    public bool IsAllFilterActive
+    {
+        get => SelectedCategoryFilter == ModCategoryFilter.All;
+        set { if (value) SelectedCategoryFilter = ModCategoryFilter.All; }
+    }
+
+    public bool IsAssetsFilterActive
+    {
+        get => SelectedCategoryFilter == ModCategoryFilter.Assets;
+        set { if (value) SelectedCategoryFilter = ModCategoryFilter.Assets; }
+    }
+
+    public bool IsPluginsFilterActive
+    {
+        get => SelectedCategoryFilter == ModCategoryFilter.Plugins;
+        set { if (value) SelectedCategoryFilter = ModCategoryFilter.Plugins; }
+    }
+
+    public bool IsScriptsFilterActive
+    {
+        get => SelectedCategoryFilter == ModCategoryFilter.Scripts;
+        set { if (value) SelectedCategoryFilter = ModCategoryFilter.Scripts; }
+    }
+
+    public int AllModsCount => LibraryMods.Count;
+    public int AssetsCount => LibraryMods.Count(m => m.Target == DeployTarget.Update);
+    public int PluginsCount => LibraryMods.Count(m => m.Target == DeployTarget.Plugins);
+    public int ScriptsCount => LibraryMods.Count(m => m.Target == DeployTarget.Scripts);
+
+    public void NotifyCountsChanged()
+    {
+        OnPropertyChanged(nameof(AllModsCount));
+        OnPropertyChanged(nameof(AssetsCount));
+        OnPropertyChanged(nameof(PluginsCount));
+        OnPropertyChanged(nameof(ScriptsCount));
+    }
 
     public LibraryViewModel()
     {
         if (System.Windows.Application.Current != null)
         {
-            MainModsCollection = System.Windows.Data.CollectionViewSource.GetDefaultView(LibraryMods);
-            PluginsCollection = System.Windows.Data.CollectionViewSource.GetDefaultView(LibraryMods);
-            ScriptsCollection = System.Windows.Data.CollectionViewSource.GetDefaultView(LibraryMods);
+            MainModsCollection = new System.Windows.Data.ListCollectionView(LibraryMods);
+            PluginsCollection = new System.Windows.Data.ListCollectionView(LibraryMods);
+            ScriptsCollection = new System.Windows.Data.ListCollectionView(LibraryMods);
+            UnifiedModsCollection = new System.Windows.Data.ListCollectionView(LibraryMods);
         }
+
+        _libraryMods.CollectionChanged += (s, e) =>
+        {
+            NotifyCountsChanged();
+        };
 
         ToggleModEnabledCommand = new RelayCommand<ModViewModel>(ToggleModEnabled);
         ReorderModCommand = new RelayCommand<Tuple<ModViewModel, int>?>(ReorderMod);
+        OpenEditModCommand = new RelayCommand<ModViewModel>(OpenEditMod);
+        CloseEditModCommand = new RelayCommand(CloseEditMod);
         SaveModDetailsCommand = new RelayCommand(SaveModDetails);
         ClearLibraryCommand = new RelayCommand(async () => await ClearLibraryAsync());
         OpenLibraryDirCommand = new RelayCommand(OpenLibraryDirInExplorer);
+        SelectCategoryCommand = new RelayCommand<string>(SelectCategory);
         
-        // Dummy handlers for now if not implemented
-        ImportModArchiveCommand = new RelayCommand(() => { });
-        DeleteModCommand = new RelayCommand<ModViewModel>(_ => { });
+        ImportModArchiveCommand = new RelayCommand(async () =>
+        {
+            if (MainVM != null)
+            {
+                await MainVM.PromptAndImportArchiveAsync();
+            }
+        });
+
+        DeleteModCommand = new RelayCommand<ModViewModel>(async mod =>
+        {
+            if (MainVM != null && mod != null)
+            {
+                await MainVM.DeleteModAsync(mod);
+            }
+        });
     }
 
     public ModViewModel? SelectedLibraryMod
@@ -129,6 +251,7 @@ public class LibraryViewModel: ViewModelBase
         MainModsCollection?.Refresh();
         PluginsCollection?.Refresh();
         ScriptsCollection?.Refresh();
+        UnifiedModsCollection?.Refresh();
     }
     public ICommand ToggleModEnabledCommand { get; }
     public ICommand ImportModArchiveCommand { get; }
@@ -137,6 +260,9 @@ public class LibraryViewModel: ViewModelBase
     public ICommand DeleteModCommand { get; }
     public ICommand ClearLibraryCommand { get; }
     public ICommand OpenLibraryDirCommand { get; }
+    public ICommand SelectCategoryCommand { get; }
+    public ICommand OpenEditModCommand { get; }
+    public ICommand CloseEditModCommand { get; }
 
     internal void LoadLibrary()
     {
@@ -209,81 +335,113 @@ public class LibraryViewModel: ViewModelBase
         return mod with { Tags = tags };
     }
 
+    private void SelectCategory(string? categoryName)
+    {
+        if (!string.IsNullOrWhiteSpace(categoryName) && Enum.TryParse<ModCategoryFilter>(categoryName, true, out var filter))
+        {
+            SelectedCategoryFilter = filter;
+        }
+    }
+
+    private void OpenEditMod(ModViewModel? mod)
+    {
+        if (mod == null) return;
+        EditingMod = mod;
+        EditingName = mod.Name;
+        EditingVersion = mod.Version;
+        EditingCompatibility = mod.Compatibility;
+        EditingDescription = mod.Description;
+        IsEditingMod = true;
+    }
+
+    private void CloseEditMod()
+    {
+        IsEditingMod = false;
+        EditingMod = null;
+    }
+
     private async void ToggleModEnabled(ModViewModel? modVm)
     {
         if (modVm == null || MainVM.ActiveProfile == null) return;
 
-        if (!modVm.IsEnabled)
+        try
         {
-            if (modVm.Target == DeployTarget.Plugins)
+            if (!modVm.IsEnabled)
             {
-                if (!MainVM.BackendStatus.AsiLoaderInstalled && !MainVM.BackendStatus.FusionFixInstalled)
+                if (modVm.Target == DeployTarget.Plugins)
                 {
-                    var result = System.Windows.MessageBox.Show(
-                        $"The mod '{modVm.Name}' is an ASI plugin and requires an ASI Loader to run, but it is not currently installed.\n\n" +
-                        "Would you like to install the Ultimate ASI Loader now?",
-                        "Missing ASI Loader",
-                        System.Windows.MessageBoxButton.YesNo,
-                        System.Windows.MessageBoxImage.Warning);
-
-                    if (result == System.Windows.MessageBoxResult.Yes)
+                    if (!MainVM.BackendStatus.AsiLoaderInstalled && !MainVM.BackendStatus.FusionFixInstalled)
                     {
-                        await MainVM.InstallAsiLoaderAsync();
-                        if (!MainVM.BackendStatus.AsiLoaderInstalled && !MainVM.BackendStatus.FusionFixInstalled)
+                        var result = System.Windows.MessageBox.Show(
+                            $"The mod '{modVm.Name}' is an ASI plugin and requires an ASI Loader to run, but it is not currently installed.\n\n" +
+                            "Would you like to install the Ultimate ASI Loader now?",
+                            "Missing ASI Loader",
+                            System.Windows.MessageBoxButton.YesNo,
+                            System.Windows.MessageBoxImage.Warning);
+
+                        if (result == System.Windows.MessageBoxResult.Yes)
                         {
-                            System.Windows.MessageBox.Show("Ultimate ASI Loader installation was not completed. Mod cannot be enabled.", "Missing Backend", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                            await MainVM.InstallAsiLoaderAsync();
+                            if (!MainVM.BackendStatus.AsiLoaderInstalled && !MainVM.BackendStatus.FusionFixInstalled)
+                            {
+                                System.Windows.MessageBox.Show("Ultimate ASI Loader installation was not completed. Mod cannot be enabled.", "Missing Backend", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                                return;
+                            }
+                        }
+                        else
+                        {
                             return;
                         }
                     }
-                    else
-                    {
-                        return;
-                    }
                 }
-            }
-            else if (modVm.Target == DeployTarget.Scripts)
-            {
-                if (!MainVM.BackendStatus.ScriptHookInstalled)
+                else if (modVm.Target == DeployTarget.Scripts)
                 {
-                    var result = System.Windows.MessageBox.Show(
-                        $"The mod '{modVm.Name}' contains scripts and requires ScriptHook to run, but it is not currently installed.\n\n" +
-                        "Would you like to install ScriptHook now?",
-                        "Missing ScriptHook",
-                        System.Windows.MessageBoxButton.YesNo,
-                        System.Windows.MessageBoxImage.Warning);
-
-                    if (result == System.Windows.MessageBoxResult.Yes)
+                    if (!MainVM.BackendStatus.ScriptHookInstalled)
                     {
-                        await MainVM.InstallScriptHookAsync();
-                        if (!MainVM.BackendStatus.ScriptHookInstalled)
+                        var result = System.Windows.MessageBox.Show(
+                            $"The mod '{modVm.Name}' contains scripts and requires ScriptHook to run, but it is not currently installed.\n\n" +
+                            "Would you like to install ScriptHook now?",
+                            "Missing ScriptHook",
+                            System.Windows.MessageBoxButton.YesNo,
+                            System.Windows.MessageBoxImage.Warning);
+
+                        if (result == System.Windows.MessageBoxResult.Yes)
                         {
-                            System.Windows.MessageBox.Show("ScriptHook installation was not completed. Mod cannot be enabled.", "Missing Backend", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                            await MainVM.InstallScriptHookAsync();
+                            if (!MainVM.BackendStatus.ScriptHookInstalled)
+                            {
+                                System.Windows.MessageBox.Show("ScriptHook installation was not completed. Mod cannot be enabled.", "Missing Backend", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                                return;
+                            }
+                        }
+                        else
+                        {
                             return;
                         }
                     }
-                    else
-                    {
-                        return;
-                    }
                 }
             }
-        }
 
-        modVm.IsEnabled = !modVm.IsEnabled;
-        
-        var list = MainVM.ActiveProfile.EnabledModIds.ToList();
-        if (modVm.IsEnabled)
-        {
-            if (!list.Contains(modVm.Id)) list.Add(modVm.Id);
-        }
-        else
-        {
-            list.Remove(modVm.Id);
-        }
+            modVm.IsEnabled = !modVm.IsEnabled;
+            
+            var list = MainVM.ActiveProfile.EnabledModIds.ToList();
+            if (modVm.IsEnabled)
+            {
+                if (!list.Contains(modVm.Id)) list.Add(modVm.Id);
+            }
+            else
+            {
+                list.Remove(modVm.Id);
+            }
 
-        var updatedProfile = MainVM.ActiveProfile with { EnabledModIds = list };
-        MainVM.SaveProfileState(updatedProfile);
-        MainVM.RefreshActiveModsList();
+            var updatedProfile = MainVM.ActiveProfile with { EnabledModIds = list };
+            MainVM.SaveProfileState(updatedProfile);
+            MainVM.RefreshActiveModsList();
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"Failed to toggle mod enablement: {ex.Message}", "Mod Toggle Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
     }
 
     private void ReorderMod(Tuple<ModViewModel, int>? param)
@@ -302,9 +460,17 @@ public class LibraryViewModel: ViewModelBase
 
     private void SaveModDetails()
     {
-        SaveLibrary();
-        MainVM.StatusText = "Mod details saved successfully.";
-        MessageBox.Show("Mod details saved successfully to the library manifest.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        if (EditingMod != null)
+        {
+            EditingMod.Name = EditingName.Trim();
+            EditingMod.Version = EditingVersion.Trim();
+            EditingMod.Compatibility = EditingCompatibility.Trim();
+            EditingMod.Description = EditingDescription.Trim();
+            SaveLibrary();
+            MainVM.StatusText = $"Saved details for '{EditingMod.Name}'.";
+        }
+        IsEditingMod = false;
+        EditingMod = null;
     }
 
     private async Task ClearLibraryAsync()

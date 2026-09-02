@@ -6,23 +6,71 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:local="clr-namespace:ManagerIV.Views"
              xmlns:core="clr-namespace:ManagerIV.Core"
+             xmlns:controls="clr-namespace:ManagerIV.Controls"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="850"
+             TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
     <UserControl.Resources>
+        <SolidColorBrush x:Key="TextFillColorTertiaryBrush" Color="#B0FFFFFF" />
+        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        </Style>
+        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        </Style>
         <Style TargetType="ui:Card" BasedOn="{StaticResource {x:Type ui:Card}}">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
             <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
         <Style TargetType="ui:CardControl" BasedOn="{StaticResource {x:Type ui:CardControl}}">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
             <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <core:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
         <core:LessThanConverter x:Key="LessThanConverter" />
+
+        <!-- Segmented Tab RadioButton Style -->
+        <Style x:Key="SegmentTabButtonStyle" TargetType="RadioButton">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="Margin" Value="2,2" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Border" 
+                                Background="{TemplateBinding Background}" 
+                                CornerRadius="6" 
+                                Padding="{TemplateBinding Padding}" 
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource MutedAccentBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                <Setter Property="FontWeight" Value="Bold" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <Style x:Key="SecondaryFooterButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
             <Setter Property="Width" Value="140" />
@@ -96,40 +144,44 @@
                     <RowDefinition Height="Auto" /> <!-- Actions footer -->
                 </Grid.RowDefinitions>
 
-                <!-- Sub-tab Buttons -->
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-                    <ui:Button Content="FusionFix" 
-                               Width="120"
-                               Command="{Binding SwitchBackendTabCommand}"
-                               CommandParameter="FusionFix"
-                               Margin="0,0,8,0">
-                        <ui:Button.Style>
-                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
-                                <Setter Property="Appearance" Value="Secondary" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsFusionFixTabActive}" Value="True">
-                                        <Setter Property="Appearance" Value="Primary" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ui:Button.Style>
-                    </ui:Button>
-                    <ui:Button Content="DXVK" 
-                               Width="120"
-                               Command="{Binding SwitchBackendTabCommand}"
-                               CommandParameter="DXVK">
-                        <ui:Button.Style>
-                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
-                                <Setter Property="Appearance" Value="Secondary" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsDxvkTabActive}" Value="True">
-                                        <Setter Property="Appearance" Value="Primary" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ui:Button.Style>
-                    </ui:Button>
-                </StackPanel>
+                <!-- Sub-Tab Segmented Control Header -->
+                <Border Grid.Row="0" 
+                        Background="{DynamicResource ControlFillColorDefaultBrush}" 
+                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
+                        BorderThickness="1" 
+                        CornerRadius="8" 
+                        Padding="3" 
+                        HorizontalAlignment="Left" 
+                        Margin="0,0,0,15">
+                    <WrapPanel>
+                        <RadioButton IsChecked="{Binding IsFusionFixTabActive, Mode=TwoWay}" 
+                                     GroupName="BackendSubTabs" 
+                                     Style="{StaticResource SegmentTabButtonStyle}">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Options24" Filled="True" Margin="0,0,8,0" />
+                                <TextBlock Text="FusionFix" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </RadioButton>
+
+                        <RadioButton IsChecked="{Binding IsDxvkTabActive, Mode=TwoWay}" 
+                                     GroupName="BackendSubTabs" 
+                                     Style="{StaticResource SegmentTabButtonStyle}">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Desktop24" Filled="True" Margin="0,0,8,0" />
+                                <TextBlock Text="DXVK" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </RadioButton>
+
+                        <RadioButton IsChecked="{Binding IsLibertyLegacyTabActive, Mode=TwoWay}" 
+                                     GroupName="BackendSubTabs" 
+                                     Style="{StaticResource SegmentTabButtonStyle}">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="WindowDevTools24" Filled="True" Margin="0,0,8,0" />
+                                <TextBlock Text="Liberty's Legacy" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </RadioButton>
+                    </WrapPanel>
+                </Border>
 
                 <!-- Content Area -->
                 <Grid Grid.Row="1">
@@ -189,10 +241,8 @@
                                 Width="400" />
 
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,5,0,0">
-                        <StackPanel x:Name="SettingsStackPanel" MaxWidth="800" HorizontalAlignment="Left" Margin="0,0,15,10">
-                                
-                                <TextBlock Text="Gameplay Mechanics" FontSize="15" FontWeight="Bold" Margin="0,0,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
-                                
+                        <StackPanel x:Name="SettingsStackPanel" MaxWidth="800" HorizontalAlignment="Stretch" Margin="0,0,15,10">
+                                <TextBlock Text="Gameplay Mechanics" FontSize="15" FontWeight="Bold" Margin="0,10,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
                                 <ui:CardControl Margin="0,0,0,8">
                                     <ui:CardControl.Header>
                                         <StackPanel>
@@ -252,10 +302,10 @@
                                     <ui:CardControl.Header>
                                         <StackPanel>
                                             <TextBlock Text="Walk Key Bind" FontSize="13" FontWeight="SemiBold" />
-                                            <TextBlock Text="Virtual key hex code for walking toggle (Default: 0x12 for Alt)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                            <TextBlock Text="Click to assign a key or mouse button for walking toggle (or clear to unbind)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </ui:CardControl.Header>
-                                    <ui:TextBox Text="{Binding FusionFixSettings.WalkKey, Mode=TwoWay}" Width="100" VerticalAlignment="Center" TextAlignment="Center" />
+                                    <controls:KeyBindPicker KeyHexCode="{Binding FusionFixSettings.WalkKey, Mode=TwoWay}" VerticalAlignment="Center" />
                                 </ui:CardControl>
 
                                 <TextBlock Text="Camera Sensitivity Ranges" FontSize="15" FontWeight="Bold" Margin="0,5,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
@@ -279,17 +329,17 @@
                                         <TextBlock Grid.Row="0" Grid.Column="2" Text="Max Range" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="5,0,0,5" HorizontalAlignment="Center" />
 
                                         <!-- Mouse Look -->
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Mouse Look Sensitivity" VerticalAlignment="Center" FontSize="13" />
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Mouse Look Sensitivity" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                         <ui:TextBox Grid.Row="1" Grid.Column="1" Text="{Binding FusionFixSettings.MouseLookSensitivityRangeMin, Mode=TwoWay}" Margin="5,4" TextAlignment="Center"/>
                                         <ui:TextBox Grid.Row="1" Grid.Column="2" Text="{Binding FusionFixSettings.MouseLookSensitivityRangeMax, Mode=TwoWay}" Margin="5,4" TextAlignment="Center"/>
 
                                         <!-- Gamepad Look -->
-                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Gamepad Look Sensitivity" VerticalAlignment="Center" FontSize="13" />
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Gamepad Look Sensitivity" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                         <ui:TextBox Grid.Row="2" Grid.Column="1" Text="{Binding FusionFixSettings.GamepadLookSensitivityRangeMin, Mode=TwoWay}" Margin="5,4" TextAlignment="Center"/>
                                         <ui:TextBox Grid.Row="2" Grid.Column="2" Text="{Binding FusionFixSettings.GamepadLookSensitivityRangeMax, Mode=TwoWay}" Margin="5,4" TextAlignment="Center"/>
 
                                         <!-- Mouse Aim -->
-                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Mouse Aim Sensitivity" VerticalAlignment="Center" FontSize="13" />
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Mouse Aim Sensitivity" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                         <ui:TextBox Grid.Row="3" Grid.Column="1" Text="{Binding FusionFixSettings.MouseAimSensitivityRangeMin, Mode=TwoWay}" Margin="5,4" TextAlignment="Center"/>
                                         <ui:TextBox Grid.Row="3" Grid.Column="2" Text="{Binding FusionFixSettings.MouseAimSensitivityRangeMax, Mode=TwoWay}" Margin="5,4" TextAlignment="Center"/>
                                     </Grid>
@@ -381,19 +431,19 @@
                                         <TextBlock Grid.Row="0" Grid.Column="3" Text="Max Softness" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
 
                                         <!-- Sharp -->
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Sharp Shadows (CE-like)" VerticalAlignment="Center" FontSize="13" />
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Sharp Shadows (CE-like)" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                         <ui:TextBox Grid.Row="1" Grid.Column="1" Text="{Binding FusionFixSettings.SharpShadowSoftness, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                         <ui:TextBox Grid.Row="1" Grid.Column="2" Text="{Binding FusionFixSettings.SharpShadowBias, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                         <TextBlock Grid.Row="1" Grid.Column="3" Text="N/A" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource TextFillColorDisabledBrush}" />
 
                                         <!-- Soft -->
-                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Soft Shadows (1.0.4.0-like)" VerticalAlignment="Center" FontSize="13" />
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Soft Shadows (1.0.4.0-like)" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                         <ui:TextBox Grid.Row="2" Grid.Column="1" Text="{Binding FusionFixSettings.SoftShadowSoftness, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                         <ui:TextBox Grid.Row="2" Grid.Column="2" Text="{Binding FusionFixSettings.SoftShadowBias, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                         <TextBlock Grid.Row="2" Grid.Column="3" Text="N/A" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource TextFillColorDisabledBrush}" />
 
                                         <!-- CHSS -->
-                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="CHSS Shadows (PCSS)" VerticalAlignment="Center" FontSize="13" />
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="CHSS Shadows (PCSS)" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                         <ui:TextBox Grid.Row="3" Grid.Column="1" Text="{Binding FusionFixSettings.ChssShadowSoftness, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                         <ui:TextBox Grid.Row="3" Grid.Column="2" Text="{Binding FusionFixSettings.ChssShadowBias, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                         <ui:TextBox Grid.Row="3" Grid.Column="3" Text="{Binding FusionFixSettings.ChssMaxSoftness, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
@@ -455,13 +505,13 @@
                                             <TextBlock Grid.Row="0" Grid.Column="2" Text="Blur Passes" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
                                             <TextBlock Grid.Row="0" Grid.Column="3" Text="Blur Radius" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
 
-                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Ambient Occlusion Details" FontSize="13" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Ambient Occlusion Details" FontSize="13" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                             <ui:TextBox Grid.Row="1" Grid.Column="1" Text="{Binding FusionFixSettings.AmbientOcclusionSamples, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                             <ui:TextBox Grid.Row="1" Grid.Column="2" Text="{Binding FusionFixSettings.AmbientOcclusionBlurPasses, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                             <ui:TextBox Grid.Row="1" Grid.Column="3" Text="{Binding FusionFixSettings.AmbientOcclusionBlurRadius, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
 
                                             <!-- Radius, Bias, Intensity -->
-                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="AO Radius / Bias / Intensity" FontSize="13" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="AO Radius / Bias / Intensity" FontSize="13" VerticalAlignment="Center" Margin="0,5,0,0" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                             <ui:TextBox Grid.Row="2" Grid.Column="1" Text="{Binding FusionFixSettings.AmbientOcclusionRadius, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                             <ui:TextBox Grid.Row="2" Grid.Column="2" Text="{Binding FusionFixSettings.AmbientOcclusionBias, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                             <ui:TextBox Grid.Row="2" Grid.Column="3" Text="{Binding FusionFixSettings.AmbientOcclusionIntensity, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
@@ -476,7 +526,7 @@
                                                 <ColumnDefinition Width="100" />
                                                 <ColumnDefinition Width="100" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="AO Log Offset / Far Clip / Max Mip Level" VerticalAlignment="Center" FontSize="13" />
+                                            <TextBlock Grid.Column="0" Text="AO Log Offset / Far Clip / Max Mip Level" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                             <ui:TextBox Grid.Column="1" Text="{Binding FusionFixSettings.AmbientOcclusionLogMaxOffset, Mode=TwoWay}" Margin="5,0" TextAlignment="Center" ToolTip="Log Max Offset" />
                                             <ui:TextBox Grid.Column="2" Text="{Binding FusionFixSettings.AmbientOcclusionFarClip, Mode=TwoWay}" Margin="5,0" TextAlignment="Center" ToolTip="Far Clip" />
                                             <ui:TextBox Grid.Column="3" Text="{Binding FusionFixSettings.AmbientOcclusionSourceMaxMipLevel, Mode=TwoWay, FallbackValue='0'}" Margin="5,0" TextAlignment="Center" ToolTip="Max Mip Level" />
@@ -639,7 +689,7 @@
                                     </ui:CardControl.Header>
                                     <StackPanel Orientation="Horizontal" Width="250">
                                         <Slider Minimum="0.0" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="True" Value="{Binding FusionFixSettings.DrunkDrivingHandlingFixIntensity, Mode=TwoWay}" Width="180" VerticalAlignment="Center" />
-                                        <TextBlock Text="{Binding FusionFixSettings.DrunkDrivingHandlingFixIntensity, StringFormat='\{0:0.00\}'}" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="12" FontWeight="Bold" />
+                                        <TextBlock Text="{Binding FusionFixSettings.DrunkDrivingHandlingFixIntensity, StringFormat='\{0:0.00\}'}" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                     </StackPanel>
                                 </ui:CardControl>
 
@@ -652,7 +702,7 @@
                                     </ui:CardControl.Header>
                                     <StackPanel Orientation="Horizontal" Width="250">
                                         <Slider Minimum="0.0" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="True" Value="{Binding FusionFixSettings.DrunkDrivingCamFixIntensity, Mode=TwoWay}" Width="180" VerticalAlignment="Center" />
-                                        <TextBlock Text="{Binding FusionFixSettings.DrunkDrivingCamFixIntensity, StringFormat='\{0:0.00\}'}" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="12" FontWeight="Bold" />
+                                        <TextBlock Text="{Binding FusionFixSettings.DrunkDrivingCamFixIntensity, StringFormat='\{0:0.00\}'}" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                     </StackPanel>
                                 </ui:CardControl>
 
@@ -675,7 +725,7 @@
                                         <TextBlock Grid.Row="0" Grid.Column="2" Text="Menu Exit" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
                                         <TextBlock Grid.Row="0" Grid.Column="3" Text="Menu Startup" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
 
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="UI Delay Timers" VerticalAlignment="Center" FontSize="13" />
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="UI Delay Timers" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                         <ui:TextBox Grid.Row="1" Grid.Column="1" Text="{Binding FusionFixSettings.MenuEnteringDelay, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                         <ui:TextBox Grid.Row="1" Grid.Column="2" Text="{Binding FusionFixSettings.MenuExitingDelay, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
                                         <ui:TextBox Grid.Row="1" Grid.Column="3" Text="{Binding FusionFixSettings.MenuAccessDelayOnStartup, Mode=TwoWay}" Margin="5,4" TextAlignment="Center" />
@@ -934,13 +984,15 @@
                                 <ui:CardControl Margin="0,0,0,8">
                                     <ui:CardControl.Header>
                                         <StackPanel>
-                                             <TextBlock Text="Left &amp; Right Key Hex Code" FontSize="13" FontWeight="SemiBold" />
-                                             <TextBlock Text="Standard key codes to trigger turn signals (Left and Right)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                             <TextBlock Text="Turn Signal Key Binds" FontSize="13" FontWeight="SemiBold" />
+                                             <TextBlock Text="Assign keyboard keys or mouse buttons (e.g. side buttons) to trigger Left and Right turn signals." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
                                     </ui:CardControl.Header>
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <ui:TextBox Text="{Binding FusionFixSettings.LeftIndicatorKey, Mode=TwoWay}" Width="100" Margin="0,0,5,0" TextAlignment="Center" ToolTip="Left Indicator Key" />
-                                        <ui:TextBox Text="{Binding FusionFixSettings.RightIndicatorKey, Mode=TwoWay}" Width="100" TextAlignment="Center" ToolTip="Right Indicator Key" />
+                                        <TextBlock Text="Left:" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" />
+                                        <controls:KeyBindPicker KeyHexCode="{Binding FusionFixSettings.LeftIndicatorKey, Mode=TwoWay}" Margin="0,0,12,0" />
+                                        <TextBlock Text="Right:" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" />
+                                        <controls:KeyBindPicker KeyHexCode="{Binding FusionFixSettings.RightIndicatorKey, Mode=TwoWay}" />
                                     </StackPanel>
                                 </ui:CardControl>
 
@@ -1027,7 +1079,7 @@
                             </Style>
                         </ScrollViewer.Style>
                         
-                        <StackPanel x:Name="DxvkSettingsStackPanel" MaxWidth="800" HorizontalAlignment="Left" Margin="0,0,15,10">
+                        <StackPanel x:Name="DxvkSettingsStackPanel" MaxWidth="800" HorizontalAlignment="Stretch" Margin="0,0,15,10">
                             <!-- General & Presentation -->
                             <TextBlock Text="General &amp; Presentation" FontSize="15" FontWeight="Bold" Margin="0,10,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
                             
@@ -1669,6 +1721,193 @@
                                     </StackPanel>
                                 </ui:CardControl.Header>
                                 <ui:ToggleSwitch IsChecked="{Binding DxvkSettings.DxvkEnableDebugUtils, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Liberty's Legacy Settings Tab -->
+                <Grid Visibility="{Binding IsLibertyLegacyTabActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Show warning if Liberty's Legacy settings are missing -->
+                    <Grid Grid.RowSpan="2">
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsLibertyLegacyConfigAvailable}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        <ui:Card Padding="20" Margin="0,20,15,20" MaxWidth="500" HorizontalAlignment="Left" VerticalAlignment="Top">
+                            <StackPanel>
+                                <ui:SymbolIcon Symbol="Info24" FontSize="36" Foreground="{DynamicResource SystemFillColorCautionBrush}" HorizontalAlignment="Center" Margin="0,0,0,10" />
+                                <TextBlock Text="Liberty's Legacy Configuration Not Found" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5" />
+                                <TextBlock Text="Liberty's Legacy.ini was not found in your game directory. Please install the Liberty's Legacy Trainer first." TextWrapping="Wrap" TextAlignment="Center" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </ui:Card>
+                    </Grid>
+
+                    <ui:TextBox x:Name="LibertyLegacySearchBox" 
+                                Grid.Row="0"
+                                PlaceholderText="Search settings by title or description..."
+                                TextChanged="LibertyLegacySearchBox_TextChanged"
+                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                Icon="{ui:SymbolIcon Search24}"
+                                Margin="0,5,15,10"
+                                MaxWidth="800"
+                                HorizontalAlignment="Left"
+                                Width="400"
+                                Visibility="{Binding IsLibertyLegacyConfigAvailable, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,5,0,0">
+                        <ScrollViewer.Style>
+                            <Style TargetType="ScrollViewer">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsLibertyLegacyConfigAvailable}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ScrollViewer.Style>
+                        
+                        <StackPanel x:Name="LibertyLegacySettingsStackPanel" MaxWidth="800" HorizontalAlignment="Stretch" Margin="0,0,15,10">
+                            <!-- Hotkeys & Controls -->
+                            <TextBlock Text="Hotkeys &amp; Controls" FontSize="15" FontWeight="Bold" Margin="0,10,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                            
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Menu Activation Key" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Keyboard hotkey used to toggle open the Liberty's Legacy trainer menu." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding LibertyLegacySettings.MenuKey, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="F11 (Default)" Tag="122" />
+                                    <ComboBoxItem Content="F4" Tag="115" />
+                                    <ComboBoxItem Content="F3" Tag="114" />
+                                    <ComboBoxItem Content="F5" Tag="116" />
+                                    <ComboBoxItem Content="Insert" Tag="45" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Controller Key Combo" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Allows opening the menu using gamepad button combinations (RB + D-Pad Left)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding LibertyLegacySettings.ControllerKeyCombo, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Menu Open Sound" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Plays an audible navigation sound effect when opening or closing the menu." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding LibertyLegacySettings.OpenMenuSound, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <!-- Startup Gameplay Options -->
+                            <TextBlock Text="Startup Gameplay Options" FontSize="15" FontWeight="Bold" Margin="0,15,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="God Mode (Invincibility)" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Automatically enables player invincibility and explosion immunity upon loading into the game." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding LibertyLegacySettings.GodMode, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Never Wanted" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Disables police wanted levels permanently upon loading the game." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding LibertyLegacySettings.NeverWanted, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Infinite Ammo" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Gives infinite ammunition without reloading upon game start." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding LibertyLegacySettings.InfiniteAmmo, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <!-- Vehicles & Speedometer -->
+                            <TextBlock Text="Vehicles &amp; HUD" FontSize="15" FontWeight="Bold" Margin="0,15,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Vehicle Speedometer" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Displays an on-screen HUD speedometer when driving vehicles." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding LibertyLegacySettings.Speedometer, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Speedometer Units" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Selects measurement unit for the vehicle speedometer overlay." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ComboBox SelectedValue="{Binding LibertyLegacySettings.SpeedometerUnit, Mode=TwoWay}" SelectedValuePath="Tag" Width="150" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="Miles Per Hour (MPH)" Tag="0" />
+                                    <ComboBoxItem Content="Kilometers Per Hour (KM/H)" Tag="1" />
+                                </ComboBox>
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Spawn Inside Vehicle" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Immediately warps the player into the driver seat when spawning a vehicle from the trainer." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding LibertyLegacySettings.VehicleSpawnInVehicle, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <!-- World & Time -->
+                            <TextBlock Text="World &amp; Environment" FontSize="15" FontWeight="Bold" Margin="0,15,0,8" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Freeze Weather" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Prevents game weather cycles from changing dynamically." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding LibertyLegacySettings.FreezeWeather, Mode=TwoWay}" VerticalAlignment="Center" />
+                            </ui:CardControl>
+
+                            <ui:CardControl Margin="0,0,0,8">
+                                <ui:CardControl.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="Freeze Time" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBlock Text="Locks the in-game clock to prevent the day/night cycle from advancing." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </ui:CardControl.Header>
+                                <ui:ToggleSwitch IsChecked="{Binding LibertyLegacySettings.FreezeTime, Mode=TwoWay}" VerticalAlignment="Center" />
                             </ui:CardControl>
                         </StackPanel>
                     </ScrollViewer>

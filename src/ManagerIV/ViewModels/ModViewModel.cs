@@ -117,8 +117,22 @@ public class ModViewModel : ViewModelBase
     public DeployTarget Target
     {
         get => _target;
-        set => SetProperty(ref _target, value);
+        set
+        {
+            if (SetProperty(ref _target, value))
+            {
+                OnPropertyChanged(nameof(TargetDisplayName));
+            }
+        }
     }
+
+    public string TargetDisplayName => Target switch
+    {
+        DeployTarget.Update => "Asset",
+        DeployTarget.Plugins => "ASI Plugin",
+        DeployTarget.Scripts => ".NET Script",
+        _ => "Other"
+    };
 
     public string ConflictStatus
     {

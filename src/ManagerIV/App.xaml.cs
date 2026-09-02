@@ -1,6 +1,3 @@
-using System;
-using System.Configuration;
-using System.Data;
 using System.IO;
 using System.Windows;
 using ManagerIV.Core;
@@ -53,6 +50,12 @@ public partial class App : Application
         services.AddSingleton<UpdateWatchdog>();
         services.AddSingleton<IModStructureAnalyzer, ModStructureAnalyzer>();
         services.AddSingleton(new BackendToolManager(Path.Combine(baseDir, "Cache")));
+
+        // Liberty's Legacy Trainer Services
+        services.AddSingleton<ILibertyTrainerValidator, LibertyTrainerValidator>();
+        services.AddSingleton<ILibertyTrainerDownloadMonitor, LibertyTrainerDownloadMonitor>();
+        services.AddSingleton<ILibertyTrainerDependencyService, LibertyTrainerDependencyService>();
+        services.AddSingleton<ILibertyTrainerInstaller, LibertyTrainerInstaller>();
         
         // Backup Service depends on Linker and backup dir
         services.AddSingleton(sp => new BackupRollbackService(sp.GetRequiredService<IFileSystemLinker>(), Path.Combine(baseDir, "Backup")));
@@ -76,7 +79,11 @@ public partial class App : Application
                 sp.GetRequiredService<IModStructureAnalyzer>(),
                 sp.GetRequiredService<SaveProfileViewModel>(),
                 sp.GetRequiredService<LibraryViewModel>(),
-                sp.GetRequiredService<ILogger<MainViewModel>>()
+                sp.GetRequiredService<ILogger<MainViewModel>>(),
+                sp.GetRequiredService<ILibertyTrainerValidator>(),
+                sp.GetRequiredService<ILibertyTrainerDownloadMonitor>(),
+                sp.GetRequiredService<ILibertyTrainerDependencyService>(),
+                sp.GetRequiredService<ILibertyTrainerInstaller>()
             ));
 
         return services.BuildServiceProvider();

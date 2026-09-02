@@ -1,5 +1,3 @@
-using System;
-using System;
 using System.Globalization;
 using System.IO;
 using System.Windows;
@@ -201,16 +199,8 @@ public partial class ModLibraryView : UserControl
                 {
                     if (DataContext is MainViewModel vm)
                     {
-                        var pos = e.GetPosition(item);
-                        bool isTopHalf = pos.Y < item.RenderSize.Height / 2;
-                        
-                        // We use the same ReorderModCommand but if the user wants exact priority adjustment 
-                        // it might require more logic here. For now, matching the original target priority.
-                        // Top half implies it goes before the target, bottom half implies after. 
-                        // The backend shifts based on target priority.
+                        // Match original target priority
                         int targetPriority = targetMod.Priority;
-                        // For a real insertion, if dragging down and dropping on top half, priority is targetPriority.
-                        // For simplicity, we just pass the targetPriority as it was.
                         vm.LibraryVM.ReorderModCommand.Execute(new Tuple<ModViewModel, int>(droppedMod, targetPriority));
                     }
                 }
@@ -232,17 +222,7 @@ public partial class ModLibraryView : UserControl
         }
         _targetAdornedItem = null;
     }
-    private void ClosePopup_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement button)
-        {
-            var popup = FindAncestor<System.Windows.Controls.Primitives.Popup>(button);
-            if (popup != null)
-            {
-                popup.IsOpen = false;
-            }
-        }
-    }
+
     private void HandleFileDrop(DragEventArgs e)
     {
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
@@ -267,53 +247,7 @@ public partial class ModLibraryView : UserControl
 
     private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        if (LibraryContentGrid == null || ListsContainerGrid == null)
-            return;
-
-        // Stack ListsContainerGrid vertically if narrow (width < 1000)
-        if (e.NewSize.Width < 1000)
-        {
-            ListsContainerGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
-            if (ListsContainerGrid.ColumnDefinitions.Count > 1)
-                ListsContainerGrid.ColumnDefinitions[1].Width = new GridLength(0);
-            if (ListsContainerGrid.ColumnDefinitions.Count > 2)
-                ListsContainerGrid.ColumnDefinitions[2].Width = new GridLength(0);
-
-            if (ListsContainerGrid.RowDefinitions.Count < 3)
-            {
-                ListsContainerGrid.RowDefinitions.Clear();
-                ListsContainerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(4, GridUnitType.Star) });
-                ListsContainerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(3, GridUnitType.Star) });
-                ListsContainerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(3, GridUnitType.Star) });
-            }
-
-            Grid.SetColumn(ScriptsListCard, 0);
-            Grid.SetRow(ScriptsListCard, 1);
-            ScriptsListCard.Margin = new Thickness(0, 10, 0, 4);
-
-            Grid.SetColumn(PluginsListCard, 0);
-            Grid.SetRow(PluginsListCard, 2);
-            PluginsListCard.Margin = new Thickness(0, 10, 0, 4);
-        }
-        else
-        {
-            if (ListsContainerGrid.ColumnDefinitions.Count > 2)
-            {
-                ListsContainerGrid.ColumnDefinitions[0].Width = new GridLength(4, GridUnitType.Star);
-                ListsContainerGrid.ColumnDefinitions[1].Width = new GridLength(3, GridUnitType.Star);
-                ListsContainerGrid.ColumnDefinitions[2].Width = new GridLength(3, GridUnitType.Star);
-            }
-
-            ListsContainerGrid.RowDefinitions.Clear();
-
-            Grid.SetColumn(ScriptsListCard, 1);
-            Grid.SetRow(ScriptsListCard, 0);
-            ScriptsListCard.Margin = new Thickness(10, 0, 6, 4);
-
-            Grid.SetColumn(PluginsListCard, 2);
-            Grid.SetRow(PluginsListCard, 0);
-            PluginsListCard.Margin = new Thickness(6, 0, 0, 4);
-        }
+        // Unified unclamped list scales responsively without manual column rearrangement.
 
         if (HeaderActionsPanel != null)
         {

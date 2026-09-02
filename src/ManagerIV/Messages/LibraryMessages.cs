@@ -1,6 +1,5 @@
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using ManagerIV.Core;
-using System.Collections.Generic;
 
 namespace ManagerIV.Messages;
 

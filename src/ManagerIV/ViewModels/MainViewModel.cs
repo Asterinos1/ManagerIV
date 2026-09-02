@@ -1,13 +1,11 @@
-using System;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using ManagerIV.Core;
+using ManagerIV.Views;
 using Microsoft.Extensions.Logging;
 
 namespace ManagerIV.ViewModels;
@@ -26,6 +24,10 @@ public class MainViewModel : ViewModelBase
     private readonly UpdateWatchdog _watchdog;
     private readonly BackendToolManager _backendToolManager;
     private readonly IModStructureAnalyzer _modStructureAnalyzer;
+    private readonly ILibertyTrainerValidator _trainerValidator;
+    private readonly ILibertyTrainerDownloadMonitor _trainerDownloadMonitor;
+    private readonly ILibertyTrainerDependencyService _trainerDependencyService;
+    private readonly ILibertyTrainerInstaller _trainerInstaller;
 
     // Config Paths
     private readonly string _baseDir;
@@ -386,7 +388,9 @@ public class MainViewModel : ViewModelBase
 
     private DxvkConfig _dxvkSettings = new();
     private bool _isDxvkConfigAvailable;
-    private bool _isFusionFixTabActive = true;
+    private LibertyLegacyConfig _libertyLegacySettings = new();
+    private bool _isLibertyLegacyConfigAvailable;
+    private int _activeBackendSubTab = 0; // 0 = FusionFix, 1 = DXVK, 2 = Liberty's Legacy
 
     public DxvkConfig DxvkSettings
     {
@@ -406,21 +410,51 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    public bool IsBackendConfigAvailable => IsFusionFixConfigAvailable || IsDxvkConfigAvailable;
-
-    public bool IsFusionFixTabActive
+    public LibertyLegacyConfig LibertyLegacySettings
     {
-        get => _isFusionFixTabActive;
+        get => _libertyLegacySettings;
+        set => SetProperty(ref _libertyLegacySettings, value);
+    }
+
+    public bool IsLibertyLegacyConfigAvailable
+    {
+        get => _isLibertyLegacyConfigAvailable;
         set
         {
-            if (SetProperty(ref _isFusionFixTabActive, value))
+            if (SetProperty(ref _isLibertyLegacyConfigAvailable, value))
             {
-                OnPropertyChanged(nameof(IsDxvkTabActive));
+                OnPropertyChanged(nameof(IsBackendConfigAvailable));
             }
         }
     }
 
-    public bool IsDxvkTabActive => !IsFusionFixTabActive;
+    public bool IsBackendConfigAvailable => IsFusionFixConfigAvailable || IsDxvkConfigAvailable || IsLibertyLegacyConfigAvailable;
+
+    public bool IsFusionFixTabActive
+    {
+        get => _activeBackendSubTab == 0;
+        set { if (value) SetBackendSubTab(0); }
+    }
+
+    public bool IsDxvkTabActive
+    {
+        get => _activeBackendSubTab == 1;
+        set { if (value) SetBackendSubTab(1); }
+    }
+
+    public bool IsLibertyLegacyTabActive
+    {
+        get => _activeBackendSubTab == 2;
+        set { if (value) SetBackendSubTab(2); }
+    }
+
+    private void SetBackendSubTab(int tab)
+    {
+        _activeBackendSubTab = tab;
+        OnPropertyChanged(nameof(IsFusionFixTabActive));
+        OnPropertyChanged(nameof(IsDxvkTabActive));
+        OnPropertyChanged(nameof(IsLibertyLegacyTabActive));
+    }
 
     // Commands
     public ICommand ApplyDeploymentCommand { get; }
@@ -437,10 +471,16 @@ public class MainViewModel : ViewModelBase
     public ICommand UninstallDxvkCommand { get; }
     public ICommand InstallScriptHookCommand { get; }
     public ICommand UninstallScriptHookCommand { get; }
+    public ICommand ToggleScriptHookCommand { get; }
     public ICommand InstallMemBiterCommand { get; }
     public ICommand UninstallMemBiterCommand { get; }
+    public ICommand ToggleMemBiterCommand { get; }
     public ICommand InstallBassAudioCommand { get; }
     public ICommand UninstallBassAudioCommand { get; }
+    public ICommand ToggleBassAudioCommand { get; }
+    public ICommand InstallLibertyTrainerCommand { get; }
+    public ICommand UninstallLibertyTrainerCommand { get; }
+    public ICommand OpenLibertyTrainerUrlCommand { get; }
     public ICommand SetVramPresetCommand { get; }
     public ICommand ResetGameDirectoryCommand { get; }
     public ICommand SaveFusionFixConfigCommand { get; }
@@ -459,9 +499,17 @@ public class MainViewModel : ViewModelBase
     public ICommand QuickSnapshotSaveProfileCommand { get; }
     public ICommand OpenSaveProfileFolderCommand { get; }
     public ICommand ImportSaveFileCommand { get; }
+    public ICommand ImportModArchiveCommand { get; }
+    public ICommand DeleteModCommand { get; }
+    public ICommand ClearLibraryCommand => LibraryVM.ClearLibraryCommand;
 
     public SaveProfileViewModel SaveProfileVM { get; }
     public LibraryViewModel LibraryVM { get; }
+
+    public System.ComponentModel.ICollectionView? MainModsCollection => LibraryVM.MainModsCollection;
+    public System.ComponentModel.ICollectionView? PluginsCollection => LibraryVM.PluginsCollection;
+    public System.ComponentModel.ICollectionView? ScriptsCollection => LibraryVM.ScriptsCollection;
+    public System.ComponentModel.ICollectionView? UnifiedModsCollection => LibraryVM.UnifiedModsCollection;
 
     public MainViewModel(
         string baseDir,
@@ -477,7 +525,11 @@ public class MainViewModel : ViewModelBase
         IModStructureAnalyzer modStructureAnalyzer,
         SaveProfileViewModel saveProfileVM,
         LibraryViewModel libraryVM,
-        ILogger<MainViewModel> logger)
+        ILogger<MainViewModel> logger,
+        ILibertyTrainerValidator? trainerValidator = null,
+        ILibertyTrainerDownloadMonitor? trainerDownloadMonitor = null,
+        ILibertyTrainerDependencyService? trainerDependencyService = null,
+        ILibertyTrainerInstaller? trainerInstaller = null)
     {
         _logger = logger;
         LibraryVM = libraryVM;
@@ -493,6 +545,10 @@ public class MainViewModel : ViewModelBase
         _watchdog = watchdog;
         _backendToolManager = backendToolManager;
         _modStructureAnalyzer = modStructureAnalyzer;
+        _trainerValidator = trainerValidator ?? new LibertyTrainerValidator();
+        _trainerDownloadMonitor = trainerDownloadMonitor ?? new LibertyTrainerDownloadMonitor(_trainerValidator);
+        _trainerDependencyService = trainerDependencyService ?? new LibertyTrainerDependencyService(_backendToolManager);
+        _trainerInstaller = trainerInstaller ?? new LibertyTrainerInstaller(_trainerValidator);
         SaveProfileVM = saveProfileVM;
 
         // Establish paths
@@ -520,10 +576,44 @@ public class MainViewModel : ViewModelBase
         UninstallDxvkCommand = new RelayCommand(async () => await UninstallDxvkAsync(), () => !IsBusy && ActiveProfile != null);
         InstallScriptHookCommand = new RelayCommand(async () => await InstallScriptHookAsync(), () => !IsBusy && ActiveProfile != null);
         UninstallScriptHookCommand = new RelayCommand(async () => await UninstallScriptHookAsync(), () => !IsBusy && ActiveProfile != null);
+        ToggleScriptHookCommand = new RelayCommand(async () =>
+        {
+            if (BackendStatus.ScriptHookInstalled) await UninstallScriptHookAsync();
+            else await InstallScriptHookAsync();
+        }, () => !IsBusy && ActiveProfile != null);
+
         InstallMemBiterCommand = new RelayCommand(async () => await InstallMemBiterAsync(), () => !IsBusy && ActiveProfile != null);
         UninstallMemBiterCommand = new RelayCommand(async () => await UninstallMemBiterAsync(), () => !IsBusy && ActiveProfile != null);
+        ToggleMemBiterCommand = new RelayCommand(async () =>
+        {
+            if (BackendStatus.MemBiterInstalled) await UninstallMemBiterAsync();
+            else await InstallMemBiterAsync();
+        }, () => !IsBusy && ActiveProfile != null);
+
         InstallBassAudioCommand = new RelayCommand(async () => await InstallBassAudioAsync(), () => !IsBusy && ActiveProfile != null);
         UninstallBassAudioCommand = new RelayCommand(async () => await UninstallBassAudioAsync(), () => !IsBusy && ActiveProfile != null);
+        ToggleBassAudioCommand = new RelayCommand(async () =>
+        {
+            if (BackendStatus.BassAudioInstalled) await UninstallBassAudioAsync();
+            else await InstallBassAudioAsync();
+        }, () => !IsBusy && ActiveProfile != null);
+        InstallLibertyTrainerCommand = new RelayCommand(async () => await InstallLibertyTrainerAsync(), () => !IsBusy && ActiveProfile != null);
+        UninstallLibertyTrainerCommand = new RelayCommand(async () => await UninstallLibertyTrainerAsync(), () => !IsBusy && ActiveProfile != null);
+        OpenLibertyTrainerUrlCommand = new RelayCommand(() =>
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "https://gtaforums.com/topic/973091-libertys-legacy-trainer-gta-iv-ce-12043-above/",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to open GTAForums topic: {ex.Message}");
+            }
+        });
         SetVramPresetCommand = new RelayCommand<object>(SetVramPreset);
         ResetGameDirectoryCommand = new RelayCommand(async () => await ResetGameDirectoryAsync(), () => !IsBusy && ActiveProfile != null && !string.IsNullOrEmpty(ActiveProfile.GamePath));
         SaveFusionFixConfigCommand = new RelayCommand(SaveFusionFixConfig, () => IsBackendConfigAvailable && !IsBusy);
@@ -547,43 +637,74 @@ public class MainViewModel : ViewModelBase
         QuickSnapshotSaveProfileCommand = new RelayCommand(QuickSnapshotSaveProfile, () => !string.IsNullOrEmpty(SelectedBaseProfileId));
         OpenSaveProfileFolderCommand = new RelayCommand<SaveProfile>(OpenSaveProfileFolder, (sp) => (sp ?? SelectedSaveProfile) != null && Directory.Exists((sp ?? SelectedSaveProfile)!.FullPath));
         ImportSaveFileCommand = new RelayCommand<object>(ImportSaveFile, (param) => !string.IsNullOrEmpty(SelectedBaseProfileId));
+        ImportModArchiveCommand = new RelayCommand(async () => await PromptAndImportArchiveAsync(), () => !IsBusy && ActiveProfile != null);
+        DeleteModCommand = new RelayCommand<ModViewModel>(async (mod) => await DeleteModAsync(mod));
 
         // Initialize collection views and their filters (only if running inside Application context to avoid WPF threading issues in unit tests)
         if (System.Windows.Application.Current != null)
         {
 
-            LibraryVM.MainModsCollection.Filter = (obj) =>
+            if (LibraryVM.MainModsCollection != null)
             {
-                if (obj is ModViewModel mod)
+                LibraryVM.MainModsCollection.Filter = (obj) =>
                 {
-                    bool matchesTarget = mod.Target == DeployTarget.Update;
-                    bool matchesSearch = string.IsNullOrWhiteSpace(SearchQuery) || mod.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase);
-                    return matchesTarget && matchesSearch;
-                }
-                return false;
-            };
+                    if (obj is ModViewModel mod)
+                    {
+                        bool matchesTarget = mod.Target == DeployTarget.Update;
+                        bool matchesSearch = string.IsNullOrWhiteSpace(SearchQuery) || mod.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase);
+                        return matchesTarget && matchesSearch;
+                    }
+                    return false;
+                };
+            }
 
-            LibraryVM.PluginsCollection.Filter = (obj) =>
+            if (LibraryVM.PluginsCollection != null)
             {
-                if (obj is ModViewModel mod)
+                LibraryVM.PluginsCollection.Filter = (obj) =>
                 {
-                    bool matchesTarget = mod.Target == DeployTarget.Plugins;
-                    bool matchesSearch = string.IsNullOrWhiteSpace(SearchQuery) || mod.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase);
-                    return matchesTarget && matchesSearch;
-                }
-                return false;
-            };
+                    if (obj is ModViewModel mod)
+                    {
+                        bool matchesTarget = mod.Target == DeployTarget.Plugins;
+                        bool matchesSearch = string.IsNullOrWhiteSpace(SearchQuery) || mod.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase);
+                        return matchesTarget && matchesSearch;
+                    }
+                    return false;
+                };
+            }
 
-            LibraryVM.ScriptsCollection.Filter = (obj) =>
+            if (LibraryVM.ScriptsCollection != null)
             {
-                if (obj is ModViewModel mod)
+                LibraryVM.ScriptsCollection.Filter = (obj) =>
                 {
-                    bool matchesTarget = mod.Target == DeployTarget.Scripts;
-                    bool matchesSearch = string.IsNullOrWhiteSpace(SearchQuery) || mod.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase);
-                    return matchesTarget && matchesSearch;
-                }
-                return false;
-            };
+                    if (obj is ModViewModel mod)
+                    {
+                        bool matchesTarget = mod.Target == DeployTarget.Scripts;
+                        bool matchesSearch = string.IsNullOrWhiteSpace(SearchQuery) || mod.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase);
+                        return matchesTarget && matchesSearch;
+                    }
+                    return false;
+                };
+            }
+
+            if (LibraryVM.UnifiedModsCollection != null)
+            {
+                LibraryVM.UnifiedModsCollection.Filter = (obj) =>
+                {
+                    if (obj is ModViewModel mod)
+                    {
+                        bool matchesCategory = LibraryVM.SelectedCategoryFilter switch
+                        {
+                            ModCategoryFilter.Assets => mod.Target == DeployTarget.Update,
+                            ModCategoryFilter.Plugins => mod.Target == DeployTarget.Plugins,
+                            ModCategoryFilter.Scripts => mod.Target == DeployTarget.Scripts,
+                            _ => true
+                        };
+                        bool matchesSearch = string.IsNullOrWhiteSpace(SearchQuery) || mod.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase);
+                        return matchesCategory && matchesSearch;
+                    }
+                    return false;
+                };
+            }
         }
 
         // Load data
@@ -966,7 +1087,19 @@ public class MainViewModel : ViewModelBase
             if (ActiveProfile.ToolVersions.TryGetValue("DXVK", out string? vdxvk)) dxvkVer = vdxvk;
         }
 
-        BackendStatus = new BackendStatusViewModel(asiLoaderExists, asiVer, fusionFixExists, ffVer, dxvkExists, dxvkVer, scriptHookExists, memBiterExists, bassAudioExists);
+        var trainerStatus = _trainerInstaller.GetTrainerStatus(gamePath);
+        string trainerVer = _trainerInstaller.GetInstalledVersion(gamePath, ActiveProfile);
+
+        BackendStatus = new BackendStatusViewModel(
+            asiLoaderExists, asiVer,
+            fusionFixExists, ffVer,
+            dxvkExists, dxvkVer,
+            scriptHookExists,
+            memBiterExists,
+            bassAudioExists,
+            trainerStatus,
+            trainerVer
+        );
 
         // Fetch latest versions from GitHub in the background
         _ = FetchLatestToolVersionsAsync(BackendStatus);
@@ -1038,7 +1171,7 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    private async Task PromptAndImportArchiveAsync()
+    public async Task PromptAndImportArchiveAsync()
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
@@ -1631,7 +1764,7 @@ public class MainViewModel : ViewModelBase
         StatusText = $"Renamed profile from '{oldName}' to '{newName}'.";
     }
 
-    private async Task DeleteModAsync(ModViewModel? modVm)
+    internal async Task DeleteModAsync(ModViewModel? modVm)
     {
         if (modVm == null) return;
 
@@ -1695,6 +1828,7 @@ public class MainViewModel : ViewModelBase
                     if (SelectedMod == modVm) SelectedMod = null;
                     if (LibraryVM.SelectedLibraryMod == modVm) LibraryVM.SelectedLibraryMod = null;
                     if (LibraryVM.SelectedPluginMod == modVm) LibraryVM.SelectedPluginMod = null;
+                    if (LibraryVM.SelectedScriptMod == modVm) LibraryVM.SelectedScriptMod = null;
                 });
             }
             else
@@ -1703,6 +1837,7 @@ public class MainViewModel : ViewModelBase
                 if (SelectedMod == modVm) SelectedMod = null;
                 if (LibraryVM.SelectedLibraryMod == modVm) LibraryVM.SelectedLibraryMod = null;
                 if (LibraryVM.SelectedPluginMod == modVm) LibraryVM.SelectedPluginMod = null;
+                if (LibraryVM.SelectedScriptMod == modVm) LibraryVM.SelectedScriptMod = null;
             }
             LibraryVM.SaveLibrary();
 
@@ -1866,6 +2001,12 @@ public class MainViewModel : ViewModelBase
         return path1;
     }
 
+    private string GetLibertyLegacyIniPath()
+    {
+        if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath)) return "";
+        return Path.Combine(ActiveProfile.GamePath, "Liberty's Legacy", "Liberty's Legacy.ini");
+    }
+
     private void LoadFusionFixConfig()
     {
         string iniPath = GetFusionFixIniPath();
@@ -1891,15 +2032,29 @@ public class MainViewModel : ViewModelBase
             DxvkSettings = new DxvkConfig();
             IsDxvkConfigAvailable = false;
         }
+
+        string llPath = GetLibertyLegacyIniPath();
+        if (File.Exists(llPath))
+        {
+            LibertyLegacySettings = LibertyLegacyConfig.Load(llPath);
+            IsLibertyLegacyConfigAvailable = true;
+        }
+        else
+        {
+            LibertyLegacySettings = new LibertyLegacyConfig();
+            IsLibertyLegacyConfigAvailable = false;
+        }
     }
 
     private void SaveFusionFixConfig()
     {
         string iniPath = GetFusionFixIniPath();
         string dxvkPath = GetDxvkConfPath();
+        string llPath = GetLibertyLegacyIniPath();
 
         bool ffSaved = false;
         bool dxvkSaved = false;
+        bool llSaved = false;
 
         if (IsFusionFixConfigAvailable && !string.IsNullOrEmpty(iniPath) && File.Exists(iniPath))
         {
@@ -1927,14 +2082,27 @@ public class MainViewModel : ViewModelBase
             }
         }
 
-        if (ffSaved || dxvkSaved)
+        if (IsLibertyLegacyConfigAvailable && !string.IsNullOrEmpty(llPath) && File.Exists(llPath))
+        {
+            try
+            {
+                LibertyLegacyConfig.Save(llPath, LibertyLegacySettings);
+                llSaved = true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to save Liberty's Legacy configuration: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        if (ffSaved || dxvkSaved || llSaved)
         {
             StatusText = "Backend configuration saved successfully.";
             MessageBox.Show("Backend configuration saved successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         else
         {
-            MessageBox.Show("No configuration files found to save. Install FusionFix or DXVK first.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("No configuration files found to save. Install FusionFix, DXVK, or Liberty's Legacy first.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -1944,9 +2112,15 @@ public class MainViewModel : ViewModelBase
         {
             LoadFusionFixDefaultsInternal(showDialogs: true);
         }
-        else
+        else if (IsDxvkTabActive)
         {
             LoadDxvkDefaultsInternal(showDialogs: true);
+        }
+        else if (IsLibertyLegacyTabActive)
+        {
+            LibertyLegacySettings = new LibertyLegacyConfig();
+            StatusText = "Restored default Liberty's Legacy trainer settings.";
+            MessageBox.Show("Restored default Liberty's Legacy settings. Click 'Save Configuration' to apply changes.", "Defaults Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 
@@ -2330,7 +2504,7 @@ public class MainViewModel : ViewModelBase
 
     private void ApplyTheme(bool isDark)
     {
-        isDark = true;
+        if (Application.Current == null) return;
         try
         {
             if (isDark)
@@ -2380,6 +2554,7 @@ public class MainViewModel : ViewModelBase
                 SetResourceBrush(resources, "TextFillColorPrimaryBrush", "#FFFFFFFF");
                 SetResourceBrush(resources, "TextFillColorSecondaryBrush", "#FFA1A1AA");
                 SetResourceBrush(resources, "TextFillColorTertiaryBrush", "#FF71717A");
+                SetResourceBrush(resources, "TextControlPlaceholderForeground", "#87FFFFFF");
 
                 // Accents: Primary (#FFFA9600), Secondary/Hover (#FFFFB347)
                 SetResourceColor(resources, "SystemAccentColor", "#FFFA9600");
@@ -2447,6 +2622,7 @@ public class MainViewModel : ViewModelBase
                 SetResourceBrush(resources, "TextFillColorPrimaryBrush", "#FF1C1C1E");
                 SetResourceBrush(resources, "TextFillColorSecondaryBrush", "#FF636366");
                 SetResourceBrush(resources, "TextFillColorTertiaryBrush", "#FF8E8E93");
+                SetResourceBrush(resources, "TextControlPlaceholderForeground", "#87000000");
 
                 // Accents: Primary (#FFD47A00), Secondary/Hover (#FFE68500)
                 SetResourceColor(resources, "SystemAccentColor", "#FFD47A00");
@@ -2947,6 +3123,209 @@ public class MainViewModel : ViewModelBase
     private async Task UninstallBassAudioAsync()
     {
         await UninstallToolGenericAsync("BassAudio", "BassAudio");
+    }
+
+    internal async Task InstallLibertyTrainerAsync(string? explicitZipPath = null)
+    {
+        if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath) || !Directory.Exists(ActiveProfile.GamePath))
+        {
+            if (System.Windows.Application.Current != null)
+                MessageBox.Show("Please select a valid game directory first.", "Cannot Install", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!_trainerDependencyService.CheckIsCompleteEdition(ActiveProfile))
+        {
+            if (System.Windows.Application.Current != null)
+                MessageBox.Show("Liberty's Legacy Trainer requires GTA IV Complete Edition (v1.2.0.43 or later).\nLegacy versions (1.0.4.0, 1.0.7.0, 1.0.8.0) are not supported.", "Complete Edition Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        string? candidateZip = explicitZipPath;
+
+        if (string.IsNullOrEmpty(candidateZip))
+        {
+            // 1. Open official download page in browser
+            try
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "https://gtaforums.com/topic/973091-libertys-legacy-trainer-gta-iv-ce-12043-above/",
+                    UseShellExecute = true
+                };
+                System.Diagnostics.Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to open browser URL: {ex.Message}");
+            }
+
+            // 2. Open nonblocking waiting dialog if running in UI thread
+            DateTime startTime = DateTime.UtcNow;
+            string downloadsDir = _trainerDownloadMonitor.GetDownloadsDirectory();
+
+            if (System.Windows.Application.Current != null)
+            {
+                var dialog = new LibertyTrainerInstallDialog(_trainerDownloadMonitor, downloadsDir, startTime);
+                if (System.Windows.Application.Current.MainWindow != null && System.Windows.Application.Current.MainWindow.IsVisible)
+                {
+                    dialog.Owner = System.Windows.Application.Current.MainWindow;
+                }
+
+                bool? dialogResult = dialog.ShowDialog();
+                if (dialogResult != true || string.IsNullOrEmpty(dialog.CandidateZipPath) || !File.Exists(dialog.CandidateZipPath))
+                {
+                    StatusText = "Liberty's Legacy installation was cancelled.";
+                    return;
+                }
+
+                candidateZip = dialog.CandidateZipPath;
+            }
+            else
+            {
+                // Headless/test fallback: attempt direct wait
+                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5));
+                candidateZip = await _trainerDownloadMonitor.WaitForCandidateArchiveAsync(downloadsDir, startTime, cts.Token);
+                if (string.IsNullOrEmpty(candidateZip) || !File.Exists(candidateZip))
+                {
+                    StatusText = "No candidate Liberty's Legacy ZIP detected.";
+                    return;
+                }
+            }
+        }
+
+        // 3. Conflict detection
+        var conflicts = _trainerInstaller.DetectConflicts(ActiveProfile.GamePath);
+        if (conflicts.HasConflicts)
+        {
+            var choice = MessageBoxResult.Yes;
+            if (System.Windows.Application.Current != null)
+            {
+                var fileNames = string.Join("\n• ", conflicts.ConflictingFiles.Select(Path.GetFileName));
+                choice = MessageBox.Show(
+                    $"Warning: Potential conflicting trainer plugins were detected in your game directory:\n• {fileNames}\n\nRunning multiple trainers simultaneously may cause crashes or control conflicts.\n\nDo you want to proceed with installing Liberty's Legacy?",
+                    "Trainer Conflicts Detected",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+            }
+
+            if (choice != MessageBoxResult.Yes)
+            {
+                StatusText = "Installation cancelled due to trainer conflict.";
+                return;
+            }
+        }
+
+        IsBusy = true;
+        StatusText = "Verifying Complete Edition runtime dependencies...";
+
+        try
+        {
+            var manifest = await LoadToolsManifestAsync();
+
+            // Ensure dependencies (UAL, ScriptHook.dll, aCompleteEditionHook.asi)
+            await _trainerDependencyService.EnsureDependenciesAsync(
+                ActiveProfile.GamePath,
+                ActiveProfile,
+                manifest,
+                async () => await InstallAsiLoaderAsync()
+            );
+
+            StatusText = "Deploying Liberty's Legacy Trainer...";
+            string installedVer = await _trainerInstaller.InstallTrainerAsync(
+                candidateZip,
+                ActiveProfile.GamePath,
+                ActiveProfile,
+                manifest,
+                new Progress<string>(msg => StatusText = msg)
+            );
+
+            await SaveToolsManifestAsync(manifest);
+
+            // Update profile
+            var toolVersions = ActiveProfile.InstalledToolVersions != null
+                ? new Dictionary<string, string>(ActiveProfile.InstalledToolVersions)
+                : new Dictionary<string, string>();
+            toolVersions["LibertysLegacy"] = installedVer;
+
+            var updatedProfile = ActiveProfile with { InstalledToolVersions = toolVersions };
+            _profileManager.SaveProfile(Path.Combine(_profilesDir, $"{updatedProfile.Id}.json"), updatedProfile);
+            ActiveProfile = updatedProfile;
+
+            StatusText = $"Liberty's Legacy {installedVer} installed successfully!";
+            if (System.Windows.Application.Current != null)
+            {
+                MessageBox.Show(
+                    $"Liberty's Legacy Trainer ({installedVer}) has been successfully installed!\n\nActivation & Controls:\n• Default Keyboard Menu Key: F11\n• Controller Shortcut: RB + X (Xbox) or R1 + Square (PlayStation)",
+                    "Liberty's Legacy Installed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Liberty's Legacy installation failed: {ex.Message}";
+            if (System.Windows.Application.Current != null)
+            {
+                MessageBox.Show($"Failed to install Liberty's Legacy: {ex.Message}", "Installation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+            UpdateBackendStatus();
+            UpdateConflictsAndWatchdog();
+        }
+    }
+
+    internal async Task UninstallLibertyTrainerAsync()
+    {
+        if (ActiveProfile == null || string.IsNullOrEmpty(ActiveProfile.GamePath) || !Directory.Exists(ActiveProfile.GamePath))
+        {
+            MessageBox.Show("Please select a valid game directory first.", "Cannot Uninstall", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var confirm = MessageBox.Show(
+            "Are you sure you want to uninstall Liberty's Legacy Trainer?\n\nBy default, your custom configuration and settings files will be preserved.",
+            "Confirm Uninstall",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (confirm != MessageBoxResult.Yes) return;
+
+        IsBusy = true;
+        StatusText = "Uninstalling Liberty's Legacy Trainer...";
+
+        try
+        {
+            var manifest = await LoadToolsManifestAsync();
+            await _trainerInstaller.UninstallTrainerAsync(ActiveProfile.GamePath, manifest, preserveUserData: true);
+            await SaveToolsManifestAsync(manifest);
+
+            var toolVersions = ActiveProfile.InstalledToolVersions != null
+                ? new Dictionary<string, string>(ActiveProfile.InstalledToolVersions)
+                : new Dictionary<string, string>();
+            toolVersions.Remove("LibertysLegacy");
+
+            var updatedProfile = ActiveProfile with { InstalledToolVersions = toolVersions };
+            _profileManager.SaveProfile(Path.Combine(_profilesDir, $"{updatedProfile.Id}.json"), updatedProfile);
+            ActiveProfile = updatedProfile;
+
+            StatusText = "Successfully uninstalled Liberty's Legacy Trainer.";
+            MessageBox.Show("Liberty's Legacy Trainer has been uninstalled (user settings preserved).", "Uninstalled", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Uninstallation failed: {ex.Message}";
+            MessageBox.Show($"Failed to uninstall trainer: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsBusy = false;
+            UpdateBackendStatus();
+            UpdateConflictsAndWatchdog();
+        }
     }
 
     private async Task<System.Collections.Generic.List<InstalledToolFile>> LoadToolsManifestAsync()

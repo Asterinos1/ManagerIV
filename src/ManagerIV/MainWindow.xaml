@@ -9,6 +9,7 @@
         xmlns:vm="clr-namespace:ManagerIV.ViewModels"
         mc:Ignorable="d"
         Title="GTA IV Mod Loader" 
+        Icon="Assets/app.ico"
         Height="700" Width="1050"
         MinWidth="850" MinHeight="600"
         WindowStartupLocation="CenterScreen"
@@ -34,9 +35,14 @@
             </Grid.RowDefinitions>
 
             <!-- App Header -->
-            <StackPanel Grid.Row="0" Margin="20,25,20,25">
-                <TextBlock Text="GTA IV MOD LOADER" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
-                <TextBlock Text="{Binding GameVersionDisplayString}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" />
+            <StackPanel Grid.Row="0" Margin="20,20,20,20">
+                <Image Source="pack://application:,,,/Assets/full_logo.png" 
+                       Height="48"
+                       MaxWidth="220"
+                       HorizontalAlignment="Left" 
+                       RenderOptions.BitmapScalingMode="HighQuality"
+                       Margin="0,0,0,6" />
+                <TextBlock Text="{Binding GameVersionDisplayString}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="2,0,0,0" />
             </StackPanel>
 
             <!-- Navigation List -->
@@ -118,21 +124,21 @@
                     </StackPanel>
                 </ListBoxItem>
 
-                <!-- Nav Item 5: Settings -->
+                <!-- Nav Item 5: Settings (disabled)
                 <ListBoxItem>
                     <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="Wrench24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
                         <TextBlock Text="Settings" FontSize="14" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     </StackPanel>
-                </ListBoxItem>
+                </ListBoxItem> -->
 
-                <!-- Nav Item 6: Logger -->
+                <!-- Nav Item 6: Logger (deferred / hidden for now)
                 <ListBoxItem>
                     <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="Document24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
                         <TextBlock Text="Logger" FontSize="14" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     </StackPanel>
-                </ListBoxItem>
+                </ListBoxItem> -->
 
                 <!-- Nav Item 7: Credits -->
                 <ListBoxItem>
@@ -200,12 +206,12 @@
             <TabItem Style="{StaticResource CollapsedTabItemStyle}">
                 <views:MusicView DataContext="{Binding}" />
             </TabItem>
-            <TabItem Style="{StaticResource CollapsedTabItemStyle}">
+            <!-- <TabItem Style="{StaticResource CollapsedTabItemStyle}">
                 <views:SettingsView DataContext="{Binding}" />
-            </TabItem>
-            <TabItem Style="{StaticResource CollapsedTabItemStyle}">
+            </TabItem> -->
+            <!-- <TabItem Style="{StaticResource CollapsedTabItemStyle}">
                 <views:LoggerView DataContext="{Binding}" />
-            </TabItem>
+            </TabItem> -->
             <TabItem Style="{StaticResource CollapsedTabItemStyle}">
                 <views:CreditsView DataContext="{Binding}" />
             </TabItem>

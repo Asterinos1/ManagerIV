@@ -535,16 +535,10 @@
                             </StackPanel>
 
                             <WrapPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                <ui:Button Content="{Binding BackendStatus.ScriptHookButtonText}" 
-                                           Icon="{ui:SymbolIcon ArrowDownload24}" 
-                                           Command="{Binding InstallScriptHookCommand}"
-                                           Appearance="Primary"
-                                           Margin="0,0,8,4" />
-                                <ui:Button Content="Uninstall" 
-                                           Icon="{ui:SymbolIcon Delete24}" 
-                                           Command="{Binding UninstallScriptHookCommand}"
-                                           Appearance="Secondary"
-                                           Margin="0,0,0,4" />
+                                <ui:ToggleSwitch IsChecked="{Binding BackendStatus.ScriptHookInstalled, Mode=OneWay}" 
+                                                 Command="{Binding ToggleScriptHookCommand}"
+                                                 OnContent="Enabled"
+                                                 OffContent="Disabled" />
                             </WrapPanel>
                         </Grid>
                     </ui:Card>
@@ -575,16 +569,10 @@
                             </StackPanel>
 
                             <WrapPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                <ui:Button Content="{Binding BackendStatus.MemBiterButtonText}" 
-                                           Icon="{ui:SymbolIcon ArrowDownload24}" 
-                                           Command="{Binding InstallMemBiterCommand}"
-                                           Appearance="Primary"
-                                           Margin="0,0,8,4" />
-                                <ui:Button Content="Uninstall" 
-                                           Icon="{ui:SymbolIcon Delete24}" 
-                                           Command="{Binding UninstallMemBiterCommand}"
-                                           Appearance="Secondary"
-                                           Margin="0,0,0,4" />
+                                <ui:ToggleSwitch IsChecked="{Binding BackendStatus.MemBiterInstalled, Mode=OneWay}" 
+                                                 Command="{Binding ToggleMemBiterCommand}"
+                                                 OnContent="Enabled"
+                                                 OffContent="Disabled" />
                             </WrapPanel>
                         </Grid>
                     </ui:Card>
@@ -612,14 +600,58 @@
                             </StackPanel>
 
                             <WrapPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                <ui:Button Content="{Binding BackendStatus.BassAudioButtonText}" 
+                                <ui:ToggleSwitch IsChecked="{Binding BackendStatus.BassAudioInstalled, Mode=OneWay}" 
+                                                 Command="{Binding ToggleBassAudioCommand}"
+                                                 OnContent="Enabled"
+                                                 OffContent="Disabled" />
+                            </WrapPanel>
+                        </Grid>
+                    </ui:Card>
+
+                    <!-- Section: Optional Tools & Gameplay Trainers -->
+                    <TextBlock Text="Optional Tools &amp; Trainers" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,15,0,10" />
+
+                    <!-- Tool 7: Liberty's Legacy Trainer Card -->
+                    <ui:Card Padding="16" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Games24" Filled="True" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" FontSize="28" Margin="0,0,15,0" VerticalAlignment="Center" />
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,15,0">
+                                <WrapPanel>
+                                    <TextBlock Text="Liberty's Legacy Trainer" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                    <Border CornerRadius="4" Padding="6,2" Margin="10,2,0,2" Background="{DynamicResource MutedAccentBrush}">
+                                        <TextBlock Text="by const96b (F11)" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" />
+                                    </Border>
+                                    <Border CornerRadius="10" Padding="10,2" Margin="8,2,0,2"
+                                            Background="{Binding BackendStatus.LibertyTrainerBrush}" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding BackendStatus.LibertyTrainerText}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                    </Border>
+                                </WrapPanel>
+                                <TextBlock Text="Native Complete Edition trainer created by const96b. Features vehicle spawning, bodyguards, world control, and modern UI. Default menu key: F11 | Controller: RB+X (Xbox) or R1+Square (PlayStation)." FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding BackendStatus.LibertyTrainerVersionInfo}" FontSize="11" Foreground="{DynamicResource SystemAccentColorSecondaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <WrapPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                <ui:Button Content="{Binding BackendStatus.LibertyTrainerButtonText}" 
                                            Icon="{ui:SymbolIcon ArrowDownload24}" 
-                                           Command="{Binding InstallBassAudioCommand}"
+                                           Command="{Binding InstallLibertyTrainerCommand}"
                                            Appearance="Primary"
                                            Margin="0,0,8,4" />
                                 <ui:Button Content="Uninstall" 
                                            Icon="{ui:SymbolIcon Delete24}" 
-                                           Command="{Binding UninstallBassAudioCommand}"
+                                           Command="{Binding UninstallLibertyTrainerCommand}"
+                                           Appearance="Secondary"
+                                           Margin="0,0,8,4"
+                                           Visibility="{Binding BackendStatus.LibertyTrainerCanUninstall, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <ui:Button Content="GTAForums" 
+                                           Icon="{ui:SymbolIcon Open24}" 
+                                           Command="{Binding OpenLibertyTrainerUrlCommand}"
                                            Appearance="Secondary"
                                            Margin="0,0,0,4" />
                             </WrapPanel>

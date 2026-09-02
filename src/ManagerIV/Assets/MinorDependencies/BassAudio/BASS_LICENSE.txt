@@ -1,0 +1,27 @@
+BASS Audio Library & BASS.NET Wrapper License & Attribution
+============================================================
+
+1. BASS Audio Library
+---------------------
+Copyright (c) 1999-2024 Un4seen Developments Ltd. All rights reserved.
+Website: https://www.un4seen.com/
+
+BASS is free for personal, educational, or non-commercial use within freeware software.
+Commercial software, shareware, or any software for which a fee is charged requires 
+a commercial license from Un4seen Developments Ltd.
+
+Redistribution of the dynamic link library (bass.dll) is permitted in free software
+provided that this copyright notice and website attribution remain intact.
+
+
+2. BASS.NET API Wrapper
+-----------------------
+Copyright (c) 2005-2024 Bernd Niedergesaess / radio42. All rights reserved.
+Website: https://www.bass.radio42.com/
+
+BASS.NET is provided as freeware for non-commercial, personal use.
+Any commercial use requires a registration key and commercial license from radio42.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.

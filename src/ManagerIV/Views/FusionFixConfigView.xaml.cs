@@ -1,5 +1,3 @@
-using System;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -28,11 +26,15 @@ public partial class FusionFixConfigView : UserControl
         FilterSettings(query, DxvkSettingsStackPanel);
     }
 
+    private void LibertyLegacySearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        string query = LibertyLegacySearchBox.Text?.Trim() ?? "";
+        FilterSettings(query, LibertyLegacySettingsStackPanel);
+    }
+
     private void FilterSettings(string query, Panel settingsPanel)
     {
         if (settingsPanel == null) return;
-
-        bool isQueryEmpty = string.IsNullOrWhiteSpace(query);
 
         // Track section visibility
         TextBlock? currentSectionHeader = null;

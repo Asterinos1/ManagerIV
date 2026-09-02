@@ -10,14 +10,17 @@ public class BackendStatusViewModel : ViewModelBase
     private bool _scriptHookInstalled;
     private bool _memBiterInstalled;
     private bool _bassAudioInstalled;
+    private TrainerStatus _libertyTrainerStatus = TrainerStatus.Missing;
 
     private string _asiLoaderVersion = "Unknown";
     private string _fusionFixVersion = "Unknown";
     private string _dxvkVersion = "Unknown";
+    private string _libertyTrainerVersion = "Unknown";
 
     private string _asiLoaderLatest = "Fetching...";
     private string _fusionFixLatest = "Fetching...";
     private string _dxvkLatest = "Fetching...";
+    private string _libertyTrainerLatest = "v2.4.1";
 
     public BackendStatusViewModel()
     {
@@ -29,7 +32,9 @@ public class BackendStatusViewModel : ViewModelBase
         bool dxvk, string dxvkVersion,
         bool scriptHook,
         bool memBiter = false,
-        bool bassAudio = false)
+        bool bassAudio = false,
+        TrainerStatus libertyTrainer = TrainerStatus.Missing,
+        string libertyTrainerVersion = "Unknown")
     {
         _asiLoaderInstalled = asiLoader;
         _asiLoaderVersion = asiLoaderVersion;
@@ -40,6 +45,8 @@ public class BackendStatusViewModel : ViewModelBase
         _scriptHookInstalled = scriptHook;
         _memBiterInstalled = memBiter;
         _bassAudioInstalled = bassAudio;
+        _libertyTrainerStatus = libertyTrainer;
+        _libertyTrainerVersion = libertyTrainerVersion;
     }
 
     public bool AsiLoaderInstalled => _asiLoaderInstalled;
@@ -117,10 +124,58 @@ public class BackendStatusViewModel : ViewModelBase
     public string BassAudioText => _bassAudioInstalled ? "Installed" : "Missing";
     public string BassAudioBrush => _bassAudioInstalled ? "#FF107C41" : "#FF8A0A0A";
 
+    public TrainerStatus LibertyTrainerStatus => _libertyTrainerStatus;
+    public bool LibertyTrainerInstalled => _libertyTrainerStatus == TrainerStatus.Installed;
+    public bool LibertyTrainerRepairNeeded => _libertyTrainerStatus == TrainerStatus.RepairNeeded;
+    public bool LibertyTrainerCanUninstall => _libertyTrainerStatus == TrainerStatus.Installed || _libertyTrainerStatus == TrainerStatus.RepairNeeded;
+
+    public string LibertyTrainerText => _libertyTrainerStatus switch
+    {
+        TrainerStatus.Installed => "Installed",
+        TrainerStatus.RepairNeeded => "Repair needed",
+        _ => "Missing"
+    };
+
+    public string LibertyTrainerBrush => _libertyTrainerStatus switch
+    {
+        TrainerStatus.Installed => "#FF107C41",     // Green
+        TrainerStatus.RepairNeeded => "#FFF3A813",  // Warning Orange
+        _ => "#FF8A0A0A"                            // Red
+    };
+
+    public string LibertyTrainerLatest
+    {
+        get => _libertyTrainerLatest;
+        set
+        {
+            if (SetProperty(ref _libertyTrainerLatest, value))
+            {
+                OnPropertyChanged(nameof(LibertyTrainerVersionInfo));
+            }
+        }
+    }
+
+    public string LibertyTrainerVersionInfo => _libertyTrainerStatus switch
+    {
+        TrainerStatus.Installed => !string.IsNullOrEmpty(_libertyTrainerVersion) && _libertyTrainerVersion != "Unknown"
+            ? $"Installed: {_libertyTrainerVersion} | Latest: {_libertyTrainerLatest} (GTAForums)"
+            : $"Installed: Complete Edition | Latest: {_libertyTrainerLatest} (GTAForums)",
+        TrainerStatus.RepairNeeded => "Incomplete installation (missing ASI or companion folder)",
+        _ => $"Not installed (Latest available: {_libertyTrainerLatest} by const96b on GTAForums)"
+    };
+
     public string FusionFixButtonText => _fusionFixInstalled ? "Update" : "Install";
     public string AsiLoaderButtonText => _asiLoaderInstalled ? "Update" : "Install";
     public string DxvkButtonText => _dxvkInstalled ? "Update" : "Install";
     public string ScriptHookButtonText => _scriptHookInstalled ? "Update" : "Install";
     public string MemBiterButtonText => _memBiterInstalled ? "Update" : "Install";
     public string BassAudioButtonText => _bassAudioInstalled ? "Update" : "Install";
+
+    public string LibertyTrainerButtonText => _libertyTrainerStatus switch
+    {
+        TrainerStatus.Installed => "Update",
+        TrainerStatus.RepairNeeded => "Repair",
+        _ => "Get Trainer"
+    };
 }
+

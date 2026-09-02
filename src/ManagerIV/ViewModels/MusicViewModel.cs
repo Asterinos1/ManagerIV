@@ -1,8 +1,5 @@
-using System;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using ManagerIV.Core;
@@ -19,6 +16,7 @@ public class MusicViewModel : ViewModelBase
     private string _editingArtist = "";
     private string _editingAlbum = "";
     private bool _isBusy;
+    private bool _isEditingTrack;
 
     public MusicViewModel(string baseDir, IFileSystemLinker linker)
     {
@@ -32,6 +30,18 @@ public class MusicViewModel : ViewModelBase
         ToggleTrackEnabledCommand = new RelayCommand<MusicTrack>(ToggleTrackEnabled, t => t != null);
         MoveTrackUpCommand = new RelayCommand<MusicTrack>(MoveTrackUp, t => t != null);
         MoveTrackDownCommand = new RelayCommand<MusicTrack>(MoveTrackDown, t => t != null);
+        EditTrackCommand = new RelayCommand<MusicTrack>(track =>
+        {
+            if (track != null)
+            {
+                SelectedTrack = track;
+                IsEditingTrack = true;
+            }
+        });
+        CloseEditTrackCommand = new RelayCommand(() =>
+        {
+            IsEditingTrack = false;
+        });
         SaveTrackMetadataCommand = new RelayCommand(async () => await SaveTrackMetadataAsync(), () => SelectedTrack != null);
         DeployMusicCommand = new RelayCommand(async () => await DeployMusicAsync());
         ClearMusicCommand = new RelayCommand(ClearMusic);
@@ -83,6 +93,12 @@ public class MusicViewModel : ViewModelBase
         set => SetProperty(ref _editingAlbum, value);
     }
 
+    public bool IsEditingTrack
+    {
+        get => _isEditingTrack;
+        set => SetProperty(ref _isEditingTrack, value);
+    }
+
     public string TracksCountText
     {
         get
@@ -100,6 +116,8 @@ public class MusicViewModel : ViewModelBase
     public ICommand ToggleTrackEnabledCommand { get; }
     public ICommand MoveTrackUpCommand { get; }
     public ICommand MoveTrackDownCommand { get; }
+    public ICommand EditTrackCommand { get; }
+    public ICommand CloseEditTrackCommand { get; }
     public ICommand SaveTrackMetadataCommand { get; }
     public ICommand DeployMusicCommand { get; }
     public ICommand ClearMusicCommand { get; }
@@ -215,7 +233,6 @@ public class MusicViewModel : ViewModelBase
         IsBusy = true;
         StatusText = "Saving metadata...";
 
-        string oldTitle = SelectedTrack.Title;
         await _musicService.UpdateTrackMetadataAsync(SelectedTrack.Id, EditingTitle, EditingArtist, EditingAlbum);
 
         var trackIdx = AllTracks.IndexOf(SelectedTrack);
@@ -223,6 +240,7 @@ public class MusicViewModel : ViewModelBase
         if (trackIdx != -1) AllTracks[trackIdx] = updated;
 
         SelectedTrack = updated;
+        IsEditingTrack = false;
         IsBusy = false;
         StatusText = $"Saved metadata for '{EditingTitle}'.";
     }
@@ -256,7 +274,14 @@ public class MusicViewModel : ViewModelBase
 
     private void ClearMusic()
     {
-        var result = MessageBox.Show("Are you sure you want to delete all tracks from the library? This cannot be undone.", "Clear Library", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (!AllTracks.Any()) return;
+
+        var result = MessageBox.Show(
+            "Are you sure you want to permanently delete all tracks from the music library?\n\nThis will remove them from Independence FM and delete the audio files from your music library. This action CANNOT be undone.", 
+            "Clear Music Library", 
+            MessageBoxButton.YesNo, 
+            MessageBoxImage.Warning);
+
         if (result == MessageBoxResult.Yes)
         {
             var tracks = AllTracks.ToList();
